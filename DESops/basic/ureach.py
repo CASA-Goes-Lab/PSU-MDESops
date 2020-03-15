@@ -1,0 +1,99 @@
+# pylint: disable=C0103
+"""
+Functions related to finding unobservable
+and extended ubobservable reaches.
+"""
+
+
+def unobservable_reach(x_set, state, g, e):
+    """
+    x_set: set of states to be expanded upon
+    state: index of current vertex
+    g: graph
+    "label": keyword for edge label
+    e: keys associated with unobserved
+    """
+    x_set.add(state)
+    if not e:
+        return
+    uc_neighbors = {
+        t.target
+        for t in g.es(_source=state)
+        if t["label"] in e and t.target not in x_set
+    }
+    while uc_neighbors:
+        x_set.update(uc_neighbors)
+        uc_neighbors = {
+            t.target
+            for t in g.es(_source_in=uc_neighbors)
+            if t["label"] in e and t.target not in x_set
+        }
+
+    return
+
+
+def ureach_from_set(x_set, S, g, e):
+    """
+    Find the collected unobservable reach for all states in S
+    x_set: where resultant UR set is stored
+    S: set of states to search from (graph indicies)
+    g: graph to search
+    e: set of unobservable events to consider
+    """
+    x_set.update(S)
+    if not e:
+        return
+
+    uc_neighbors = {
+        t.target
+        for t in g.es(_source_in=S)
+        if t["label"] in e and t.target not in x_set
+    }
+    while uc_neighbors:
+        x_set.update(uc_neighbors)
+        uc_neighbors = {
+            t.target
+            for t in g.es(_source_in=uc_neighbors)
+            if t["label"] in e and t.target not in x_set
+        }
+
+    return
+
+
+def extended_ureach(x_set, state, g, e, Euo):
+    """
+    Find the extended unobservable reach from a state in g.
+
+    e_o: single observable event, set of events e
+    Defined as unobservable reach via unobservable events e in E_uo, followed by the single observable event e_o in E_o
+    Starting from state in g
+    result stored in x_set
+    """
+    unobservable_reach(x_set, state, g, e)
+    new_set = set()
+    for new_state in x_set:
+        for edge in g.es(_source=new_state):
+            if edge["label"] in e and edge["label"] not in Euo:
+                new_set.add(edge.target)
+    x_set.update(new_set)
+    return
+
+
+def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
+    """
+    Find extended_ureach for each state in set_of_states.
+
+    x_set: output set
+    set_of_states: states to begin from
+    g: igraph Graph object
+    e: events to consider
+    Euo: set of unobservable events in g
+    """
+    ureach_from_set(x_set, set_of_states, g, e & Euo)
+    new_set = {
+        t.target
+        for t in g.es(_source_in=x_set)
+        if t["label"] in e and t["label"] not in Euo
+    }
+    x_set.update(new_set)
+    return
