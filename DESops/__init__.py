@@ -1,6 +1,6 @@
 # from .Automata.Automata import Automata
-from .Automata.Automata import *
-from .Event.Event import Event
+from .Automata import *
+from .Event import Event
 
 # Functions:
 # from .Automata.Automata import parallel_comp

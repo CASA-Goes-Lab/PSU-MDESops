@@ -114,24 +114,24 @@ try:
 except:
     raise DependencyNotInstalledError("IGraph library not found")
 
-from ..basic.generic_functions import find_Euc as find_Euc_i
-from ..basic.generic_functions import find_Euo as find_Euo_i
-from ..basic.generic_functions import find_obs_contr
-from ..basic.observer_comp import observer_comp
-from ..basic.parallel_comp import parallel_comp as parallel_comp_i
-from ..basic.product_comp import product_comp as product_comp_i
-from ..basic.ureach import unobservable_reach, ureach_from_set
-from ..error import *
-from ..Event.Event import Event
-from ..file.fsm_to_igraph import fsm_to_igraph
-from ..file.igraph_to_fsm import igraph_to_fsm
-from ..supremal.supremal_cn_supervisor import (
+from .basic.generic_functions import find_Euc as find_Euc_i
+from .basic.generic_functions import find_Euo as find_Euo_i
+from .basic.generic_functions import find_obs_contr
+from .basic.observer_comp import observer_comp
+from .basic.parallel_comp import parallel_comp as parallel_comp_i
+from .basic.product_comp import product_comp as product_comp_i
+from .basic.ureach import unobservable_reach, ureach_from_set
+from .error import *
+from .Event import Event
+from .file.fsm_to_igraph import fsm_to_igraph
+from .file.igraph_to_fsm import igraph_to_fsm
+from .supremal.supremal_cn_supervisor import (
     supremal_cn_supervisor as supremal_cn_supervisor_i,
 )
-from ..supremal.supremal_controllable_supervisor import (
+from .supremal.supremal_controllable_supervisor import (
     supremal_controllable_supervisor as scs_i,
 )
-from ..VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
+from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
 
 # from ..supremal.supremal_controllable_supervisor import supremal_controllable_supervisor_pp
 # from ..basic.construct_spa import construct_spa
