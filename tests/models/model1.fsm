@@ -1,0 +1,7 @@
+2
+
+init1	0	1
+t0	mark1	c	o
+
+mark1	1	1
+t1	init1	c	o
