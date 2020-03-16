@@ -2,9 +2,9 @@
 
 init2	0	2
 e0	mark2	c	o
-e1	state	c	o
+e1	state2	c	o
 
 mark2	1	0
 
-state	0	1
+state2	0	1
 e2	mark2	c	o

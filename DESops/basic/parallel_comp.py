@@ -72,10 +72,9 @@ def parallel_comp(
 
         # Always have (0,0) state
         # unless there are no shared events, then it's really an empty set of states?
-        index = list()
         index = 0
 
-        g_comp_vert_mark = list()
+        g_comp_vert_mark = []
 
         g_comp_edges = []
         g_comp_edge_labels = []
@@ -95,9 +94,6 @@ def parallel_comp(
         else:
             g_comp_vert[(0, 0)] = [index, [0, 0]]
 
-        if save_marked_states:
-            g_comp_vert_mark.append(marked_bool(g1, g2, (0, 0)))
-
         # set next_states_to_check returns False when empty
         while next_states_to_check:
             next_states_temp = set()
@@ -115,7 +111,7 @@ def parallel_comp(
                 g2_labels = {e["label"]: e for e in g2_es}
 
                 l_set = set(g1_labels.keys()).union(g2_labels.keys())
-                [
+                for x in l_set:
                     pcomp_det(
                         x,
                         vert_pair,
@@ -126,8 +122,6 @@ def parallel_comp(
                         new_edge_pairs,
                         new_edge_labels,
                     )
-                    for x in l_set
-                ]
                 # new : (new vert pair, new edge pair, new edge label)
 
                 g_comp_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
@@ -145,14 +139,15 @@ def parallel_comp(
                             g_comp_vert[v] = [index, list(g1.vs["name"][v[0]]) + [v[1]]]
                         else:
                             g_comp_vert[v] = [index, v]
-                        next_states_temp.add(v)
 
-                # if save_marked_states:
-                #   g_comp_vert_mark.append(marked_bool(g1, g2, new_vert_pair))
+                        next_states_temp.add(v)
 
                 # need to check the new states' neighbors
 
             next_states_to_check = next_states_temp
+
+        if save_marked_states:
+            g_comp_vert_mark = [marked_bool(g1, g2, v) for v in g_comp_vert]
 
         assemble_graph(
             g_comp,
