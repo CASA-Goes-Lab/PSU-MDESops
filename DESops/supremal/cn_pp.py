@@ -6,9 +6,11 @@ Preprocessing functions for computing the supremal controllable
 
 import igraph as ig
 
-from ..basic.construct_spa import construct_spa as construct_spa
-from ..basic.construct_subautomata import construct_subautomata as construct_subautomata
-from ..basic.generic_functions import write_transition_attributes
+from DESops.basic.construct_spa import construct_spa as construct_spa
+from DESops.basic.construct_subautomata import (
+    construct_subautomata as construct_subautomata,
+)
+from DESops.basic.generic_functions import write_transition_attributes
 
 
 def cn_preprocessing(H_given, G_given, Euc, Euo):
@@ -46,7 +48,7 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
     G_t = ig.Graph(directed=True)
     H_t = ig.Graph(directed=True)
 
-    dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False)
+    dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False, True)
     construct_spa(G_t, G, Euo)
 
     # After constructing SPA equivalent of G, H can be found by deleting dead states in G

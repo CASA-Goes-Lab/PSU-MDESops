@@ -5,10 +5,8 @@ Functions relevant to constructing an observer automaton from a partially-observ
 Only observer_comp is used outside this module; the rest are included as helper functions
 only used by observer_comp.
 """
-from collections import OrderedDict
-
-from ..basic.generic_functions import find_Euo
-from ..basic.ureach import unobservable_reach, ureach_from_set
+from DESops.basic.generic_functions import find_Euo
+from DESops.basic.ureach import unobservable_reach
 
 
 def observer_comp(
@@ -21,6 +19,8 @@ def observer_comp(
     Euo: optionally provide set of unobservable events; if not provided, will attempt to find in g_po edge attributes
     save_state_names: TODO
     """
+
+    # TODO: implement state marking
 
     if not g_po.vcount():
         return
@@ -88,7 +88,7 @@ def convert_to_graph(
     for i, x in enumerate(X_obs, 1):
         vert_names_list.append(x)
         vert_names[x] = i
-    edge_list = list(H)
+    # edge_list = list(H)
     trans_labels = [q[1] for q in H]
     trans_pairs = [(vert_names[q[0]], vert_names[q[2]]) for q in H]
     g_obs.vs["name"] = vert_names_list

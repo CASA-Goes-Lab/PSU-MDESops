@@ -1,10 +1,5 @@
-# from .Automata.Automata import Automata
-from .Automata import *
-from .Event import Event
-
-# Functions:
-# from .Automata.Automata import parallel_comp
-# from .Automata.Automata import product_comp
-# from .Automata.Automata import offline_VLPPO
+# flake8: noqa
+from DESops.Automata import *
+from DESops.Event import Event
 
 __version__ = "20.3.d0"

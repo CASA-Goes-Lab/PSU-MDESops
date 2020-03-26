@@ -3,7 +3,7 @@
 Functions relevant to the process of constructing Automata wherein one
 is a strict subautomaton of the other.
 """
-from ..basic.product_comp import product_comp
+from DESops.basic.product_comp import product_comp
 
 
 def construct_subautomata(
@@ -31,14 +31,28 @@ def construct_subautomata(
     # (This G does not have proper markings yet)
     product_comp(G, [H_given, G_given], True)
     dead_state_index = H_given.vcount() - 1
+
     if find_H:
         # Find H := G w/o dead states
         delete_dead_states(G, H, dead_state_index)
+
     if save_state_markings:
-        # Add markings to G, H
-        if find_H:
-            mark_states(H_given, H)
-        mark_states(G_given, G)
+        # Add markings to H
+        if find_H and "marked" in H_given.vs.attributes():
+            marked_labels = [False] * H.vcount()
+            for state in H.vs:
+                if H_given.vs[state["name"][0]]["marked"]:
+                    marked_labels[state.index] = True
+            H.vs["marked"] = marked_labels
+
+        # Add markings to G
+        if "marked" in G_given.vs.attributes():
+            marked_labels = [False] * G.vcount()
+            for state in G.vs:
+                if G_given.vs[state["name"][1]]["marked"]:
+                    marked_labels[state.index] = True
+            G.vs["marked"] = marked_labels
+
     return dead_state_index
 
 
@@ -81,20 +95,3 @@ def delete_dead_states(G, H, dead_state_index):
     H.es["label"] = G.es["label"]
     H.delete_vertices(states_to_delete)
     return H
-
-
-def mark_states(O_given, O):
-    """
-    Mark states in H,G if associated states in given H,G are marked
-    """
-    # THIS might not be working properly? (Should be fixed)
-    O_markings = list()
-    if "marked" not in O_given.vs.attributes():
-        return
-    for state in O.vs:
-        if O_given.vs[state["name"][0]]["marked"]:
-            O_markings.append("True")
-        else:
-            O_markings.append("False")
-
-    O.vs["marked"] = O_markings

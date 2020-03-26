@@ -20,9 +20,9 @@ no preprocessing (similar to how the SCS is handled).
 
 import igraph as ig
 
-from ..basic.generic_functions import find_obs_contr
-from ..basic.observer_comp import observer_comp
-from ..supremal.cn_pp import cn_preprocessing as cn_preprocessing
+from DESops.basic.generic_functions import find_obs_contr
+from DESops.basic.observer_comp import observer_comp
+from DESops.supremal.cn_pp import cn_preprocessing as cn_preprocessing
 
 
 def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
@@ -54,17 +54,18 @@ def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
 
     """
 
+    # Make copies to H_given and G_given to keep the given automata
+    H_given_copy = H_given.copy()
+    G_given_copy = G_given.copy()
+
     # Find set of events that are unobservable/uncontrollable
-
-    find_obs_contr([H_given, G_given], Euc, Euo)
-
-    H = ig.Graph(directed=True)
-    G = ig.Graph(directed=True)
+    find_obs_contr([H_given_copy, G_given_copy], Euc, Euo)
 
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
-    [H, G, states_to_remove] = cn_preprocessing(H_given, G_given, Euc, Euo)
+    [H, G, states_to_remove] = cn_preprocessing(H_given_copy, G_given_copy, Euc, Euo)
+
     # For each state:
     # 2.1: Compute normality condition
     # 2.2: Compute controllability condition
@@ -207,7 +208,7 @@ def sns(G, G_obs, S, Euc, Euo, states_removed):
     q_dict = dict()
     bad_states = set()
     states_yi = {v["name"][1] for v in S.vs}
-    Q = list()
+    # Q = list()
     for yi in S.vs:
         for q in G_obs.vs["name"]:
             if yi["name"][1] in q:

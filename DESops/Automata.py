@@ -108,11 +108,7 @@ copy_event_sets
 
 """
 
-
-try:
-    import igraph as ig
-except:
-    raise DependencyNotInstalledError("IGraph library not found")
+from collections.abc import Iterable
 
 from .basic.generic_functions import find_Euc as find_Euc_i
 from .basic.generic_functions import find_Euo as find_Euo_i
@@ -121,7 +117,7 @@ from .basic.observer_comp import observer_comp
 from .basic.parallel_comp import parallel_comp as parallel_comp_i
 from .basic.product_comp import product_comp as product_comp_i
 from .basic.ureach import unobservable_reach, ureach_from_set
-from .error import *
+from .error import DependencyNotInstalledError, IncongruencyError, MissingAttributeError
 from .Event import Event
 from .file.fsm_to_igraph import fsm_to_igraph
 from .file.igraph_to_fsm import igraph_to_fsm
@@ -132,6 +128,12 @@ from .supremal.supremal_controllable_supervisor import (
     supremal_controllable_supervisor as scs_i,
 )
 from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
+
+try:
+    import igraph as ig
+except ImportError:
+    raise DependencyNotInstalledError("IGraph library not found")
+
 
 # from ..supremal.supremal_controllable_supervisor import supremal_controllable_supervisor_pp
 # from ..basic.construct_spa import construct_spa
@@ -469,10 +471,10 @@ class Automata:
         Plotting is done by the igraph library.
         Requires cairo package to be installed.
         """
-        try:
-            import cairo
-        except:
-            raise DependencyNotInstalledError("cairo required to plot Igraph graphs")
+        # try:
+        #     import cairo
+        # except ImportError:
+        #     raise DependencyNotInstalledError("cairo required to plot Igraph graphs")
 
         P = self._graph.copy()
         P.es["label"] = [str2(l) for l in P.es["label"]]
@@ -524,7 +526,7 @@ class Automata:
         self.X_crit = self._graph["X_crit"]
         self.type = self._graph["type"]
 
-    def write_svg(
+    def write_svg(  # noqa: C901
         self,
         fname,
         layout="auto",
@@ -544,7 +546,7 @@ class Automata:
 
         try:
             import math
-        except:
+        except ImportError:
             raise DependencyNotInstalledError("Math library not found")
 
         """Saves the graph as an SVG (Scalable Vector Graphics) file
@@ -1020,7 +1022,7 @@ def product_comp(inputs, save_state_names=True, save_marked_states=False):
     # Appears to work fine even though inputs are provided as automata, meaning
     # the parallel_comp_i function works on Automata objects & igraph Graphs?
     product_comp_i(P, inputs, save_state_names, save_marked_states)
-    A = Automata(graph=P)
+    A = Automata(P)
     copy_event_sets(inputs, A)
     return A
 
