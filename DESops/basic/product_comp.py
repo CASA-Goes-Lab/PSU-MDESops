@@ -10,7 +10,7 @@ parallel_comp but were essentially redundant.
 """
 from collections import OrderedDict
 
-from .parallel_comp import assemble_graph, marked_bool
+from DESops.basic.parallel_comp import assemble_graph, marked_bool
 
 
 def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False):
@@ -90,10 +90,6 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
 
         if save_marked_states:
             g_comp_vert_mark.append(marked_bool(g1, g2, (0, 0)))
-        # more_states_to_check: flag that means there are new pairs in next_states_to_check
-        # Gets set when new synchronized states are found --- need to check their neighbors now
-        # always should be true for first iteration (creating 0,0 state)
-        more_states_to_check = True
 
         # set next_states_to_check returns False when empty
         while next_states_to_check:
@@ -104,8 +100,6 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
                 # select edges with source at current vertex
                 g1_es = g1.es(_source=vert_pair[0])
                 g2_es = g2.es(_source=vert_pair[1])
-
-                more_states_to_check = False
 
                 common_events = all_events.intersection(g1_es["label"]).intersection(
                     g2_es["label"]
@@ -140,7 +134,6 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
                             g_comp_vert_mark.append(marked_bool(g1, g2, new_vert_pair))
                         # need to check the new states' neighbors
                         next_states_temp.add(new_vert_pair)
-                    more_states_to_check = True
                     new_edge_pair = ((a.source, b.source), (a.target, b.target))
                     g_comp_edges.append(new_edge_pair)
                     g_comp_edge_labels.append(x)
