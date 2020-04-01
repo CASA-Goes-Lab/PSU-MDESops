@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "DESops"
-version = "20.3.d0"
+version = "20.3.0"
 description = ""
 authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>"]
+packages = [
+    { include = "DESops" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"

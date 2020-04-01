@@ -17,10 +17,7 @@ def observer_comp(
     g_po: input partially observed automata
     g_obs: Obs(g_po)
     Euo: optionally provide set of unobservable events; if not provided, will attempt to find in g_po edge attributes
-    save_state_names: TODO
     """
-
-    # TODO: implement state marking
 
     if not g_po.vcount():
         return

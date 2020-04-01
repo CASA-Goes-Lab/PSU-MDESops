@@ -72,7 +72,7 @@ def extract_H_from_G(G, dead_state_index, states_to_delete):
         [state.index for state in G.vs if state["name"][0][0] == dead_state_index]
     )
     G.vs["name"] = [(v, i) for i, v in enumerate(G.vs["name"])]
-    #### G.delete_vertices(states_to_delete)
+    # G.delete_vertices(states_to_delete)
     return G
 
 

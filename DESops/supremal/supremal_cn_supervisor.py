@@ -64,6 +64,7 @@ def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
+    # NOTE: The states in H are not yet deleted and must be deleted in SCS!
     [H, G, states_to_remove] = cn_preprocessing(H_given_copy, G_given_copy, Euc, Euo)
 
     # For each state:
@@ -74,11 +75,10 @@ def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
     # delete all bad states, resulting in K^CN
     states_removed = set()
     G_obs = ig.Graph(directed=True)
-    observer_comp(G, G_obs, Euo=Euo)
+    observer_comp(G, G_obs, Euo=Euo, save_state_names=False, save_marked_states=True)
 
-    not_converged = True
     first_iter = True
-    while not_converged:
+    while True:
         if not first_iter and not states_to_remove:
             break
         else:
