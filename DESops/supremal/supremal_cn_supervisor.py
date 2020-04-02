@@ -54,18 +54,14 @@ def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
 
     """
 
-    # Make copies to H_given and G_given to keep the given automata
-    H_given_copy = H_given.copy()
-    G_given_copy = G_given.copy()
-
     # Find set of events that are unobservable/uncontrollable
-    find_obs_contr([H_given_copy, G_given_copy], Euc, Euo)
+    find_obs_contr([H_given, G_given], Euc, Euo)
 
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
     # NOTE: The states in H are not yet deleted and must be deleted in SCS!
-    [H, G, states_to_remove] = cn_preprocessing(H_given_copy, G_given_copy, Euc, Euo)
+    [H, G, states_to_remove] = cn_preprocessing(H_given, G_given, Euc, Euo)
 
     # For each state:
     # 2.1: Compute normality condition

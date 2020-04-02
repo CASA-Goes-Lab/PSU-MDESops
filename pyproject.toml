@@ -11,6 +11,7 @@ packages = [
 python = "^3.8"
 python-igraph = "^0.8.0"
 pycairo = "^1.19.1"
+pydash = "^4.7.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

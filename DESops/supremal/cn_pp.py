@@ -4,7 +4,10 @@ Preprocessing functions for computing the supremal controllable
 
 """
 
+import copy
+
 import igraph as ig
+from pydash import flatten_deep
 
 from DESops.basic.construct_spa import construct_spa as construct_spa
 from DESops.basic.construct_subautomata import (
@@ -42,6 +45,10 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
     assumed they were found in the supremal_cn_supervisor module).
 
     """
+
+    # Save marked states of H
+    marked_H_given = [v.attributes().get("marked", False) for v in H_given.vs]
+
     G = ig.Graph(directed=True)
     H = ig.Graph(directed=True)
 
@@ -54,6 +61,13 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
     # After constructing SPA equivalent of G, H can be found by deleting dead states in G
     G_states_to_delete = list()
     H = extract_H_from_G(G.copy(), dead_state_index, G_states_to_delete)
+    # Mark state in H accordingly to H_given
+    # NOTE: cannot mark H by just looking at marked_H_given because the states in G_states_to_delete are not yet deleted from H here
+    H_given_states_in_H = [flatten_deep(v["name"])[0] for v in H.vs]
+    H.vs["marked"] = [
+        marked_H_given[index] if index < len(marked_H_given) else False
+        for index in H_given_states_in_H
+    ]
     # Rewrite controllable/observable attributes to H, G
     add_event_attributes(H, G, Euo, Euc)
 
