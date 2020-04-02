@@ -2,4 +2,4 @@
 from DESops.Automata import *
 from DESops.Event import Event
 
-__version__ = "20.3.0"
+__version__ = "20.3.1"
