@@ -454,7 +454,7 @@ class Automata:
                 )
         PO = ig.Graph(directed=True)
         observer_comp(self._graph, PO, self.Euo, save_state_names, save_marked_states)
-        PO_A = Automata(graph=PO)
+        PO_A = Automata(PO)
         PO_A.type = "obs"
         return PO_A
 
