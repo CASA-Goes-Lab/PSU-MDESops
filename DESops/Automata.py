@@ -109,6 +109,11 @@ copy_event_sets
 """
 
 from collections.abc import Iterable
+try:
+    import igraph as ig
+except ImportError:
+    raise DependencyNotInstalledError("IGraph library not found")
+
 
 from .basic.generic_functions import find_Euc as find_Euc_i
 from .basic.generic_functions import find_Euo as find_Euo_i
@@ -128,11 +133,8 @@ from .supremal.supremal_controllable_supervisor import (
     supremal_controllable_supervisor as scs_i,
 )
 from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
+from .AES.SynthSMV_AES import write_AES_SMV_model
 
-try:
-    import igraph as ig
-except ImportError:
-    raise DependencyNotInstalledError("IGraph library not found")
 
 
 # from ..supremal.supremal_controllable_supervisor import supremal_controllable_supervisor_pp

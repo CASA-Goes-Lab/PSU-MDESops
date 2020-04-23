@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 from DESops.Automata import Automata
 
 cwd = Path(__file__).parent.resolve()

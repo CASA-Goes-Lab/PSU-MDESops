@@ -1,0 +1,3 @@
+MODULE unobservable_reach(Q,gamma,asg,obs)
+VAR nx: array 0..2 of boolean;
+INIT (!nX[0]& !nx[1]& !nx[2])
