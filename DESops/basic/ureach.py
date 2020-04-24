@@ -97,3 +97,34 @@ def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
     }
     x_set.update(new_set)
     return
+
+
+def ureach_ignore_states(x_set, state, g, e, ignore):
+    """
+    Find the collected unobservable reach for all states in S
+    x_set: where resultant UR set is stored
+    S: set of states to search from (graph indicies)
+    g: graph to search
+    e: set of unobservable events to consider
+    ignore: set of states to ignore
+    """
+    if state in ignore:
+        return
+    x_set.add(state)
+    if not e:
+        return
+
+    uc_neighbors = {
+        t.target
+        for t in g.es(_source=state)
+        if t["label"] in e and t.target not in x_set and t.target not in ignore
+    }
+    while uc_neighbors:
+        x_set.update(uc_neighbors)
+        uc_neighbors = {
+            t.target
+            for t in g.es(_source_in=uc_neighbors)
+            if t["label"] in e and t.target not in x_set and t.target not in ignore
+        }
+
+    return
