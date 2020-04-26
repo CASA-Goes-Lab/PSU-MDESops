@@ -1,0 +1,26 @@
+7
+
+0	0	2
+b	1	c	uo
+c	3	c	uo
+
+1	0	2
+e	1	uc	uo
+a	2	c	uo
+
+2	0	2
+o1	2	uc	o
+o2	5	uc	o
+
+3	0	2
+a	4	c	uo
+o1	5	uc	o
+
+4	0	1
+o1	6	uc	o
+
+5	0	1
+o1	5	uc	o
+
+6	0	1
+o1	6	uc	o

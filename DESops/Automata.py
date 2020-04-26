@@ -163,6 +163,7 @@ class Automata:
         self._graph = ig.Graph(directed=True)
         self.Euc = set()
         self.Euo = set()
+        self.E = set()
         self.X_crit = set()
         self.Ea = set()
         self.dead_state = None
@@ -173,7 +174,7 @@ class Automata:
             fsm_filename = init
             self._graph = ig.Graph(directed=True)
             fsm_to_igraph(fsm_filename, self._graph)
-            find_obs_contr(self._graph, self.Euc, self.Euo)
+            find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
             if "crit" in self._graph.vs.attributes():
                 self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
 
@@ -181,7 +182,7 @@ class Automata:
             # Create Automata from igraph Graph
             graph = init
             self._graph = graph.copy()
-            find_obs_contr(self._graph, self.Euc, self.Euo)
+            find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
 
         elif isinstance(init, Automata):
             # Create Automata from another Automata
@@ -355,7 +356,7 @@ class Automata:
         P = ig.Graph(directed=True)
         fsm_to_igraph(filename, P)
         self._graph = P
-        find_obs_contr(self._graph, self.Euc, self.Euo)
+        find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
         if "crit" in self._graph.vs.attributes():
             self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
 
@@ -367,7 +368,7 @@ class Automata:
         Extract uncontrollable & unoberservable events
         from igraph Graph instance.
         """
-        find_obs_contr(self._graph, self.Euc, self.Euo)
+        find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
 
     def find_Euc(self):
         """

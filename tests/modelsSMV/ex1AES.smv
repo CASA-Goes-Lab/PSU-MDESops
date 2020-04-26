@@ -1,3 +1,103 @@
 MODULE unobservable_reach(Q,gamma,asg,obs)
-VAR nx: array 0..2 of boolean;
-INIT (!nX[0]& !nx[1]& !nx[2])
+VAR nX: array 0..2 of boolean;
+INIT (!nX[0]& !nX[1]& !nX[2])
+ASSIGN
+	next(nX[0]):=
+	case
+		asg & !obs: Q[0];
+		nX[0] & !asg & !obs: TRUE;
+		obs: nX[0];
+		TRUE: FALSE;
+	esac;
+	next(nX[1]):=
+	case
+		asg & !obs: Q[1];
+		nX[1] & !asg & !obs: TRUE;
+		!nX[1] & !asg & !obs & (nX[0]) & gamma[0] & !asg & !obs: TRUE;
+		obs: nX[1];
+		TRUE: FALSE;
+	esac;
+	next(nX[2]):=
+	case
+		asg & !obs: Q[2];
+		nX[2] & !asg & !obs: TRUE;
+		obs: nX[2];
+		TRUE: FALSE;
+	esac;
+
+MODULE main
+
+IVAR
+	events_o: {b, eps};
+	--event_uo: a,
+	--event_uc:
+	--event_c: a, b,
+	gammas: array 0..1 of boolean;
+
+VAR
+	Q: array 0..2 of boolean;
+	uoreach: unobservable_reach(Q,gammas,asg,obs);
+	obs: boolean;
+	asg: boolean;
+	oldgammas: array 0..1 of boolean;
+INIT (Q[0]& !Q[1]& !Q[2])
+ASSIGN
+	init(asg):=TRUE;
+	next(asg):=
+	case
+		!obs:FALSE;
+		obs & events_o!= eps: TRUE;
+		obs & events_o = eps: FALSE;
+	esac;
+
+ASSIGN
+	init(obs):=FALSE;
+	next(obs):=
+	case
+		!obs & uoreach.nX[0] = next(uoreach.nX[0]) & uoreach.nX[1] = next(uoreach.nX[1]) & uoreach.nX[2] = next(uoreach.nX[2]): TRUE;
+		obs & events_o!= eps: FALSE;
+		obs & events_o = eps: TRUE;
+		TRUE: FALSE;
+	esac;
+
+ASSIGN
+	next(Q[0]):=
+	case
+		!asg & !obs: uoreach.nX[0];
+		!asg & obs & (Q[0]) & events_o = b: TRUE;
+		!asg & obs & !(Q[0]) & events_o = b: FALSE;
+		asg: Q[0];
+		TRUE: Q[0];
+	esac;
+	next(Q[1]):=
+	case
+		!asg & !obs: uoreach.nX[1];
+		!asg & obs & events_o = b: FALSE;
+		asg: Q[1];
+		TRUE: Q[1];
+	esac;
+	next(Q[2]):=
+	case
+		!asg & !obs: uoreach.nX[2];
+		!asg & obs & events_o = b: FALSE;
+		asg: Q[2];
+		TRUE: Q[2];
+	esac;
+
+ASSIGN
+	next(oldgammas[0]):= gammas[0];
+	next(oldgammas[1]):= gammas[1];
+
+TRANS
+	(gammas[0]=FALSE & gammas[1]=FALSE -> events_o in {eps}) &
+	(gammas[0]=FALSE & gammas[1]=TRUE -> events_o in {eps,b}) &
+	(gammas[0]=TRUE & gammas[1]=FALSE -> events_o in {eps}) &
+	(gammas[0]=TRUE & gammas[1]=TRUE -> events_o in {eps,b}) &
+	((Q[0]| Q[1]| Q[2]) -> (next(Q[0])| next(Q[1])| next(Q[2]))) &
+	((Q[0] -> events_o in {eps}) | (Q[1] -> events_o in {eps}) | (Q[2] -> events_o in {b,eps})) &
+	(!asg -> (gammas[0] = oldgammas[0] & gammas[1] = oldgammas[1]))
+
+CTRBL obs = FALSE;
+CTRBL gammas[0] = TRUE |  gammas[0] = FALSE | gammas[1] = TRUE |  gammas[1] = FALSE;
+
+SYNTH AG !Q[2]

@@ -3,8 +3,8 @@ sys.path.append('../')
 
 import DESops as d
 
-G = d.Automata("models/ex1AES.fsm")
+G = d.Automata("models/ex3AES.fsm")
 
 # G.plot()
-d.write_AES_SMV_model(G,"modelsSMV/ex1AES.smv")
+d.write_AES_SMV_model(G,"modelsSMV/ex3AES.smv")
 

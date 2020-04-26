@@ -5,7 +5,7 @@ Contains helpful functions used in various operations.
 """
 
 
-def find_obs_contr(S, Euc=None, Euo=None):
+def find_obs_contr(S, Euc=None, Euo=None,E=None):
     """
     For set of graphs S, find Euc and Euo if not provided.
     This way, checks for Euc, Euo as empty sets are done
@@ -16,6 +16,10 @@ def find_obs_contr(S, Euc=None, Euo=None):
         find_Euc(S, Euc)
     if not Euo:
         find_Euo(S, Euo)
+    if not E:
+        G_E = [trans["label"] for trans in S.es]
+        E.update(G_E)
+
 
 
 def find_Euc(S, Euc=set()):
