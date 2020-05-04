@@ -39,6 +39,7 @@ def fsm_to_igraph(fsm_filename, g):
     trans_observable = list()
     trans_controllable = list()
     trans_prob = list()
+    neighbors_list = list()
 
     with open(fsm_filename, 'r') as f:
         # First line in fsm is # of states
@@ -62,6 +63,7 @@ def fsm_to_igraph(fsm_filename, g):
                 state_crit.append(states_tuple[2])
             i+=1
             total = 0
+            neigh = list()
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
                 if trans_tuple == ["\n"]:
@@ -84,7 +86,11 @@ def fsm_to_igraph(fsm_filename, g):
                         sys.exit("ERROR %s in line %d:\nProbability value must be a number smaller than or equal to 1" %(fsm_filename,i))
                     trans_prob.append(trans_tuple[4])
                     total = total + float(trans_tuple[4])
+                    neigh.append((trans_tuple[1],trans_tuple[0],int(trans_tuple[4])))
+                else:
+                    neigh.append((trans_tuple[1],trans_tuple[0]))
                 i+=1
+            neighbors_list.append(neigh)
             if total > 0 and total != 1:
                 sys.exit("ERROR %s:\nTransitions in state %s do not sum up to 1" %(fsm_filename, states_tuple[0]))
 
@@ -105,6 +111,7 @@ def fsm_to_igraph(fsm_filename, g):
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == 'c' for x in trans_controllable]
     g.es["contr"] = trans_controllable_bool
-
+    neighbors_list = [[(state_names.index(adj[0]),adj[1]) for adj in l] for l in neighbors_list]
+    g.vs["out"] = neighbors_list
     if trans_prob:
         g.es["prob"] = trans_prob

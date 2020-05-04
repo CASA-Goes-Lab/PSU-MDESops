@@ -13,8 +13,8 @@ ASSIGN
 	case
 		asg & !obs: Q[1];
 		nX[1] & !asg & !obs: TRUE;
+		!nX[1] & !asg & !obs & (nX[0]) & gamma[1] & !asg & !obs: TRUE;
 		!nX[1] & !asg & !obs & (nX[1]) & !asg & !obs: TRUE;
-		!nX[1] & !asg & !obs & (nX[0]) & gamma[0] & !asg & !obs: TRUE;
 		obs: nX[1];
 		TRUE: FALSE;
 	esac;
@@ -22,7 +22,7 @@ ASSIGN
 	case
 		asg & !obs: Q[2];
 		nX[2] & !asg & !obs: TRUE;
-		!nX[2] & !asg & !obs & (nX[1]) & gamma[1] & !asg & !obs: TRUE;
+		!nX[2] & !asg & !obs & (nX[1]) & gamma[2] & !asg & !obs: TRUE;
 		obs: nX[2];
 		TRUE: FALSE;
 	esac;
@@ -30,7 +30,7 @@ ASSIGN
 	case
 		asg & !obs: Q[3];
 		nX[3] & !asg & !obs: TRUE;
-		!nX[3] & !asg & !obs & (nX[0]) & gamma[2] & !asg & !obs: TRUE;
+		!nX[3] & !asg & !obs & (nX[0]) & gamma[0] & !asg & !obs: TRUE;
 		obs: nX[3];
 		TRUE: FALSE;
 	esac;
@@ -38,7 +38,7 @@ ASSIGN
 	case
 		asg & !obs: Q[4];
 		nX[4] & !asg & !obs: TRUE;
-		!nX[4] & !asg & !obs & (nX[3]) & gamma[1] & !asg & !obs: TRUE;
+		!nX[4] & !asg & !obs & (nX[3]) & gamma[2] & !asg & !obs: TRUE;
 		obs: nX[4];
 		TRUE: FALSE;
 	esac;
@@ -60,10 +60,10 @@ ASSIGN
 MODULE main
 
 IVAR
-	events_o: {o1,o2, eps};
-	--event_uo: e, b, a, c,
-	--event_uc: e, o1, o2,
-	--event_c: b, a, c,
+	events_o: {o2,o1, eps};
+	--event_uo: c, b, e, a,
+	--event_uc: o2, e, o1,
+	--event_c: c, b, a,
 	gammas: array 0..2 of boolean;
 
 VAR
@@ -96,60 +96,60 @@ ASSIGN
 	next(Q[0]):=
 	case
 		!asg & !obs: uoreach.nX[0];
-		!asg & obs & events_o = o1: FALSE;
 		!asg & obs & events_o = o2: FALSE;
+		!asg & obs & events_o = o1: FALSE;
 		asg: Q[0];
 		TRUE: Q[0];
 	esac;
 	next(Q[1]):=
 	case
 		!asg & !obs: uoreach.nX[1];
-		!asg & obs & events_o = o1: FALSE;
 		!asg & obs & events_o = o2: FALSE;
+		!asg & obs & events_o = o1: FALSE;
 		asg: Q[1];
 		TRUE: Q[1];
 	esac;
 	next(Q[2]):=
 	case
 		!asg & !obs: uoreach.nX[2];
+		!asg & obs & events_o = o2: FALSE;
 		!asg & obs & (Q[2]) & events_o = o1: TRUE;
 		!asg & obs & !(Q[2]) & events_o = o1: FALSE;
-		!asg & obs & events_o = o2: FALSE;
 		asg: Q[2];
 		TRUE: Q[2];
 	esac;
 	next(Q[3]):=
 	case
 		!asg & !obs: uoreach.nX[3];
-		!asg & obs & events_o = o1: FALSE;
 		!asg & obs & events_o = o2: FALSE;
+		!asg & obs & events_o = o1: FALSE;
 		asg: Q[3];
 		TRUE: Q[3];
 	esac;
 	next(Q[4]):=
 	case
 		!asg & !obs: uoreach.nX[4];
-		!asg & obs & events_o = o1: FALSE;
 		!asg & obs & events_o = o2: FALSE;
+		!asg & obs & events_o = o1: FALSE;
 		asg: Q[4];
 		TRUE: Q[4];
 	esac;
 	next(Q[5]):=
 	case
 		!asg & !obs: uoreach.nX[5];
-		!asg & obs & (Q[3] | Q[5]) & events_o = o1: TRUE;
-		!asg & obs & !(Q[3] | Q[5]) & events_o = o1: FALSE;
 		!asg & obs & (Q[2]) & events_o = o2: TRUE;
 		!asg & obs & !(Q[2]) & events_o = o2: FALSE;
+		!asg & obs & (Q[3] | Q[5]) & events_o = o1: TRUE;
+		!asg & obs & !(Q[3] | Q[5]) & events_o = o1: FALSE;
 		asg: Q[5];
 		TRUE: Q[5];
 	esac;
 	next(Q[6]):=
 	case
 		!asg & !obs: uoreach.nX[6];
+		!asg & obs & events_o = o2: FALSE;
 		!asg & obs & (Q[4] | Q[6]) & events_o = o1: TRUE;
 		!asg & obs & !(Q[4] | Q[6]) & events_o = o1: FALSE;
-		!asg & obs & events_o = o2: FALSE;
 		asg: Q[6];
 		TRUE: Q[6];
 	esac;
@@ -160,14 +160,14 @@ ASSIGN
 	next(oldgammas[2]):= gammas[2];
 
 TRANS
-	(gammas[0]=FALSE & gammas[1]=FALSE & gammas[2]=FALSE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=FALSE & gammas[1]=FALSE & gammas[2]=TRUE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=FALSE & gammas[1]=TRUE & gammas[2]=FALSE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=FALSE & gammas[1]=TRUE & gammas[2]=TRUE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=TRUE & gammas[1]=FALSE & gammas[2]=FALSE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=TRUE & gammas[1]=FALSE & gammas[2]=TRUE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=TRUE & gammas[1]=TRUE & gammas[2]=FALSE -> events_o in {eps,o1,o2}) & 
-	(gammas[0]=TRUE & gammas[1]=TRUE & gammas[2]=TRUE -> events_o in {eps,o1,o2}) & 
+	(gammas[0]=FALSE & gammas[1]=FALSE & gammas[2]=FALSE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=FALSE & gammas[1]=FALSE & gammas[2]=TRUE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=FALSE & gammas[1]=TRUE & gammas[2]=FALSE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=FALSE & gammas[1]=TRUE & gammas[2]=TRUE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=TRUE & gammas[1]=FALSE & gammas[2]=FALSE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=TRUE & gammas[1]=FALSE & gammas[2]=TRUE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=TRUE & gammas[1]=TRUE & gammas[2]=FALSE -> events_o in {eps,o2,o1}) & 
+	(gammas[0]=TRUE & gammas[1]=TRUE & gammas[2]=TRUE -> events_o in {eps,o2,o1}) & 
 	((Q[0]| Q[1]| Q[2]| Q[3]| Q[4]| Q[5]| Q[6]) -> (next(Q[0])| next(Q[1])| next(Q[2])| next(Q[3])| next(Q[4])| next(Q[5])| next(Q[6]))) &
 	((Q[0] -> events_o in {eps}) | (Q[1] -> events_o in {eps}) | (Q[2] -> events_o in {o1,o2,eps}) | (Q[3] -> events_o in {o1,eps}) | (Q[4] -> events_o in {o1,eps}) | (Q[5] -> events_o in {o1,eps}) | (Q[6] -> events_o in {o1,eps})) & 
 	(!asg -> (gammas[0] = oldgammas[0] & gammas[1] = oldgammas[1] & gammas[2] = oldgammas[2])) 
