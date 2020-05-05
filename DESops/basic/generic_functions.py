@@ -3,26 +3,30 @@
 """
 Contains helpful functions used in various operations.
 """
+from collections.abc import Iterable
 
 
-def find_obs_contr(S, Euc=None, Euo=None,E=None):
+def find_obs_contr(S, Euc=set(), Euo=set(), E=set()):
     """
     For set of graphs S, find Euc and Euo if not provided.
     This way, checks for Euc, Euo as empty sets are done
     here, rather than at the place this function gets called
     (slight convenience).
     """
+    if not isinstance(S, Iterable):
+        S = [S]
+
     if not Euc:
         find_Euc(S, Euc)
     if not Euo:
         find_Euo(S, Euo)
     if not E:
-        G_E = [trans["label"] for trans in S.es]
-        E.update(G_E)
+        find_E(S, E)
+
+    return (Euc, Euo, E)
 
 
-
-def find_Euc(S, Euc=set()):
+def find_Euc(S, Euc):
     """
     Check set of graphs S to find uncontrollable events.
     """
@@ -43,7 +47,7 @@ def find_Euc(S, Euc=set()):
         Euc.update(G_uc)
 
 
-def find_Euo(S, Euo=set()):
+def find_Euo(S, Euo):
     """
     Check set of graphs S to find unobservable events.
     """
@@ -62,6 +66,19 @@ def find_Euo(S, Euo=set()):
             return
         G_uo = [trans["label"] for trans in S.es if not trans["obs"]]
         Euo.update(G_uo)
+
+
+def find_E(S, E):
+    """
+    Check set of graphs S to find all events.
+    """
+    if not S:
+        return set()
+    if E:
+        return
+    for graph in S:
+        events = [trans["label"] for trans in graph.es]
+        E.update(events)
 
 
 def write_transition_attributes(G, Euc=set(), Euo=set()):
