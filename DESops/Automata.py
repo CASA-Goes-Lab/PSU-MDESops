@@ -109,12 +109,8 @@ copy_event_sets
 """
 
 from collections.abc import Iterable
-try:
-    import igraph as ig
-except ImportError:
-    raise DependencyNotInstalledError("IGraph library not found")
 
-
+from .AES.SynthSMV_AES import write_AES_SMV_model
 from .basic.generic_functions import find_Euc as find_Euc_i
 from .basic.generic_functions import find_Euo as find_Euo_i
 from .basic.generic_functions import find_obs_contr
@@ -133,8 +129,11 @@ from .supremal.supremal_controllable_supervisor import (
     supremal_controllable_supervisor as scs_i,
 )
 from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
-from .AES.SynthSMV_AES import write_AES_SMV_model
 
+try:
+    import igraph as ig
+except ImportError:
+    raise DependencyNotInstalledError("IGraph library not found")
 
 
 # from ..supremal.supremal_controllable_supervisor import supremal_controllable_supervisor_pp
@@ -174,7 +173,7 @@ class Automata:
             fsm_filename = init
             self._graph = ig.Graph(directed=True)
             fsm_to_igraph(fsm_filename, self._graph)
-            find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
+            find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
             if "crit" in self._graph.vs.attributes():
                 self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
 
@@ -182,7 +181,7 @@ class Automata:
             # Create Automata from igraph Graph
             graph = init
             self._graph = graph.copy()
-            find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
+            find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
 
         elif isinstance(init, Automata):
             # Create Automata from another Automata
@@ -356,7 +355,7 @@ class Automata:
         P = ig.Graph(directed=True)
         fsm_to_igraph(filename, P)
         self._graph = P
-        find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
+        find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
         if "crit" in self._graph.vs.attributes():
             self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
 
@@ -368,7 +367,7 @@ class Automata:
         Extract uncontrollable & unoberservable events
         from igraph Graph instance.
         """
-        find_obs_contr(self._graph, self.Euc, self.Euo,self.E)
+        find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
 
     def find_Euc(self):
         """
@@ -970,6 +969,15 @@ def parallel_comp(
 
     Depends on parallel_comp_i, implemented in basic/parallel_comp
     """
+
+    # Change every state name to str or list of str
+    for graph in inputs:
+        graph.vs["name"] = [
+            [str(n) for n in name]
+            if isinstance(name, Iterable) and not isinstance(name, str)
+            else str(name)
+            for name in graph.vs["name"]
+        ]
 
     if save_marked_states:
         if not all(["marked" in a.vs.attributes() for a in inputs]):
