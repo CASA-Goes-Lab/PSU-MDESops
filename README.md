@@ -124,3 +124,44 @@ The initial state of an automaton is assumed to always be the first element in a
 * The supremal controllable supervisor operations have specified conditions on the Automata instances used; make sure assumptions are satisfied, or use the functions that handle preprocessing.
 
 * Serialization is neatly handled by the igraph `write_pickle()` and `read_pickle()` methods. See the igraph documentation for more details, but they can be used as Automata methods with no issues.
+
+## Contributing to DESops
+
+You will need [Poetry](https://python-poetry.org/) to start contribution on the DESops codes.
+
+First, you will need to clone the repository using `git`:
+```
+$ git clone git@gitlab.eecs.umich.edu:M-DES-tools/desops.git
+$ cd desops
+```
+
+Second, you will need to install the required dependencies and `pre-commit` git hooks:
+```
+$ poetry install
+$ poetry run pre-commit install
+```
+
+### Before pushing your contribution to the repository
+
+`pre-commit` checks the code style and fix it if necessary every time the code
+changes are committed. When `pre-commit` fixes the code style, `git` automatically
+reverts your `commit` command, so you will need to stage your changes again.
+
+This repository employs [pytest](https://docs.pytest.org/en/latest/) to write tests.
+All tests are located in `tests` directory, and must be written with the formats of
+`pytest`.
+
+You can execute tests by the following command:
+```
+$ poetry run pytest
+```
+You can also execute certain tests by specifying test names:
+```
+$ poetry run pytest -k [name]
+```
+For example, if you want to do the test defined by `def test_example():`, pass its name to `pytest` as:
+```
+$ poetry run pytest -k example
+```
+
+For other options of `pytest`, see `poetry run pytest --help`.
