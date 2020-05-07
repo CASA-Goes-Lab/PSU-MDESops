@@ -104,3 +104,32 @@ def write_transition_attributes(G, Euc=set(), Euo=set()):
         G.es["contr"] = contr_list
     if Euo:
         G.es["obs"] = obs_list
+
+
+def copy_event_sets(this, other):
+    """
+    Useful function to copy event sets from 'this' to 'other'.
+    Event sets being the set of unobservable events Euo, the set
+    of uncontrollable events Euc, and the set of compromised
+    events Ea.
+
+    Used for example in the parallel_comp function to handle
+    copying attributes from an input set of automata to the
+    automata resulting from the composition.
+
+    this: either an automata or iteratable collection of automata,
+        from which event sets will be copied.
+    other: automata, target of the copying.
+
+    If 'this' is an interable, the event sets copied to 'other'
+    will be the set union of the automata in 'this'.
+
+    """
+    if isinstance(this, Automata):
+        other.Euo = this.Euo
+        other.Euc = this.Euc
+        other.Ea = this.Ea
+    else:
+        other.Euo = set.union(*[a.Euo for a in this])
+        other.Euc = set.union(*[a.Euc for a in this])
+        other.Ea = set.union(*[a.Ea for a in this])

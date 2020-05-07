@@ -1,11 +1,13 @@
-import igraph as ig
-import subprocess
-import os
-from pathlib import Path
 import itertools
+import os
+import subprocess
+from pathlib import Path
 
-def construct_explicit_AES(arena, G, E, Euc, Euo, X_crit, debug = False):
-# arena: igraph graph object where resulting arena will be stored, assumed to be empty
+import igraph as ig
+
+
+def construct_explicit_AES(arena, G, E, Euc, Euo, X_crit, debug=False):
+    # arena: igraph graph object where resulting arena will be stored, assumed to be empty
     # G: input system automata, igraph graph object
     # E: set of events of G
     # Euc: set of uncontrollable events of G
@@ -16,8 +18,11 @@ def construct_explicit_AES(arena, G, E, Euc, Euo, X_crit, debug = False):
     #          default: False
     if debug:
         import time
+
         start_time = time.process_time()
-    Eo = E-Euo
+    Eo = E - Euo
+
+
 #     A1 = set()
 #     # find_A1_sets(A1, G, Euc)
 #     singleton_A1_set(A1,G,E,Euc)

@@ -10,20 +10,16 @@ parallel_comp but were essentially redundant.
 """
 from collections import OrderedDict
 
-from DESops.basic.parallel_comp import assemble_graph, marked_bool
+from DESops.basic_operations.generic_functions import copy_event_sets
+from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
 
 
-def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False):
+def product_comp(inputs, g_comp=None, save_state_names=True, save_marked_states=False):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.
 
     Parameters
-
-    g_comp: directed igraph Graph, assumed to be empty. Used to store the output
-        instead of returning a copy. This is different from the interface in the
-        Automata class file, which returns a copy of the result of the
-        composition.
 
     g_list: an iterable collection of Automata (class object) for which
         the parallel composition will be computed. If saving state names,
@@ -43,15 +39,25 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
         An error will be raised if this parameter is True, but not all Automata
         in the composition have the "marked" parameter on their vertices.
 
-    Doesn't return anything to avoid potentially making redundant copies.
+    Returns an Automata object.
+
     """
+    g_comp_def = True
+    if not g_comp:
+        g_comp_def = False
+        g_comp = Automata()
+    if save_marked_states:
+        if not all(["marked" in a.vs.attributes() for a in inputs]):
+            raise MissingAttributeError(
+                'Graph does not have "marked" attribute on states'
+            )
 
     # Compute intersection of events of all included graphs:
-    all_events = g_list[0].es["label"]
-    for gi in g_list[1:]:
+    all_events = inputs[0].es["label"]
+    for gi in inputs[1:]:
         all_events = set(all_events).intersection(gi.es["label"])
 
-    for i in range(1, len(g_list)):
+    for i in range(1, len(inputs)):
         # Intermediate storage for g_comp vertices and edges
 
         # Storage for vertice pairs
@@ -71,9 +77,9 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
             # result of the last product composition.
             g1 = g_comp
         else:
-            g1 = g_list[0]
+            g1 = inputs[0]
 
-        g2 = g_list[i]
+        g2 = inputs[i]
 
         # Saving the index is useful in converting this OrderedDict into
         # If saving state names, need to keep track of vertices from each automata
@@ -150,5 +156,8 @@ def product_comp(g_comp, g_list, save_state_names=True, save_marked_states=False
             save_state_names,
             save_marked_states,
         )
-    # to iterate through list of inputs
-    # g_list[i] = g_comp
+    copy_event_sets(inputs, g_comp)
+    if not g_comp_def:
+        return g_comp
+
+    # else, g_comp is saved in the existing object already

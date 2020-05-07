@@ -5,35 +5,68 @@ Functions relevant to constructing an observer automaton from a partially-observ
 Only observer_comp is used outside this module; the rest are included as helper functions
 only used by observer_comp.
 """
-from DESops.basic.generic_functions import find_Euo
-from DESops.basic.ureach import unobservable_reach
+from DESops.automata.automata import Automata
+from DESops.basic_operations.generic_functions import find_Euo
+from DESops.basic_operations.ureach import unobservable_reach
 
 
-def observer_comp(
-    g_po, g_obs, Euo=set(), save_state_names=False, save_marked_states=False
-):
+def observer(g_po, Euo=set(), save_state_names=False, save_marked_states=False):
     """
     Compute an observer automata
+    Constructs an observer of the given automata. Each state in the observer
+    represents the best state estimate as a set of possible states the system
+    could be in.
+
+    Returns the observer as an Automata
+
+    Requires the unobersvable events in the system be notated in some way.
+    If Euo is not empty, those events will be used as the unobservable event set.
+    Otherwise, the observer_comp function will check the igraph Graph edges
+    for an "Euo" attribute, {G.es()["Euo"]} and from that construct the unobservable
+    event set (legacy, shouldn't happen anymore; any initialization method from igraph Graphs
+    should find the Euo set already).
+
+    Parameters:
+    save_state_names (default True): currently does nothing (!!!!)
+        Note: the thinking for this was that currently, state names ("name" vertex attribute)
+        are sets of states from the original Automata. This parameter could avoid
+        allowing unnecessarily saving this information. Change to be similar to parallel_comp,
+        where the names just don't get assigned to the result?
+
+    save_marked_states (default False):
+
+    Usage:
+    >>> O = observer(G)
+
     g_po: input partially observed automata
     g_obs: Obs(g_po)
     Euo: optionally provide set of unobservable events; if not provided, will attempt to find in g_po edge attributes
     """
-
+    g_obs = Automata()
     if not g_po.vcount():
         return
-    find_Euo([g_po], Euo)
+    find_Euo([g_po._graph], Euo)
     # 1. Determine x0_obs = u-reach(x0), add to X_obs
     x0_obs = set()
-    unobservable_reach(x0_obs, 0, g_po, Euo)
+    unobservable_reach(x0_obs, 0, g_po._graph, Euo)
     x0_obs = frozenset(x0_obs)
     X_obs, H = set(), set()
     Q = list()
     Q.append(x0_obs)
     X_obs.add(x0_obs)
-    search(g_po, Q, Euo, X_obs, H)
+    search(g_po._graph, Q, Euo, X_obs, H)
     convert_to_graph(
-        g_po, g_obs, X_obs, H, x0_obs, save_state_names, save_marked_states
+        g_po._graph,
+        g_obs._graph,
+        X_obs,
+        H,
+        x0_obs,
+        save_state_names,
+        save_marked_states,
     )
+    g_obs.Euc = list(g_po.Euc)
+    g_obs.Euo = list(g_obs.Euo)
+    return g_obs
 
 
 def search(g_po, Q, Euo, X_obs, H):
