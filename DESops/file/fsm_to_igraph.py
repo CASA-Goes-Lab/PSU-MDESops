@@ -1,5 +1,7 @@
 import sys
 
+from DESops.automata.automata import Automata
+
 
 # pylint: disable=C0103
 """
@@ -8,7 +10,7 @@ into an igraph Graph object.
 """
 
 
-def fsm_to_igraph(fsm_filename, g):
+def read_fsm(fsm_filename, g=None):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
     g: igraph Graph object to read from (an Automata instance would work as well).
@@ -33,6 +35,11 @@ def fsm_to_igraph(fsm_filename, g):
         > 0   2   c   uo   0.5
         > ...
     """
+
+    g_defined = True
+    if not g:
+        g_defined = False
+        g = Automata()
 
     state_markings = list()
     state_names = list()
@@ -138,3 +145,6 @@ def fsm_to_igraph(fsm_filename, g):
     g.vs["out"] = neighbors_list
     if trans_prob:
         g.es["prob"] = trans_prob
+
+    if not g_defined:
+        return g

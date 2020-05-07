@@ -4,10 +4,11 @@ Convert an igraph Graph instance into an 'fsm' filetype,
 which is used/defined by the DESUMA software.
 """
 
-# from DESops.Event import Event
+from DESops.automata.event.event import Event
+from DESops.automata.state.state import State
 
 
-def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
+def write_fsm(fsm_filename, g, plot_prob=False):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
     g: igraph Graph object to read from (an Automata instance would work as well).
@@ -73,13 +74,13 @@ def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
                 f.write("\t")
                 f.write(",".join(g.vs["name"][trans.target]))
                 f.write("\t")
-                if Euc:
-                    f.write("c" if trans["label"] not in Euc else "uc")
+                if g.Euc:
+                    f.write("c" if trans["label"] not in g.Euc else "uc")
                 else:
                     f.write("c" if trans["contr"] else "uc")
                 f.write("\t")
-                if Euo:
-                    f.write("o" if trans["label"] not in Euo else "uo")
+                if g.Euo:
+                    f.write("o" if trans["label"] not in g.Euo else "uo")
                 else:
                     f.write("o" if trans["obs"] else "uo")
                 if plot_prob and "prob" in g.es.attributes():
