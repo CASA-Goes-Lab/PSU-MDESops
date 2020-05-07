@@ -1,6 +1,6 @@
 import sys
 
-from DESops.automata.automata import Automata
+from DESops.automata.automata import _Automata
 
 
 # pylint: disable=C0103
@@ -39,7 +39,7 @@ def read_fsm(fsm_filename, g=None):
     g_defined = True
     if not g:
         g_defined = False
-        g = Automata()
+        g = _Automata()
 
     state_markings = list()
     state_names = list()

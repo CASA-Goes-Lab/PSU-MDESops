@@ -5,7 +5,7 @@ Functions relevant to constructing an observer automaton from a partially-observ
 Only observer_comp is used outside this module; the rest are included as helper functions
 only used by observer_comp.
 """
-from DESops.automata.automata import Automata
+from DESops.automata.automata import _Automata
 from DESops.basic_operations.generic_functions import find_Euo
 from DESops.basic_operations.ureach import unobservable_reach
 
@@ -42,7 +42,7 @@ def observer(g_po, Euo=set(), save_state_names=False, save_marked_states=False):
     g_obs: Obs(g_po)
     Euo: optionally provide set of unobservable events; if not provided, will attempt to find in g_po edge attributes
     """
-    g_obs = Automata()
+    g_obs = _Automata()
     if not g_po.vcount():
         return
     find_Euo([g_po._graph], Euo)

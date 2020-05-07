@@ -10,6 +10,7 @@ parallel_comp but were essentially redundant.
 """
 from collections import OrderedDict
 
+from DESops.automata.automata import _Automata
 from DESops.basic_operations.generic_functions import copy_event_sets
 from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
 
@@ -45,7 +46,7 @@ def product_comp(inputs, g_comp=None, save_state_names=True, save_marked_states=
     g_comp_def = True
     if not g_comp:
         g_comp_def = False
-        g_comp = Automata()
+        g_comp = _Automata()
     if save_marked_states:
         if not all(["marked" in a.vs.attributes() for a in inputs]):
             raise MissingAttributeError(

@@ -119,14 +119,15 @@ try:
 except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
 
+from abc import ABC, abstractmethod
+
 from collections.abc import Iterable
 
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 
 from DESops.automata.event.event import Event
 
-
-class Automata:
+class _Automata():
     def __init__(self, init=None):
         """
         Constructor can create an empty automata, or be created in one of the following ways:
@@ -144,12 +145,8 @@ class Automata:
 
         # Default case; create Automata from scratch.
         self._graph = ig.Graph(directed=True)
-        self.Euc = set()
-        self.Euo = set()
-        self.E = set()
-        self.X_crit = set()
-        self.Ea = set()
-        self.dead_state = None
+        self.events = list()
+        self.states = list()
         self.type = None
 
         if isinstance(init, ig.Graph):
@@ -161,10 +158,8 @@ class Automata:
         elif isinstance(init, Automata):
             # Create Automata from another Automata
             self._graph = init._graph.copy()
-            self.Euc = init.Euc.copy()
-            self.Euo = init.Euo.copy()
-            self.X_crit = init.X_crit.copy()
-            self.dead_state = init.dead_state
+            self.events = init.events.copy()
+            self.states = init.states.copy()
             self.type = init.type
 
         if "label" not in self._graph.es.attributes():
@@ -172,10 +167,6 @@ class Automata:
 
         if "name" not in self._graph.vs.attributes():
             self._graph.vs["name"] = [""]
-
-        self.type = "graph"
-        if "type_state" in self._graph.vs.attributes():
-            self.type = "IDA"
 
         # Allow references to graph instance's edge & vertex sequence methods
         # from the Automata (e.g. self.es as opposed to doing self._graph.es)
@@ -187,7 +178,6 @@ class Automata:
 
         self.write_dot = self._graph.write_dot
 
-        # bool was its own function, but this is easier to understand.
         self.__bool__ = self._graph.__bool__()
 
     def add_edge(self, source, target, label=None, prob=None):
@@ -359,43 +349,6 @@ class Automata:
             ureach_from_set(x_set, state_s, self._graph, e)
         else:
             unobservable_reach(x_set, state_s, self._graph, e)
-
-    def _extended_ureach():
-        # TODO
-        return
-
-    def _extended_reach():
-        # TODO
-        return
-
-    def plot(self, layout_i="kk", bbox_i=(0, 0, 2000, 2000), margin_i=100):
-        """
-        Plot the Graph attribute of the Automata.
-        If the automata is an IDA or similar, the plot will differentiate the two state types.
-        layout_i, bbox_i and margin_i are passed into the igraph plot function,
-        and are defined in the igraph plot documentation.
-        Roughly:
-            layout_i: layout algorithm used, default is Kamada-Kawai force-directed algorithm.
-            bbox_i: bounding box of the plot, with dimensions in pixels.
-            margin_i: margin width in pixels to surround the plot.
-        Plotting is done by the igraph library.
-        Requires cairo package to be installed.
-        """
-        # try:
-        #     import cairo
-        # except ImportError:
-        #     raise DependencyNotInstalledError("cairo required to plot Igraph graphs")
-
-        P = self._graph.copy()
-        P.es["label"] = [str2(l) for l in P.es["label"]]
-
-        P.vs["name"] = [str2(v) for v in P.vs["name"]]
-
-        P.vs["label"] = P.vs["name"]
-        P.vs["label_size"] = [30]
-        P.vs["size"] = [70]
-        ig.plot(P, bbox=bbox_i, layout=layout_i, margin=margin_i)
-    
 
 
 def str2(label):
