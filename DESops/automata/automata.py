@@ -110,25 +110,31 @@ copy_event_sets
 
 from collections.abc import Iterable
 
-from .AES.SynthSMV_AES import write_AES_SMV_model
-from .basic.generic_functions import find_Euc as find_Euc_i
-from .basic.generic_functions import find_Euo as find_Euo_i
-from .basic.generic_functions import find_obs_contr
-from .basic.observer_comp import observer_comp
-from .basic.parallel_comp import parallel_comp as parallel_comp_i
-from .basic.product_comp import product_comp as product_comp_i
-from .basic.ureach import unobservable_reach, ureach_from_set
-from .error import DependencyNotInstalledError, IncongruencyError, MissingAttributeError
-from .Event import Event
-from .file.fsm_to_igraph import fsm_to_igraph
-from .file.igraph_to_fsm import igraph_to_fsm
-from .supremal.supremal_cn_supervisor import (
-    supremal_cn_supervisor as supremal_cn_supervisor_i,
+# from .AES.SynthSMV_AES import write_AES_SMV_model
+from ..basic_operations.generic_functions import find_Euc as find_Euc_i
+from ..basic_operations.generic_functions import find_Euo as find_Euo_i
+from ..basic_operations.generic_functions import find_obs_contr
+
+# from ..basic_operations.observer_comp import observer_comp
+from ..basic_operations.parallel_comp import parallel_comp as parallel_comp_i
+from ..basic_operations.product_comp import product_comp as product_comp_i
+from ..basic_operations.ureach import unobservable_reach, ureach_from_set
+from ..error import (
+    DependencyNotInstalledError,
+    IncongruencyError,
+    MissingAttributeError,
 )
-from .supremal.supremal_controllable_supervisor import (
-    supremal_controllable_supervisor as scs_i,
-)
-from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
+from ..file.fsm_to_igraph import fsm_to_igraph
+from ..file.igraph_to_fsm import igraph_to_fsm
+from .event import Event
+
+# from .supremal.supremal_cn_supervisor import (
+#     supremal_cn_supervisor as supremal_cn_supervisor_i,
+# )
+# from .supremal.supremal_controllable_supervisor import (
+#     supremal_controllable_supervisor as scs_i,
+# )
+# from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
 
 try:
     import igraph as ig

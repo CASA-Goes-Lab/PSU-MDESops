@@ -4,7 +4,7 @@ Convert an igraph Graph instance into an 'fsm' filetype,
 which is used/defined by the DESUMA software.
 """
 
-from DESops.Event import Event
+# from DESops.Event import Event
 
 
 def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
