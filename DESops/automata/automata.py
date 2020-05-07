@@ -110,42 +110,22 @@ copy_event_sets
 
 from collections.abc import Iterable
 
-# from .AES.SynthSMV_AES import write_AES_SMV_model
-from ..basic_operations.generic_functions import find_Euc as find_Euc_i
-from ..basic_operations.generic_functions import find_Euo as find_Euo_i
-from ..basic_operations.generic_functions import find_obs_contr
+from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 
 # from ..basic_operations.observer_comp import observer_comp
-from ..basic_operations.parallel_comp import parallel_comp as parallel_comp_i
-from ..basic_operations.product_comp import product_comp as product_comp_i
-from ..basic_operations.ureach import unobservable_reach, ureach_from_set
-from ..error import (
+from DESops.error import (
     DependencyNotInstalledError,
     IncongruencyError,
     MissingAttributeError,
 )
-from ..file.fsm_to_igraph import fsm_to_igraph
-from ..file.igraph_to_fsm import igraph_to_fsm
-from .event import Event
 
-# from .supremal.supremal_cn_supervisor import (
-#     supremal_cn_supervisor as supremal_cn_supervisor_i,
-# )
-# from .supremal.supremal_controllable_supervisor import (
-#     supremal_controllable_supervisor as scs_i,
-# )
-# from .VLPPO.VLPPO import offline_VLPPO as offline_VLPPO_i
+# from .AES.SynthSMV_AES import write_AES_SMV_model
+
 
 try:
     import igraph as ig
 except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
-
-
-# from ..supremal.supremal_controllable_supervisor import supremal_controllable_supervisor_pp
-# from ..basic.construct_spa import construct_spa
-# from ..basic.construct_subautomata import construct_subautomata
-# from ..basic.parallel_comp_old import parallel_comp
 
 
 class Automata:
@@ -174,16 +154,7 @@ class Automata:
         self.dead_state = None
         self.type = None
 
-        if isinstance(init, str):
-            # Create Automata from `*.fsm` filetype.
-            fsm_filename = init
-            self._graph = ig.Graph(directed=True)
-            fsm_to_igraph(fsm_filename, self._graph)
-            find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
-            if "crit" in self._graph.vs.attributes():
-                self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
-
-        elif isinstance(init, ig.Graph):
+        if isinstance(init, ig.Graph):
             # Create Automata from igraph Graph
             graph = init
             self._graph = graph.copy()
@@ -337,33 +308,6 @@ class Automata:
         >>> A.dead_state = 7
         """
         self.dead_state = dead_state_index
-
-    # Read/write Automata (Graph) from/to fsm filetypes
-    # Depend on implementation in automata_operations/file/igraph_to_fsm
-    # and automata_operations/file/fsm_to_igraph
-    # Require the filename to be provided.
-    def write_fsm(self, filename):
-        """
-        Write Automata (Graph) to fsm filetype
-        Depends on implementation in automata_operations/file/igraph_to_fsm
-
-        filename: string for file to write to, e.g. 'output.fsm'
-        """
-        igraph_to_fsm(filename, self._graph)
-
-    def read_fsm(self, filename):
-        """
-        Read/write Automata (Graph) from/to fsm filetypes
-        Depends on implementation in automata_operations/file/fsm_to_igraph
-
-        filename: string to for file to read from, e.g. 'input.fsm'
-        """
-        P = ig.Graph(directed=True)
-        fsm_to_igraph(filename, P)
-        self._graph = P
-        find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
-        if "crit" in self._graph.vs.attributes():
-            self.X_crit = {v["name"] for v in self._graph.vs if v["crit"]}
 
     # Methods to interface w/ functions from automata_operations/basic/generic_functions
     # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
