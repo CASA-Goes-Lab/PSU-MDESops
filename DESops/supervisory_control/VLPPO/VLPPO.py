@@ -15,21 +15,22 @@ from ..basic.ureach import *
 
 
 def offline_VLPPO(
-    G,
-    H,
-    Euc=set(),
-    Euo=set(),
+    plant,
+    spec,
+    Euc=None,
+    Euo=None,
     event_ordering=None,
     G_bad_states=None,
     construct_SA=True,
+    supervisor=None,
 ):
     """
     Returns an Automata object which is a maximal controllable & observable supervisor of
         the given system and specification Automata.
 
     Parameters:
-    system: Automata representing the plant/system.
-    specification: Automata representing the desired specification.
+    system (G): Automata representing the plant/system.
+    specification (H): Automata representing the desired specification.
     event_ordering: optionally provide a priority list of controllable events;
         if not provided, an arbitrary ordering will be used (the set of controllable
         events will be found as a python set(), and then casting the set into a list()).
@@ -46,29 +47,34 @@ def offline_VLPPO(
 
     The sets of uncontrollable and unobservable events, Euc and Euo respectively,
     are found as the unions of the Euc & Euo sets in the plant & specification.
-
-    Depends on offline_VLPPO_i, implemented in automata_operations/VLPPO/VLPPO as
-    offline_VLPPO().
     """
 
     # TODO: Find uncontrollable events (if not provided)
-    if isinstance(Euo, list):
+    if not Euo:
+        Euo = plant.Euo.union(spec.Euo)
+    elif isinstance(Euo, list):
         Euo = set(Euo)
+
+    if not Euc:
+        Euc = plant.Euc.union(spec.Euc)
+    elif isinstance(Euc, list):
+        Euc = set(Euc)
+
     # Accumlate sets of states for final control policy in sets_of_states var
     sets_of_states = set()
 
     if construct_SA:
-        G_SA = ig.Graph(directed=True)
-        H_SA = ig.Graph(directed=True)
-        construct_subautomata(H, G, H_SA, G_SA)
+        G_SA = Automata()
+        H_SA = Automata()
+        construct_subautomata(spec, plant, H_SA, G_SA)
         # To keep names simple, reassign H, G to their SA counterparts.
-        H = H_SA
-        G = G_SA
+        spec = H_SA
+        plant = G_SA
 
     if not G_bad_states:
         # Need to construct H_o as refined product of GxH to determine infinite-cost states
-        H_o = ig.Graph(directed=True)
-        parallel_comp(H_o, [G, H], save_state_names=True)
+        H_o = Automata()
+        parallel_comp(H_o, [plant, spec], save_state_names=True)
         G_bad_states = [
             v["name"][0] for v in H_o.vs if invalid_state(G, H_o, Euc, v["name"][1])
         ]
@@ -76,7 +82,7 @@ def offline_VLPPO(
         G_bad_states.extend([i.index for i in G.vs if i.index not in comp_G_names])
     else:
         # H_o is equal to H if H is already the intial specification
-        H_o = H
+        H_o = spec
     bad_states = compute_state_costs(G, G_bad_states, Euc)
     # State is illegal if in bad_states
 
@@ -86,15 +92,19 @@ def offline_VLPPO(
     edge_labels = list()
     edge_pairs = list()
     # Compute next set of 'present' states PS, and control policy ACT
-    [ACT, PS] = VLPPO(G, H_o, Euc, Euo, {0}, {}, bad_states, event_ordering)
+    [ACT, PS] = VLPPO(plant, H_o, Euc, Euo, {0}, {}, bad_states, event_ordering)
     init_set = frozenset(PS)
-    P = ig.Graph(directed=True)
 
-    # If the first VLPPO computation found a possible next set of states, use recursive depth-search to traverse all sets of states
+    supervisor_def = True
+    if not supervisor:
+        supervisor_def = False
+        supervisor = Automata()
+
+    # If the first VLPPO computation found a possible next set of states, use bfs to traverse all sets of states
     if PS:
         sets_of_states.add(init_set)
         search_VLPPO(
-            G,
+            plant,
             H_o,
             Euc,
             Euo,
@@ -109,9 +119,18 @@ def offline_VLPPO(
 
         # Create graph P using sets_of_states, edge_labels & edge_pairs
         # modifies sets_of_states
-        convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_set)
+        convert_to_graph(
+            supervisor, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_set
+        )
     # Otherwise, P will be an empty graph?
-    return P
+
+    # EVENT TODO: switch this to more general event updating
+    supervisor.Euc = Euc.copy()
+    supervisor.Euo = Euo.copy()
+    if plant.Ea or spec.Ea:
+        supervisor.Ea = system.Ea | specification.Ea
+    if not supervisor_def:
+        return supervisor
 
 
 def search_VLPPO(
