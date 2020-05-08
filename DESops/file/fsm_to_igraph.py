@@ -139,10 +139,14 @@ def read_fsm(fsm_filename, g=None):
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == "c" for x in trans_controllable]
     g.es["contr"] = trans_controllable_bool
+    
     neighbors_list = [
         [(state_names.index(adj[0]), adj[1]) for adj in l] for l in neighbors_list
     ]
+    
+        
     g.vs["out"] = neighbors_list
+
     if trans_prob:
         g.es["prob"] = trans_prob
 

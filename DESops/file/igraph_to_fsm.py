@@ -35,10 +35,10 @@ def write_fsm(fsm_filename, g, plot_prob=False):
 
     # If obs/contr attributes are not defined, mark them as true
     if "obs" not in g.es.attributes():
-        if not Euo:
+        if not g.Euo:
             g.es["obs"] = [True]
     if "contr" not in g.es.attributes():
-        if not Euc:
+        if not g.Euc:
             g.es["contr"] = [True]
 
     not_marked = False
