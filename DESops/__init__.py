@@ -1,5 +1,5 @@
 # flake8: noqa
-from DESops.automata.automata import _Automata
+#from DESops.automata.automata import _Automata
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
