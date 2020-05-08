@@ -11,11 +11,11 @@ parallel_comp but were essentially redundant.
 from collections import OrderedDict
 
 from DESops.automata.automata import _Automata
-from DESops.basic_operations.generic_functions import copy_event_sets
+
 from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
 
 
-def product_comp(inputs, g_comp=None, save_state_names=True, save_marked_states=False):
+def product_comp(input_list, output=None, save_state_names=True, save_marked_states=False):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.
@@ -43,122 +43,123 @@ def product_comp(inputs, g_comp=None, save_state_names=True, save_marked_states=
     Returns an Automata object.
 
     """
-    g_comp_def = True
-    if not g_comp:
-        g_comp_def = False
-        g_comp = _Automata()
+    output_def = True
+    if not output:
+        output_def = False
+        output = _Automata()
+
     if save_marked_states:
-        if not all(["marked" in a.vs.attributes() for a in inputs]):
+        if not all(["marked" in a.vs.attributes() for a in input_list]):
             raise MissingAttributeError(
                 'Graph does not have "marked" attribute on states'
             )
 
     # Compute intersection of events of all included graphs:
-    all_events = inputs[0].es["label"]
-    for gi in inputs[1:]:
+    all_events = input_list[0].es["label"]
+    for gi in input_list[1:]:
         all_events = set(all_events).intersection(gi.es["label"])
 
-    for i in range(1, len(inputs)):
-        # Intermediate storage for g_comp vertices and edges
+    for i in range(1, len(input_list)):
+        # Intermediate storage for output vertices and edges
 
         # Storage for vertice pairs
-        g_comp_vert = OrderedDict()
+        output_vert = OrderedDict()
 
         index = 0
 
-        g_comp_vert_mark = list()
+        output_vert_mark = list()
 
-        g_comp_edges = []
-        g_comp_edge_labels = []
-        # (0,0) included immediately as there will always be a state (0,0).
-        next_states_to_check = {(0, 0)}
+        output_edges = []
+        output_edge_labels = []
 
         if i > 1:
             # After the first iteration, the first multiplicand is the
             # result of the last product composition.
-            g1 = g_comp
+            g1 = output
         else:
-            g1 = inputs[0]
+            g1 = input_list[0]
 
-        g2 = inputs[i]
+        g2 = input_list[i]
 
         # Saving the index is useful in converting this OrderedDict into
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state in the second position
-        # of the lists in g_comp_vert's values.
+        # of the lists in output_vert's values.
         if i > 1 and save_state_names:
             # If this isn't the first iteration, store the name of vertex 0
             # from the last computation as the start of this vertex name.
             # The result of the last product is stored in place of
             # the first multiplicand, g1.
-            g_comp_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
+            output_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
         else:
-            g_comp_vert[(0, 0)] = [index, [0, 0]]
+            output_vert[(0, 0)] = [index, [0, 0]]
 
         if save_marked_states:
-            g_comp_vert_mark.append(marked_bool(g1, g2, (0, 0)))
+            output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
 
-        # set next_states_to_check returns False when empty
-        while next_states_to_check:
-            next_states_temp = set()
 
-            # Iterate through all new synchronized states found in last iteration, checking neighbors
-            for vert_pair in next_states_to_check:
-                # select edges with source at current vertex
-                g1_es = g1.es(_source=vert_pair[0])
-                g2_es = g2.es(_source=vert_pair[1])
+        queue = list()
+        queue.append((0,0))
+        while queue:
+            vert_pair = queue.pop()
+        
+            # select edges with source at current vertex
+            g1_es = g1.vs["out"][vert_pair[0]]
+            g2_es = g2.vs["out"][vert_pair[1]]
+            print(g1_es)
+            g1_labels = {e[1]: e[0] for e in g1_es}
+            g2_labels = {e[1]: e[0] for e in g2_es}
 
-                common_events = all_events.intersection(g1_es["label"]).intersection(
-                    g2_es["label"]
-                )
-                # iterate through each possible common event
-                for x in common_events:
-                    # might be able to do this more efficiently
-                    # Currently: find index of edge labeled x at current vertex
-                    a = g1_es.select(label_eq=x)[0]
-                    b = g2_es.select(label_eq=x)[0]
-                    new_vert_pair = (a.target, b.target)
+            common_events = all_events.intersection(g1_labels.keys()).intersection(
+                g2_labels.keys()
+            )
+            # iterate through each possible common event
+            for x in common_events:
+                # might be able to do this more efficiently
+                # Currently: find index of edge labeled x at current vertex
 
-                    # see if this is a new vertex pair
-                    if new_vert_pair not in g_comp_vert:
-                        # this is a new vertex pair: add it to the dict with value 'index'
-                        # index just makes it easier later to map edge names from key to index
-                        index = index + 1
-                        if i > 1 and save_state_names:
-                            # Stores the index, final name of the vertex as the set of states
-                            # in the composition.
-                            g_comp_vert[new_vert_pair] = [
-                                index,
-                                list(g1.vs["name"][new_vert_pair[0]])
-                                + [new_vert_pair[1]],
-                            ]
-                        else:
-                            g_comp_vert[new_vert_pair] = [index, new_vert_pair]
+                a = [i[0] for i in g1_es if i[1] == x][0]
+                b = [i[0] for i in g2_es if i[1] == x][0]
+                new_vert_pair = (a, b)
 
-                        # check if this vertex pair should get marked
-                        # maybe only do this with a flag passed into fn?
-                        if save_marked_states:
-                            g_comp_vert_mark.append(marked_bool(g1, g2, new_vert_pair))
-                        # need to check the new states' neighbors
-                        next_states_temp.add(new_vert_pair)
-                    new_edge_pair = ((a.source, b.source), (a.target, b.target))
-                    g_comp_edges.append(new_edge_pair)
-                    g_comp_edge_labels.append(x)
+                # see if this is a new vertex pair
+                if new_vert_pair not in output_vert:
+                    # this is a new vertex pair: add it to the dict with value 'index'
+                    # index just makes it easier later to map edge names from key to index
+                    index = index + 1
+                    if i > 1 and save_state_names:
+                        # Stores the index, final name of the vertex as the set of states
+                        # in the composition.
+                        output_vert[new_vert_pair] = [
+                            index,
+                            list(g1.vs["name"][new_vert_pair[0]])
+                            + [new_vert_pair[1]],
+                        ]
+                    else:
+                        output_vert[new_vert_pair] = [index, new_vert_pair]
 
-            next_states_to_check = next_states_temp
+                    # check if this vertex pair should get marked
+                    # maybe only do this with a flag passed into fn?
+                    if save_marked_states:
+                        output_vert_mark.append(marked_bool(g1, g2, new_vert_pair))
+                    # need to check the new states' neighbors
+                    queue.append(new_vert_pair)
+                new_edge_pair = (vert_pair, new_vert_pair)
+                output_edges.append(new_edge_pair)
+                output_edge_labels.append(x)
+
 
         assemble_graph(
-            g_comp,
-            g_comp_edges,
+            output,
+            output_edges,
             index,
-            g_comp_vert_mark,
-            g_comp_edge_labels,
-            g_comp_vert,
+            output_vert_mark,
+            output_edge_labels,
+            output_vert,
             save_state_names,
             save_marked_states,
         )
-    copy_event_sets(inputs, g_comp)
-    if not g_comp_def:
-        return g_comp
+    if not output_def:
+        return output
 
-    # else, g_comp is saved in the existing object already
+    # else, output is saved in the existing object already
