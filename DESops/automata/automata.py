@@ -374,71 +374,6 @@ def str2(label):
         return str(set(label))
     return str(label)
 
-
-def parallel_comp(
-    inputs, save_state_names=True, save_marked_states=False, common_events=None
-):
-    """
-    Computes the parallel composition of 2 (or more) Automata, and returns
-    the resulting composition as an automata.
-
-    Parameters
-
-    inputs: an iterable collection of Automata (class object) for which
-        the parallel composition will be computed. If saving state names (when
-        save_state_names=True), this should be ordered, as it determines the
-        order that vertex indices are stored in the composition's vertex names.
-
-    save_state_names (default True): whether vertex names should be saved
-        in the igraph Graph "name" attribute. If set to false, the attribute
-        will not be set (less memory usage). Vertex names are a list of indicies
-        from each input, in the order used by 'inputs'. For example, in the operation
-        A || B || C, a vertex name '(0,3,1)' in the output O means that state is
-        composed of vertex 0 in A, 3 in B, and 1 in C (by index, NOT vertex name).
-
-    save_marked_states (default False): whether states in the composition
-        should be 'marked' or not (marked if the composed states are both marked).
-        An error will be raised if this parameter is True, but not all Automata
-        in the composition have the "marked" parameter on their vertices.
-
-    common_events (default None): if there are events in the event set that are not
-        on any transitions of the input graphs, they can be provided through this
-        parameter. For example, if in the operation A || B, A has 'c' in its event set,
-        but no active transitions, including 'c' in common_events forces 'c' not
-        to be a private event.
-
-    Returns an Automata object.
-
-    Usage: for composing Automata A, B and C with common event 'a'.
-    >>> O = Automata([A, B, C], common_events='a')
-
-    Depends on parallel_comp_i, implemented in basic/parallel_comp
-    """
-
-    # Change every state name to str or list of str
-    for graph in inputs:
-        graph.vs["name"] = [
-            [str(n) for n in name]
-            if isinstance(name, Iterable) and not isinstance(name, str)
-            else str(name)
-            for name in graph.vs["name"]
-        ]
-
-    if save_marked_states:
-        if not all(["marked" in a.vs.attributes() for a in inputs]):
-            raise MissingAttributeError(
-                'Graph does not have "marked" attribute on states'
-            )
-
-    P = ig.Graph(directed=True)
-    # Appears to work fine even though inputs are provided as automata, meaning
-    # the parallel_comp_i function works on Automata objects & igraph Graphs?
-    parallel_comp_i(P, inputs, save_state_names, save_marked_states, common_events)
-    A = Automata(P)
-    copy_event_sets(inputs, A)
-    return A
-
-
 def supremal_contr_supervisor(system, specification):
     """
     Computes the supremal controllable supervisor for the given plant
@@ -486,3 +421,33 @@ def supremal_cn_supervisor(system, specification):
     A = Automata(supremal_cn_supervisor_i(specification, system, Euc_u, Euo_u))
     copy_event_sets([system, specification], A)
     return A
+
+
+
+def copy_event_sets(this, other):
+    """
+    Useful function to copy event sets from 'this' to 'other'.
+    Event sets being the set of unobservable events Euo, the set
+    of uncontrollable events Euc, and the set of compromised
+    events Ea.
+
+    Used for example in the parallel_comp function to handle
+    copying attributes from an input set of automata to the
+    automata resulting from the composition.
+
+    this: either an automata or iteratable collection of automata,
+        from which event sets will be copied.
+    other: automata, target of the copying.
+
+    If 'this' is an interable, the event sets copied to 'other'
+    will be the set union of the automata in 'this'.
+
+    """
+    if isinstance(this, _Automata):
+        other.Euo = this.Euo
+        other.Euc = this.Euc
+        other.Ea = this.Ea
+    else:
+        other.Euo = set.union(*[a.Euo for a in this])
+        other.Euc = set.union(*[a.Euc for a in this])
+        other.Ea = set.union(*[a.Ea for a in this])
