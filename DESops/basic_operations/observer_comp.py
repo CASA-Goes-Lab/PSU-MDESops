@@ -79,17 +79,30 @@ def search(part_obs, Q, Euo, X_obs, H):
     BFS of the states of part_obs (the partially observed automaton).
     Uses queue-system via list Q.
     """
+    adj_list = part_obs.get_inclist()
     while Q:
         q = Q.pop(0)
 
         #active_events = set(part_obs.es(_source_in=q)["label"])
-        active_events = set(e[1] for vert in q for e in part_obs.vs["out"][vert])
-
+        #active_events = set(e[1] for vert in q for e in part_obs.vs["out"][vert])
+        active_events = set(part_obs.es["label"][e] for vert in q for e in adj_list[vert])
+        
+        """
         adjacent_states = {
             (frozenset({t.target for t in part_obs.es(label_eq=e)(_source_in=q)}), e)
             for e in active_events
             if e not in Euo
         }
+        """
+        # TODO: make this more readable
+        set_of_states = lambda e : (frozenset(part_obs.es[t].target for vert in q for t in adj_list[vert] if part_obs.es[t]["label"] == e), e)
+        adjacent_states = {
+            (set_of_states(e))
+            for e in active_events 
+            if e not in Euo
+        }
+        
+
 
         #adjacent_states = {frozenset()}
         adj_sets = ((t_ureach_from_set(S[0], part_obs, Euo), S[1]) for S in adjacent_states)
@@ -99,6 +112,7 @@ def search(part_obs, Q, Euo, X_obs, H):
                 X_obs.add(frozenset(s[0]))
             H.add((q, s[1], frozenset(s[0])))
         # Older version, less comprehensions: (above is only marginally faster)
+
         """
         for e in active_events:
             if e in Euo: continue
