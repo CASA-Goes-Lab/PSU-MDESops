@@ -6,29 +6,32 @@ uses the helper functions.
 
 assemble_graph and marked_bool used in product_comp
 """
+
 import sys
+
 from collections import OrderedDict
 
+from DESops.automata.automata import _Automata
 
 def parallel_comp_b(
-    g_comp,
-    g_list,
+    input_list,
+    output = None,
     save_state_names=True,
     save_marked_states=False,
     common_events_i=None,
 ):
     """
     Computes the parallel composition of 2 (or more) automata (igraph Graphs),
-    stores the resulting graph in g_comp
+    stores the resulting graph in output (or returns if unspecified)
 
     Parameters
 
-    g_comp: directed igraph Graph, assumed to be empty. Used to store the output
+    output: directed igraph Graph, assumed to be empty. Used to store the output
         instead of returning a copy. This is different from the interface in the
         Automata class file, which returns a copy of the result of the
         composition.
 
-    g_list: an iterable collection of Automata (class object) for which
+    input_list: an iterable collection of Automata (class object) for which
         the parallel composition will be computed. If saving state names,
         this should be ordered, as it determines the order that vertex indices
         are stored in the composition's vertex names. MUST have at least two
@@ -55,38 +58,43 @@ def parallel_comp_b(
     Doesn't return anything to avoid potentially making redundant copies.
     """
 
+    output_defined = True
+    if not isinstance(output, _Automata):
+        output_defined = False
+        output = _Automata()
+
     all_common_events = set()
     if common_events_i:
         all_common_events = set(common_events_i)
-    for i in range(0, len(g_list) - 1):
+    for i in range(0, len(input_list) - 1):
         all_common_events = all_common_events.union(
-            set(g_list[i].es["label"]).intersection(g_list[i + 1].es["label"])
+            set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
         )
 
     # set the first multiplicand term
 
-    for i in range(1, len(g_list)):
-        # Intermediate variables for g_comp vertices and edges
+    for i in range(1, len(input_list)):
+        # Intermediate variables for output vertices and edges
 
         # Storage for vertice product_pairs
-        g_comp_vert = OrderedDict()
+        output_vert = OrderedDict()
 
         # Always have (0,0) state
         # unless there are no shared events, then it's really an empty set of states?
         index = 0
 
-        g_comp_vert_mark = []
+        output_vert_mark = []
 
-        g_comp_edges = []
-        g_comp_edge_labels = []
+        output_edges = []
+        output_edge_labels = []
         next_states_to_check = {(0, 0)}
 
         if i > 1:
-            g1 = g_comp
+            g1 = output
         else:
-            g1 = g_list[0]
+            g1 = input_list[0]
 
-        g2 = g_list[i]
+        g2 = input_list[i]
 
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
@@ -100,7 +108,7 @@ def parallel_comp_b(
                 new_name.append(g2.vs["name"][0])
             else:
                 sys.exit("ERROR:\nState name must be str or list of str")
-            g_comp_vert[(0, 0)] = [index, new_name, (0, 0)]
+            output_vert[(0, 0)] = [index, new_name, (0, 0)]
         elif i == 1 and save_state_names:
             if isinstance(g1.vs["name"][0], str) and isinstance(g2.vs["name"][0], list):
                 new_name = [g1.vs["name"][0], ",".join(g2.vs["name"][0])]
@@ -118,19 +126,19 @@ def parallel_comp_b(
                 new_name = [",".join(g1.vs["name"][0]), ",".join(g2.vs["name"][0])]
             else:
                 sys.exit("ERROR:\nState name must be str or list of str")
-            g_comp_vert[(0, 0)] = [index, new_name, (0, 0)]
+            output_vert[(0, 0)] = [index, new_name, (0, 0)]
         else:
-            g_comp_vert[(0, 0)] = [index, [0, 0]]
+            output_vert[(0, 0)] = [index, [0, 0]]
 
         if save_marked_states:
-            g_comp_vert_mark.append(marked_bool(g1, g2, (0, 0)))
+            output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
 
         adj = dict()
 
         if i > 1 and save_state_names:
-            g_comp_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
+            output_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
         else:
-            g_comp_vert[(0, 0)] = [index, [0, 0]]
+            output_vert[(0, 0)] = [index, [0, 0]]
 
         # set next_states_to_check returns False when empty
         while next_states_to_check:
@@ -162,21 +170,21 @@ def parallel_comp_b(
                     )
                 # new : (new vert pair, new edge pair, new edge label)
 
-                g_comp_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
-                g_comp_edge_labels.extend(
+                output_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
+                output_edge_labels.extend(
                     [new_edge_label for new_edge_label in new_edge_labels]
                 )
 
                 # see if this is a new vertex pair
                 for v in new_vert_pairs:
-                    if v not in g_comp_vert:
+                    if v not in output_vert:
                         index += 1
                         if i > 1 and save_state_names:
                             # Stores the index, final name of the vertex as the set of states
                             # in the composition.
-                            g_comp_vert[v] = [index, list(g1.vs["name"][v[0]]) + [v[1]]]
+                            output_vert[v] = [index, list(g1.vs["name"][v[0]]) + [v[1]]]
                         else:
-                            g_comp_vert[v] = [index, v]
+                            output_vert[v] = [index, v]
 
                         next_states_temp.add(v)
 
@@ -185,41 +193,45 @@ def parallel_comp_b(
             next_states_to_check = next_states_temp
 
         if save_marked_states:
-            g_comp_vert_mark = [marked_bool(g1, g2, v) for v in g_comp_vert]
+            output_vert_mark = [marked_bool(g1, g2, v) for v in output_vert]
 
         assemble_graph(
-            g_comp,
-            g_comp_edges,
+            output,
+            output_edges,
             index,
-            g_comp_vert_mark,
-            g_comp_edge_labels,
-            g_comp_vert,
+            output_vert_mark,
+            output_edge_labels,
+            output_vert,
             save_state_names,
             save_marked_states,
         )
         # to iterate through list of inputs
-        # g_list[i] = g_comp
+        # input_list[i] = output
+
+    copy_event_sets(input_list, output)
+    if not output_defined:
+        return output
 
 
 def parallel_comp(
-    g_comp,
-    g_list,
+    input_list,
+    output = None,
     save_state_names=True,
     save_marked_states=False,
     common_events_i=None,
 ):
     """
     Computes the parallel composition of 2 (or more) automata (igraph Graphs),
-    stores the resulting graph in g_comp
+    stores the resulting graph in output
 
     Parameters
 
-    g_comp: directed igraph Graph, assumed to be empty. Used to store the output
+    output: directed igraph Graph, assumed to be empty. Used to store the output
         instead of returning a copy. This is different from the interface in the
         Automata class file, which returns a copy of the result of the
         composition.
 
-    g_list: an iterable collection of Automata (class object) for which
+    input_list: an iterable collection of Automata (class object) for which
         the parallel composition will be computed. If saving state names,
         this should be ordered, as it determines the order that vertex indices
         are stored in the composition's vertex names. MUST have at least two
@@ -234,7 +246,7 @@ def parallel_comp(
 
     save_marked_states (default False): whether states in the composition
         should be 'marked' or not (marked if the composed states are both marked).
-        An error will be raised if this parameter is True, but not all Automata
+        An error will be raised if this parameter is True and not all Automata
         in the composition have the "marked" parameter on their vertices.
 
     common_events_i (default None): if there are events in the event set that are not
@@ -244,40 +256,46 @@ def parallel_comp(
         to be a private event.
 
     Doesn't return anything to avoid potentially making redundant copies.
+
     """
+
+
+    output_defined = True
+    if not isinstance(output, _Automata):
+        output_defined = False
+        output = _Automata()
 
     all_common_events = set()
     if common_events_i:
         all_common_events = set(common_events_i)
-    for i in range(0, len(g_list) - 1):
+    for i in range(0, len(input_list) - 1):
         all_common_events = all_common_events.union(
-            set(g_list[i].es["label"]).intersection(g_list[i + 1].es["label"])
+            set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
         )
 
     # set the first multiplicand term
 
-    for i in range(1, len(g_list)):
-        # Intermediate variables for g_comp vertices and edges
+    for i in range(1, len(input_list)):
+        # Intermediate variables for output vertices and edges
 
         # Storage for vertice product_pairs
-        g_comp_vert = OrderedDict()
+        output_vert = OrderedDict()
 
         # Always have (0,0) state
         # unless there are no shared events, then it's really an empty set of states?
         index = 0
 
-        g_comp_vert_mark = []
+        output_vert_mark = []
 
-        g_comp_edges = []
-        g_comp_edge_labels = []
-        next_states_to_check = {(0, 0)}
+        output_edges = []
+        output_edge_labels = []
 
         if i > 1:
-            g1 = g_comp
+            g1 = output
         else:
-            g1 = g_list[0]
+            g1 = input_list[0]
 
-        g2 = g_list[i]
+        g2 = input_list[i]
 
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
@@ -291,7 +309,7 @@ def parallel_comp(
                 new_name.append(g2.vs["name"][0])
             else:
                 sys.exit("ERROR:\nState name must be str or list of str")
-            g_comp_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
+            output_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
         elif i == 1 and save_state_names:
             if isinstance(g1.vs["name"][0], str) and isinstance(g2.vs["name"][0], list):
                 new_name = [g1.vs["name"][0], ",".join(g2.vs["name"][0])]
@@ -309,154 +327,149 @@ def parallel_comp(
                 new_name = [",".join(g1.vs["name"][0]), ",".join(g2.vs["name"][0])]
             else:
                 sys.exit("ERROR:\nState name must be str or list of str")
-            g_comp_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
+            output_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
         else:
-            g_comp_vert[(0, 0)] = [index, [0, 0], (0, 0)]
+            output_vert[(0, 0)] = [index, [0, 0], (0, 0)]
 
         if save_marked_states:
-            g_comp_vert_mark.append(marked_bool(g1, g2, (0, 0)))
+            output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
 
-        adj = dict()
 
         if i > 1 and save_state_names:
-            g_comp_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
+            output_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
         else:
-            g_comp_vert[(0, 0)] = [index, [0, 0], (0, 0)]
+            output_vert[(0, 0)] = [index, [0, 0], (0, 0)]
 
         adj = dict()
-        # set next_states_to_check returns False when empty
-        # MAYBE WE COULD USE JUST ONE LIST AS A QUEUE POP FIRST ELEMENT AND AT EACH ITERATION IT MIGHT ADD NEW STATES IN THE END
-        # THERE ARE A FEW FOR LOOPS HERE
-        while next_states_to_check:
-            next_states_temp = set()
 
-            # Iterate through all new states found in last iteration
-            for vert_pair in next_states_to_check:
-                # select edges with source at current vertex
-                new_vert_pairs = list()
-                new_edge_pairs = list()
-                new_edge_labels = list()
-                adj_vert = list()
+        queue = list()
+        queue.append((0,0))
 
-                g1_es = g1.vs["out"][vert_pair[0]]
-                g2_es = g2.vs["out"][vert_pair[1]]
+        while queue:
+            vert_pair = queue.pop()
+            # select edges with source at current vertex
+            new_vert_pairs = list()
+            new_edge_pairs = list()
+            new_edge_labels = list()
+            adj_vert = list()
 
-                g1_labels = {e[1]: e[0] for e in g1_es}
-                g2_labels = {e[1]: e[0] for e in g2_es}
-                # g1_es = g1.es(_source=vert_pair[0])
-                # g2_es = g2.es(_source=vert_pair[1])
+            
+            g1_es = g1.vs["out"][vert_pair[0]]
+            g2_es = g2.vs["out"][vert_pair[1]]
 
-                # g1_labels = {e["label"]: e for e in g1_es}
-                # g2_labels = {e["label"]: e for e in g2_es}
+            g1_labels = {e[1]: e[0] for e in g1_es}
+            g2_labels = {e[1]: e[0] for e in g2_es}
+            """
+            g1_es = g1.es(_source=vert_pair[0])
+            g2_es = g2.es(_source=vert_pair[1])
 
-                l_set = set(g1_labels.keys()).union(g2_labels.keys())
-                for x in l_set:
-                    pcomp_det(
-                        x,
-                        vert_pair,
-                        g1_labels,
-                        g2_labels,
-                        all_common_events,
-                        new_vert_pairs,
-                        new_edge_pairs,
-                        new_edge_labels,
-                        adj_vert,
-                    )
-                # new : (new vert pair, new edge pair, new edge label)
-                adj[vert_pair] = adj_vert
-                g_comp_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
-                g_comp_edge_labels.extend(
-                    [new_edge_label for new_edge_label in new_edge_labels]
+            g1_labels = {e["label"]: e.target for e in g1_es}
+            g2_labels = {e["label"]: e.target for e in g2_es}
+            """
+            l_set = set(g1_labels.keys()).union(g2_labels.keys())
+
+            for x in l_set:
+                pcomp_det(
+                    x,
+                    vert_pair,
+                    g1_labels,
+                    g2_labels,
+                    all_common_events,
+                    new_vert_pairs,
+                    new_edge_pairs,
+                    new_edge_labels,
+                    adj_vert,
                 )
+            # new : (new vert pair, new edge pair, new edge label)
+            adj[vert_pair] = adj_vert
+            output_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
+            output_edge_labels.extend(
+                [new_edge_label for new_edge_label in new_edge_labels]
+            )
 
-                # see if this is a new vertex pair
-                for v in new_vert_pairs:
-                    if v not in g_comp_vert:
-                        index += 1
-                        if i > 1 and save_state_names:
-                            if isinstance(g2.vs["name"][v[1]], list):
-                                new_name = list(g1.vs["name"][v[0]])
-                                new_name.append(",".join(g2.vs["name"][0]))
-                            elif isinstance(g2.vs["name"][v[1]], str):
-                                new_name = list(g1.vs["name"][v[0]])
-                                new_name.append(g2.vs["name"][v[1]])
-                            else:
-                                sys.exit(
-                                    "ERROR:\nState name must be str or list of str"
-                                )
-                            g_comp_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
-                        elif i == 1 and save_state_names:
-                            if isinstance(g1.vs["name"][v[0]], str) and isinstance(
-                                g2.vs["name"][v[1]], list
-                            ):
-                                new_name = [
-                                    g1.vs["name"][v[0]],
-                                    ",".join(g2.vs["name"][v[1]]),
-                                ]
-                            elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
-                                g2.vs["name"][v[1]], str
-                            ):
-                                new_name = [
-                                    ",".join(g1.vs["name"][v[0]]),
-                                    g2.vs["name"][v[1]],
-                                ]
-                            elif isinstance(g1.vs["name"][v[0]], str) and isinstance(
-                                g2.vs["name"][v[1]], str
-                            ):
-                                new_name = [g1.vs["name"][v[0]], g2.vs["name"][v[1]]]
-                            elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
-                                g2.vs["name"][v[1]], list
-                            ):
-                                new_name = [
-                                    ",".join(g1.vs["name"][v[0]]),
-                                    ",".join(g2.vs["name"][v[1]]),
-                                ]
-                            else:
-                                sys.exit(
-                                    "ERROR:\nState name must be str or list of str"
-                                )
-                            g_comp_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
+            # see if this is a new vertex pair
+            for v in new_vert_pairs:
+                if v not in output_vert:
+                    index += 1
+                    if i > 1 and save_state_names:
+                        if isinstance(g2.vs["name"][v[1]], list):
+                            new_name = list(g1.vs["name"][v[0]])
+                            new_name.append(",".join(g2.vs["name"][0]))
+                        elif isinstance(g2.vs["name"][v[1]], str):
+                            new_name = list(g1.vs["name"][v[0]])
+                            new_name.append(g2.vs["name"][v[1]])
                         else:
-                            g_comp_vert[(v[0], v[1])] = [index, [str(v[0]), str(v[1])]]
+                            sys.exit(
+                                "ERROR:\nState name must be str or list of str"
+                            )
+                        output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
+                    elif i == 1 and save_state_names:
+                        if isinstance(g1.vs["name"][v[0]], str) and isinstance(
+                            g2.vs["name"][v[1]], list
+                        ):
+                            new_name = [
+                                g1.vs["name"][v[0]],
+                                ",".join(g2.vs["name"][v[1]]),
+                            ]
+                        elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
+                            g2.vs["name"][v[1]], str
+                        ):
+                            new_name = [
+                                ",".join(g1.vs["name"][v[0]]),
+                                g2.vs["name"][v[1]],
+                            ]
+                        elif isinstance(g1.vs["name"][v[0]], str) and isinstance(
+                            g2.vs["name"][v[1]], str
+                        ):
+                            new_name = [g1.vs["name"][v[0]], g2.vs["name"][v[1]]]
+                        elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
+                            g2.vs["name"][v[1]], list
+                        ):
+                            new_name = [
+                                ",".join(g1.vs["name"][v[0]]),
+                                ",".join(g2.vs["name"][v[1]]),
+                            ]
+                        else:
+                            sys.exit(
+                                "ERROR:\nState name must be str or list of str"
+                            )
+                        output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
+                    else:
+                        output_vert[(v[0], v[1])] = [index, [str(v[0]), str(v[1])]]
 
-                        # if i > 1 and save_state_names:
-                        #     # Stores the index, final name of the vertex as the set of states
-                        #     # in the composition.
-                        #     g_comp_vert[v] = [index, list(g1.vs["name"][v[0]]) + [v[1]]]
-                        # else:
-                        #     g_comp_vert[v] = [index, v]
 
-                        next_states_temp.add(v)
+                    queue.append(v)
 
-                # need to check the new states' neighbors
+            # need to check the new states' neighbors
 
-            next_states_to_check = next_states_temp
 
         if save_marked_states:
-            g_comp_vert_mark = [marked_bool(g1, g2, v) for v in g_comp_vert]
+            output_vert_mark = [marked_bool(g1, g2, v) for v in output_vert]
 
         assemble_graph(
-            g_comp,
-            g_comp_edges,
+            output,
+            output_edges,
             index,
-            g_comp_vert_mark,
-            g_comp_edge_labels,
-            g_comp_vert,
+            output_vert_mark,
+            output_edge_labels,
+            output_vert,
             save_state_names,
             save_marked_states,
             adj,
         )
         # to iterate through list of inputs
-        # g_list[i] = g_comp
+        # input_list[i] = output
+    if not output_defined:
+        return output
 
 
 def assemble_graph(
-    g_comp,
-    g_comp_edges,
+    output,
+    output_edges,
     index,
-    g_comp_vert_mark,
-    g_comp_edge_labels,
-    g_comp_vert,
+    output_vert_mark,
+    output_edge_labels,
+    output_vert,
     save_state_names,
     save_marked_states,
     adj=dict(),
@@ -464,30 +477,30 @@ def assemble_graph(
     """
     Assemble product_pairs, edge_pairs and edge_labels into resultant graph.
     """
-    g_comp_edges_list = list()
+    output_edges_list = list()
     # substitute names of edges via dict mapping
-    for vert_pair in g_comp_edges:
-        source = g_comp_vert[vert_pair[0]][0]
-        target = g_comp_vert[vert_pair[1]][0]
-        g_comp_edges_list.append((source, target))
+    for vert_pair in output_edges:
+        source = output_vert[vert_pair[0]][0]
+        target = output_vert[vert_pair[1]][0]
+        output_edges_list.append((source, target))
 
     # add items to new graph
-    g_comp.delete_vertices([i for i in range(0, g_comp.vcount())])
-    g_comp.add_vertices(index + 1)
+    output._graph.delete_vertices([i for i in range(0, output.vcount())])
+    output.add_vertices(index + 1)
     if save_marked_states:
-        g_comp.vs["marked"] = g_comp_vert_mark
-    g_comp.add_edges(g_comp_edges_list)
-    g_comp.es["label"] = g_comp_edge_labels
+        output.vs["marked"] = output_vert_mark
+    output.add_edges(output_edges_list)
+    output.es["label"] = output_edge_labels
     if save_state_names:
-        g_comp.vs["name"] = [v[1] for v in g_comp_vert.values()]
+        output.vs["name"] = [v[1] for v in output_vert.values()]
     if adj:
         # print(adj)
-        # print(g_comp_vert.values())
+        # print(output_vert.values())
         adj = [
-            [(g_comp_vert[v[0]][0], v[1]) for v in adj[l[2]]]
-            for l in g_comp_vert.values()
+            [(output_vert[v[0]][0], v[1]) for v in adj[l[2]]]
+            for l in output_vert.values()
         ]
-        g_comp.vs["out"] = adj
+        output.vs["out"] = adj
 
 
 def marked_bool(g1, g2, vert_pair):

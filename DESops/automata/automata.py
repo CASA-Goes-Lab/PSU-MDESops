@@ -147,6 +147,8 @@ class _Automata():
         self._graph = ig.Graph(directed=True)
         self.events = list()
         self.states = list()
+        self.Euc = set()
+        self.Euo = set()
         self.type = None
 
         if isinstance(init, ig.Graph):
@@ -155,7 +157,7 @@ class _Automata():
             self._graph = graph.copy()
             find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
 
-        elif isinstance(init, Automata):
+        elif isinstance(init, _Automata):
             # Create Automata from another Automata
             self._graph = init._graph.copy()
             self.events = init.events.copy()

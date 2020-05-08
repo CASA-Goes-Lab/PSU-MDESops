@@ -12,4 +12,6 @@ from DESops.file.igraph_pickle import *
 
 from DESops.visualization.plot import plot
 
+from DESops.basic_operations.parallel_comp import parallel_comp
+
 __version__ = "20.3.1"

@@ -5,7 +5,6 @@ Contains helpful functions used in various operations.
 """
 from collections.abc import Iterable
 
-
 def find_obs_contr(S, Euc=set(), Euo=set(), E=set()):
     """
     For set of graphs S, find Euc and Euo if not provided.
@@ -125,7 +124,7 @@ def copy_event_sets(this, other):
     will be the set union of the automata in 'this'.
 
     """
-    if isinstance(this, Automata):
+    if isinstance(this, _Automata):
         other.Euo = this.Euo
         other.Euc = this.Euc
         other.Ea = this.Ea
