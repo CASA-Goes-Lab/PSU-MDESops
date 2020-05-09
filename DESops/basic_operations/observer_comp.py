@@ -7,7 +7,7 @@ only used by observer_comp.
 """
 from DESops.automata.automata import _Automata
 from DESops.basic_operations.generic_functions import find_Euo
-from DESops.basic_operations.ureach import unobservable_reach
+from DESops.basic_operations.ureach import ureach_from_set_adjlist
 
 
 def observer_comp(part_obs, observer=None, Euo=set(), save_state_names=False, save_marked_states=False):
@@ -52,13 +52,15 @@ def observer_comp(part_obs, observer=None, Euo=set(), save_state_names=False, sa
     find_Euo([part_obs._graph], Euo)
     # 1. Determine x0_obs = u-reach(x0), add to X_obs
     x0_obs = set()
-    unobservable_reach(x0_obs, 0, part_obs._graph, Euo)
+
+    adj_list = part_obs._graph.get_inclist()
+    x0_obs = ureach_from_set_adjlist({0}, part_obs, Euo, adj_list)
     x0_obs = frozenset(x0_obs)
     X_obs, H = set(), set()
     Q = list()
     Q.append(x0_obs)
     X_obs.add(x0_obs)
-    search(part_obs._graph, Q, Euo, X_obs, H)
+    search(part_obs._graph, Q, Euo, X_obs, H, adj_list)
     convert_to_graph(
         part_obs._graph,
         observer._graph,
@@ -74,57 +76,27 @@ def observer_comp(part_obs, observer=None, Euo=set(), save_state_names=False, sa
         return observer
 
 
-def search(part_obs, Q, Euo, X_obs, H):
+def search(part_obs, Q, Euo, X_obs, H, adj_list):
     """
     BFS of the states of part_obs (the partially observed automaton).
     Uses queue-system via list Q.
     """
-    adj_list = part_obs.get_inclist()
     while Q:
         q = Q.pop(0)
 
-        #active_events = set(part_obs.es(_source_in=q)["label"])
-        #active_events = set(e[1] for vert in q for e in part_obs.vs["out"][vert])
         active_events = set(part_obs.es["label"][e] for vert in q for e in adj_list[vert])
-        
-        """
-        adjacent_states = {
-            (frozenset({t.target for t in part_obs.es(label_eq=e)(_source_in=q)}), e)
-            for e in active_events
-            if e not in Euo
-        }
-        """
-        # TODO: make this more readable
+
         set_of_states = lambda e : (frozenset(part_obs.es[t].target for vert in q for t in adj_list[vert] if part_obs.es[t]["label"] == e), e)
-        adjacent_states = {
-            (set_of_states(e))
-            for e in active_events 
-            if e not in Euo
-        }
         
+        adjacent_states = {(set_of_states(e)) for e in active_events if e not in Euo}
 
+        adj_sets = ((ureach_from_set_adjlist(S[0], part_obs, Euo, adj_list), S[1]) for S in adjacent_states)
 
-        #adjacent_states = {frozenset()}
-        adj_sets = ((t_ureach_from_set(S[0], part_obs, Euo), S[1]) for S in adjacent_states)
         for s in adj_sets:
             if s[0] not in X_obs:
                 Q.append(frozenset(s[0]))
                 X_obs.add(frozenset(s[0]))
             H.add((q, s[1], frozenset(s[0])))
-        # Older version, less comprehensions: (above is only marginally faster)
-
-        """
-        for e in active_events:
-            if e in Euo: continue
-            adjacent_states = {t.target for t in part_obs.es(label_eq = e)(_source_in = q)}
-            adjacent_set = set()
-            ureach_from_set(adjacent_set,adjacent_states,part_obs,Euo)
-            if adjacent_set not in X_obs:
-                Q.append(frozenset(adjacent_set))
-                X_obs.add(frozenset(adjacent_set))
-            H.add((q, e, frozenset(adjacent_set)))
-        """
-
 
 def convert_to_graph(
     part_obs, observer, X_obs, H, init_set, save_state_names, save_marked_states
@@ -151,27 +123,3 @@ def convert_to_graph(
         observer.vs["marked"] = [
             any(part_obs.vs[v]["marked"] for v in v_set) for v_set in vert_names_list
         ]
-
-
-def t_ureach_from_set(S, g, e):
-    """
-    Similar to ureach_from_set but with more set comprehensions, testing to see if any faster
-    Seems to be no noticable difference, so will likely change back to using ureach_from_set
-    """
-    x_set = set(S)
-    if not e:
-        return x_set
-    uc_neighbors = {
-        t.target
-        for t in g.es(_source_in=S)
-        if t["label"] in e and t.target not in x_set
-    }
-    while uc_neighbors:
-        x_set.update(uc_neighbors)
-        uc_neighbors = {
-            t.target
-            for t in g.es(_source_in=uc_neighbors)
-            if t["label"] in e and t.target not in x_set
-        }
-
-    return x_set
