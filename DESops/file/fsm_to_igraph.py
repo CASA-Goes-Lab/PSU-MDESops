@@ -35,8 +35,12 @@ def read_fsm(fsm_filename, g=None):
         > 0   2   c   uo   0.5
         > ...
     """
-
     g_defined = True
+
+    # IF WE USE READ_FSM WITHOUT CALLING FROM INIT OF DFA, PFA, OR NFA, THEN IT MUST CREATE ONE BASED ON THE FILE.
+    # E.G. IF FSM HAS PROBABILITIES THEN A PFA IS CREATED. WE SHOULD NOT CREATE _Automata() ITS ABSTRACT
+    # THE READ_FSM IS NOT CREATING STATE OBJECTS NEITHER EVENT OBJECTS
+
     if not g:
         g_defined = False
         g = _Automata()
@@ -139,12 +143,11 @@ def read_fsm(fsm_filename, g=None):
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == "c" for x in trans_controllable]
     g.es["contr"] = trans_controllable_bool
-    
+
     neighbors_list = [
         [(state_names.index(adj[0]), adj[1]) for adj in l] for l in neighbors_list
     ]
-    
-        
+
     g.vs["out"] = neighbors_list
 
     if trans_prob:
