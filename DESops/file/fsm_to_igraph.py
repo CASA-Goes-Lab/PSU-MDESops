@@ -1,6 +1,8 @@
 import sys
 
-from DESops.automata.automata import _Automata
+import igraph as ig
+
+from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.automata.state.state import State
 
@@ -12,7 +14,7 @@ into an igraph Graph object.
 """
 
 
-def read_fsm(fsm_filename, g=None, type=""):
+def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
     g: igraph Graph object to read from (an Automata instance would work as well).
@@ -44,12 +46,15 @@ def read_fsm(fsm_filename, g=None, type=""):
     g_defined = True
     if not g:
         g_defined = False
-        g = _Automata()
+        # g = _Automata()
+        g = ig.Graph(directed=True)
 
     state_markings = list()
     state_names = list()
     state_crit = list()
     events = set()
+    events_unobs = set()
+    events_unctr = set()
     trans_list = list()
     trans_labels = list()
     trans_observable = list()
@@ -96,21 +101,46 @@ def read_fsm(fsm_filename, g=None, type=""):
                         "ERROR %s in line %d:\nToo many argument\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )
-                if len(trans_tuple) < 4:
+                elif len(trans_tuple) < 4:
                     sys.exit(
                         "ERROR %s in line %d:\nMissing arguments\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )
+
+                if not g_defined and not type_aut:
+                    if len(trans_tuple) == 5:
+                        type_aut = "PFA"
+                    elif (
+                        len(trans_tuple) == 4
+                    ):  # TODO WHEN NFA IS DEFINED THEN SET AS DFA UNTIL A NONDETERMINISTIC TRANS IS FOUND
+                        type_aut = "DFA"
+                if type_aut == "PFA" and len(trans_tuple) != 5:
+                    sys.exit(
+                        "ERROR %s in line %d:\nPFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob "
+                        % (fsm_filename, i)
+                    )
+                elif type_aut == "DFA" and len(trans_tuple) != 4:
+                    sys.exit(
+                        "ERROR %s in line %d:\nDFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo"
+                        % (fsm_filename, i)
+                    )
+
                 last_el = trans_tuple.pop()
                 trans_tuple.append(last_el[0:-1])
-                trans_labels.append(trans_tuple[0])
+                trans_labels.append(Event(trans_tuple[0]))
                 events.add(Event(trans_tuple[0]))
                 trans_list.append((states_tuple[0], trans_tuple[1]))
+                if trans_tuple[2] == "uc":
+                    events_unctr.add(Event(trans_tuple[0]))
                 trans_controllable.append(trans_tuple[2])
+                if trans_tuple[3] == "uo":
+                    events_unobs.add(Event(trans_tuple[0]))
                 trans_observable.append(trans_tuple[3])
-                if len(trans_tuple) == 5:
+
+                if type_aut == "PFA":
                     # probabilistic info encoded
                     # must be a PFA
+                    type_aut = "PFA"
                     try:
                         float(trans_tuple[4])
                     except ValueError:
@@ -125,6 +155,7 @@ def read_fsm(fsm_filename, g=None, type=""):
                     )
                 else:
                     neigh.append((trans_tuple[1], Event(trans_tuple[0])))
+                    type_aut = "DFA"
                 i += 1
             neighbors_list.append(neigh)
             if total > 0 and total != 1:
@@ -134,6 +165,7 @@ def read_fsm(fsm_filename, g=None, type=""):
                 )
 
     # Construct graph
+
     g.vs["marked"] = bool(state_markings == "1")
     if state_crit:
         g.vs["crit"] = state_crit
@@ -144,8 +176,9 @@ def read_fsm(fsm_filename, g=None, type=""):
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
     g.add_edges(trans_list_int_names)
-    print(events)
-    g.es["label"] = events
+
+    # print(events)
+    g.es["label"] = trans_labels
     trans_observable_bool = [x == "o" for x in trans_observable]
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == "c" for x in trans_controllable]
@@ -161,4 +194,9 @@ def read_fsm(fsm_filename, g=None, type=""):
         g.es["prob"] = trans_prob
 
     if not g_defined:
-        return g
+        if type_aut == "DFA":
+            G = DFA(g, events_unctr, events_unobs, events)
+            return G
+        else:  # TODO WHEN PFA CLASS IS DEFINED
+            G = DFA(g, events_unctr, events_unobs, events)
+            return G

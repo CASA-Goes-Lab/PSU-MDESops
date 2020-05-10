@@ -127,7 +127,7 @@ except ImportError:
 
 
 class _Automata:
-    def __init__(self, init=None):
+    def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         """
         Constructor can create an empty automata, or be created in one of the following ways:
         1.  From an existing igraph-Graph instance, the input graph is stored in self._graph
@@ -144,8 +144,10 @@ class _Automata:
 
         # Default case; create Automata from scratch.
         self._graph = ig.Graph(directed=True)
-        self.events = list()
-        self.states = list()
+        self.events = set()  # IT SHOULD BE A SET OF EVENTS
+        self.states = (
+            list()
+        )  # A SET OF STATES. I AM GOING BACK TO JUST USE VS OF IGRAPH TO BE THE SET OF STATES
         self.Euc = set()
         self.Euo = set()
         self.type = None
@@ -154,7 +156,10 @@ class _Automata:
             # Create Automata from igraph Graph
             graph = init
             self._graph = graph.copy()
-            find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
+            self.Euc = Euc
+            self.Euo = Euo
+            self.events = E
+            # find_obs_contr(self._graph, self.Euc, self.Euo, self.events)
 
         elif isinstance(init, _Automata):
             # Create Automata from another Automata
