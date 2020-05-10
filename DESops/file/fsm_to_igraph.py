@@ -1,6 +1,8 @@
 import sys
 
 from DESops.automata.automata import _Automata
+from DESops.automata.event.event import Event
+from DESops.automata.state.state import State
 
 
 # pylint: disable=C0103
@@ -10,7 +12,7 @@ into an igraph Graph object.
 """
 
 
-def read_fsm(fsm_filename, g=None):
+def read_fsm(fsm_filename, g=None, type=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
     g: igraph Graph object to read from (an Automata instance would work as well).
@@ -35,12 +37,11 @@ def read_fsm(fsm_filename, g=None):
         > 0   2   c   uo   0.5
         > ...
     """
-    g_defined = True
 
     # IF WE USE READ_FSM WITHOUT CALLING FROM INIT OF DFA, PFA, OR NFA, THEN IT MUST CREATE ONE BASED ON THE FILE.
     # E.G. IF FSM HAS PROBABILITIES THEN A PFA IS CREATED. WE SHOULD NOT CREATE _Automata() ITS ABSTRACT
     # THE READ_FSM IS NOT CREATING STATE OBJECTS NEITHER EVENT OBJECTS
-
+    g_defined = True
     if not g:
         g_defined = False
         g = _Automata()
@@ -48,7 +49,7 @@ def read_fsm(fsm_filename, g=None):
     state_markings = list()
     state_names = list()
     state_crit = list()
-
+    events = set()
     trans_list = list()
     trans_labels = list()
     trans_observable = list()
@@ -76,6 +77,7 @@ def read_fsm(fsm_filename, g=None):
             states_tuple.append(last_el[0:-1])  # REMOVING \n
             # print(states_tuple)
             state_names.append(states_tuple[0])
+            # states.append(State(states_tuple[0]))
             state_markings.append(states_tuple[1])
             if len(states_tuple) > 3:
                 state_crit.append(states_tuple[2])
@@ -102,11 +104,13 @@ def read_fsm(fsm_filename, g=None):
                 last_el = trans_tuple.pop()
                 trans_tuple.append(last_el[0:-1])
                 trans_labels.append(trans_tuple[0])
+                events.add(Event(trans_tuple[0]))
                 trans_list.append((states_tuple[0], trans_tuple[1]))
                 trans_controllable.append(trans_tuple[2])
                 trans_observable.append(trans_tuple[3])
                 if len(trans_tuple) == 5:
                     # probabilistic info encoded
+                    # must be a PFA
                     try:
                         float(trans_tuple[4])
                     except ValueError:
@@ -116,9 +120,11 @@ def read_fsm(fsm_filename, g=None):
                         )
                     trans_prob.append(trans_tuple[4])
                     total = total + float(trans_tuple[4])
-                    neigh.append((trans_tuple[1], trans_tuple[0], int(trans_tuple[4])))
+                    neigh.append(
+                        (trans_tuple[1], Event(trans_tuple[0]), int(trans_tuple[4]))
+                    )
                 else:
-                    neigh.append((trans_tuple[1], trans_tuple[0]))
+                    neigh.append((trans_tuple[1], Event(trans_tuple[0])))
                 i += 1
             neighbors_list.append(neigh)
             if total > 0 and total != 1:
@@ -138,7 +144,8 @@ def read_fsm(fsm_filename, g=None):
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
     g.add_edges(trans_list_int_names)
-    g.es["label"] = trans_labels
+    print(events)
+    g.es["label"] = events
     trans_observable_bool = [x == "o" for x in trans_observable]
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == "c" for x in trans_controllable]

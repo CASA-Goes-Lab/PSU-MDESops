@@ -108,6 +108,12 @@ copy_event_sets
 
 """
 
+from abc import ABC, abstractmethod
+from collections.abc import Iterable
+
+from DESops.automata.event.event import Event
+from DESops.automata.state.state import State
+from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
     DependencyNotInstalledError,
     IncongruencyError,
@@ -119,15 +125,8 @@ try:
 except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
 
-from abc import ABC, abstractmethod
 
-from collections.abc import Iterable
-
-from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
-
-from DESops.automata.event.event import Event
-
-class _Automata():
+class _Automata:
     def __init__(self, init=None):
         """
         Constructor can create an empty automata, or be created in one of the following ways:
@@ -374,6 +373,7 @@ def str2(label):
         return str(set(label))
     return str(label)
 
+
 def supremal_contr_supervisor(system, specification):
     """
     Computes the supremal controllable supervisor for the given plant
@@ -421,7 +421,6 @@ def supremal_cn_supervisor(system, specification):
     A = Automata(supremal_cn_supervisor_i(specification, system, Euc_u, Euo_u))
     copy_event_sets([system, specification], A)
     return A
-
 
 
 def copy_event_sets(this, other):
