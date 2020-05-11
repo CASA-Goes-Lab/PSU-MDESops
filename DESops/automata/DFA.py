@@ -3,6 +3,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.automata import _Automata
+from DESops.error import IncongruencyError
 
 
 class DFA(_Automata):
@@ -43,7 +44,7 @@ class DFA(_Automata):
 					which accepts iterables of pairs or an EdgeSeq (see igraph documentation
 					for more details on what is acceptable here).
 				labels:
-					(default None) optionally provide an iterable of labels to attach as
+					provide an iterable of labels to attach as
 					keyword attributes. Should be parallel to pair_list (e.g., pair n of
 					pair_list corresponding to label n of labels). To be stored in the "label" edge keyword attribute.
 				Returns nothing.

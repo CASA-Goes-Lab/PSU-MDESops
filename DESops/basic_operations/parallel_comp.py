@@ -291,8 +291,7 @@ def assemble_graph(
     output.add_vertices(index + 1)
     if save_marked_states:
         output.vs["marked"] = output_vert_mark
-    output.add_edges(output_edges_list)
-    output.es["label"] = output_edge_labels
+    output.add_edges(output_edges_list, output_edge_labels)
     if save_state_names:
         output.vs["name"] = [v[1] for v in output_vert.values()]
     if adj:

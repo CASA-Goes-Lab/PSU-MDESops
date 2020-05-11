@@ -4,7 +4,7 @@
 from DESops.automata.DFA import DFA
 from DESops.automata.PFA import PFA
 from DESops.automata.NFA import NFA
-from DESops.automata.automata_ctor import construct_automata
+
 from DESops.automata.event.event import Event
 from DESops.automata.state.state import State
 

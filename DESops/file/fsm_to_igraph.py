@@ -177,10 +177,9 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         source = state_names.index(pair[0])
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
-    g.add_edges(trans_list_int_names)
+    g.add_edges(trans_list_int_names, trans_labels)
 
     # print(events)
-    g.es["label"] = trans_labels
     trans_observable_bool = [x == "o" for x in trans_observable]
     g.es["obs"] = trans_observable_bool
     trans_controllable_bool = [x == "c" for x in trans_controllable]

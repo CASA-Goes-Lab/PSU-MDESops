@@ -2,8 +2,9 @@
 """
 Refine Automata by product.
 """
-from ..basic.parallel_comp import parallel_comp as parallel_comp
-from ..basic.product_comp import product_comp as product_comp
+from DESops import automata
+from DESops.basic_operations.parallel_comp import parallel_comp as parallel_comp
+from DESops.basic_operations.product_comp import product_comp as product_comp
 
 
 def refine_product(G_out, G1, G2):
@@ -13,7 +14,7 @@ def refine_product(G_out, G1, G2):
     Assuming L(G1) is a subset of L(G2)...
     or L(G2) is a subset of L(G1)
     """
-    product_comp(G_out, [G1, G2], True)
+    product_comp([G1, G2], G_out, True)
 
 
 def refine_product_SCS(G_out, H, G):
@@ -22,8 +23,9 @@ def refine_product_SCS(G_out, H, G):
     Then refine by product H_p, G
     Written as G_out, but that should be H_out?
     """
-    H_p = ig.Graph(directed=True)
-    parallel_comp(H_p, [H, G], True)
+    #H_p = ig.Graph(directed=True)
+    H_p = automata.DFA()
+    parallel_comp([H, G], H_p, True)
     # map names of H_p from (h,g) to h, where h,g are states of H,G
     H_p.vs["name"] = [pair[0] for pair in H_p.vs["name"]]
 
