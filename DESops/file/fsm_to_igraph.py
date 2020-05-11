@@ -46,9 +46,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     # THE READ_FSM IS NOT CREATING STATE OBJECTS NEITHER EVENT OBJECTS
     g_defined = True
     if not g:
-        g_defined = False
-        # g = _Automata()
         g = ig.Graph(directed=True)
+        g_defined = False
 
     state_markings = list()
     state_names = list()
@@ -177,7 +176,29 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         source = state_names.index(pair[0])
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
-    g.add_edges(trans_list_int_names, trans_labels)
+
+
+    if g_defined:
+        g.Euc = events_unctr.copy()
+        g.Euo = events_unobs.copy()
+        g.events = events.copy()
+
+    if type_aut == "DFA" or isinstance(g, DFA):
+        if not g_defined:
+            g = DFA(g, events_unctr, events_unobs, events, False)
+        g.add_edges(trans_list_int_names, trans_labels)
+
+    elif type_aut == "PFA" or isinstance(g, PFA):
+        if not g_defined:
+            g = PFA(g, events_unctr, events_unobs, events)
+        g.add_edges(trans_list_int_names, trans_labels, trans_prob)
+
+    elif type_aut == "NFA" or isinstance(g, NFA):
+        if not g_defined:
+            g = NFA(g, events_unctr, events_unobs, events)
+        g.add_edges(trans_list_int_names, trans_labels)
+
+
 
     # print(events)
     trans_observable_bool = [x == "o" for x in trans_observable]
@@ -191,14 +212,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
 
     g.vs["out"] = neighbors_list
 
-    if trans_prob:
-        g.es["prob"] = trans_prob
 
-    if type_aut == "DFA":
-        G = DFA(g, events_unctr, events_unobs, events, False)
-    elif type_aut == "PFA":
-        G = PFA(g, events_unctr, events_unobs, events)
-        return G
+    return g
 
     # TODO WHEN NFA CLASS IS DEFINED
 
