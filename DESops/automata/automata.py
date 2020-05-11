@@ -148,16 +148,21 @@ class _Automata:
         self.states = (
             list()
         )  # A SET OF STATES. I AM GOING BACK TO JUST USE VS OF IGRAPH TO BE THE SET OF STATES
-        self.Euc = set()
-        self.Euo = set()
+
+        if not Euc:
+            self.Euc = set()
+        else:
+            self.Euc = Euc.copy()
+        if not Euo:
+            self.Euo = set()
+        else:
+            self.Euo = Euo.copy()
         self.type = None
 
         if isinstance(init, ig.Graph):
             # Create Automata from igraph Graph
             graph = init
             self._graph = graph.copy()
-            self.Euc = Euc
-            self.Euo = Euo
             self.events = E
             # find_obs_contr(self._graph, self.Euc, self.Euo, self.events)
 
