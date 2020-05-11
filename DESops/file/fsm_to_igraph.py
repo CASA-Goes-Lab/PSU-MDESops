@@ -3,6 +3,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.DFA import DFA
+from DESops.automata.PFA import PFA
 from DESops.automata.event.event import Event
 from DESops.automata.state.state import State
 
@@ -110,9 +111,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                 if not g_defined and not type_aut:
                     if len(trans_tuple) == 5:
                         type_aut = "PFA"
-                    elif (
-                        len(trans_tuple) == 4
-                    ):  # TODO WHEN NFA IS DEFINED THEN SET AS DFA UNTIL A NONDETERMINISTIC TRANS IS FOUND
+                    elif (len(trans_tuple) == 4):  
+                        # TODO WHEN NFA IS DEFINED THEN SET AS DFA UNTIL A NONDETERMINISTIC TRANS IS FOUND
                         type_aut = "DFA"
                 if type_aut == "PFA" and len(trans_tuple) != 5:
                     sys.exit(
@@ -142,7 +142,9 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                     # must be a PFA
                     type_aut = "PFA"
                     try:
-                        float(trans_tuple[4])
+                        #float(trans_tuple[4])
+                        if float(trans_tuple[4]) > 1 or float(trans_tuple[4]) < 0:
+                            raise ValueError
                     except ValueError:
                         sys.exit(
                             "ERROR %s in line %d:\nProbability value must be a number smaller than or equal to 1"
@@ -151,7 +153,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                     trans_prob.append(trans_tuple[4])
                     total = total + float(trans_tuple[4])
                     neigh.append(
-                        (trans_tuple[1], Event(trans_tuple[0]), int(trans_tuple[4]))
+                        (trans_tuple[1], Event(trans_tuple[0]), float(trans_tuple[4]))
                     )
                 else:
                     neigh.append((trans_tuple[1], Event(trans_tuple[0])))
@@ -193,10 +195,15 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     if trans_prob:
         g.es["prob"] = trans_prob
 
+    if type_aut == "DFA":
+        G = DFA(g, events_unctr, events_unobs, events)
+    elif type_aut == "PFA": 
+        G = PFA(g, events_unctr, events_unobs, events)
+        return G
+
+    # TODO WHEN NFA CLASS IS DEFINED
+
     if not g_defined:
-        if type_aut == "DFA":
-            G = DFA(g, events_unctr, events_unobs, events)
-            return G
-        else:  # TODO WHEN PFA CLASS IS DEFINED
-            G = DFA(g, events_unctr, events_unobs, events)
-            return G
+        return G
+    else:
+        g = G
