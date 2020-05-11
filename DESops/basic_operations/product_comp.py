@@ -106,7 +106,6 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
             # select edges with source at current vertex
             g1_es = g1.vs["out"][vert_pair[0]]
             g2_es = g2.vs["out"][vert_pair[1]]
-            print(g1_es)
             g1_labels = {e[1]: e[0] for e in g1_es}
             g2_labels = {e[1]: e[0] for e in g2_es}
 
