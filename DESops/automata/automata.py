@@ -174,6 +174,9 @@ class _Automata:
         if "name" not in self._graph.vs.attributes():
             self._graph.vs["name"] = [""]
 
+        if "out" not in self._graph.vs.attributes():
+            self._graph.vs["out"] = [""]
+
         # Allow references to graph instance's edge & vertex sequence methods
         # from the Automata (e.g. self.es as opposed to doing self._graph.es)
         self.es = self._graph.es
