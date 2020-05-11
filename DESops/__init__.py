@@ -2,6 +2,7 @@
 #from DESops.automata.automata import _Automata
 
 from DESops.automata.DFA import DFA
+from DESops.automata.PFA import PFA
 from DESops.automata.event.event import Event
 from DESops.automata.state.state import State
 
