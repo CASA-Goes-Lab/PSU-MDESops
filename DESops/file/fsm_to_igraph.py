@@ -195,8 +195,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
 
     if not g_defined:
         if type_aut == "DFA":
-            G = DFA(g, events_unctr, events_unobs, events)
+            G = DFA(g, events_unctr, events_unobs, events, False)
             return G
         else:  # TODO WHEN PFA CLASS IS DEFINED
-            G = DFA(g, events_unctr, events_unobs, events)
+            G = DFA(g, events_unctr, events_unobs, events, False)
             return G
