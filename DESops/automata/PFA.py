@@ -7,8 +7,8 @@ class PFA(_Automata):
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set(), prob=list()):
         super(PFA, self).__init__(init, Euc, Euo, E)
 
-        if not prob:
-            if "prob" not in init.es.attributes():
+        if not prob and self.ecount() > 0:
+            if "prob" not in self.es.attributes():
                 import warnings
                 #sys.exit("ERROR: prob attribute not defined for type PFA")
                 warnings.warn("prob attribute not defined for type PFA, setting to default")
