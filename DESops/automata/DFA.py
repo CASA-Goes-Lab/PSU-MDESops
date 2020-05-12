@@ -5,6 +5,11 @@ import igraph as ig
 from DESops.automata.automata import _Automata
 from DESops.error import IncongruencyError
 
+# MUST HAVE A DEFINITION NFA TO DFA
+# CHECKS IF THERE IS NONDETERMINISM
+# IF NO NONDETERMINISM THEN OUTPUTS A COPY OF THE NFA
+# IF THERE IS NONDETERMINISM THEN OUTPUTS THE DETERMINIZING OF NFA
+
 
 class DFA(_Automata):
     """docstring for """

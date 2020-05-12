@@ -1,6 +1,9 @@
 import igraph as ig
+
 from DESops.automata.event.event import Event
-def plot(automata, layout_i="kk", bbox_i=(0, 0, 2000, 2000), margin_i=100):
+
+
+def plot(automata, layout_i="kk", bbox_i=(0, 0, 1000, 1000), margin_i=100):
     """
     Plot the Graph attribute of the Automata.
     If the automata is an IDA or similar, the plot will differentiate the two state types.
