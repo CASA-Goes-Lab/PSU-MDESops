@@ -3,8 +3,10 @@ import sys
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
 from DESops.automata.PFA import PFA
+from DESops.automata.NFA import NFA
+from DESops.automata.event.event import Event
+
 from DESops.automata.state.state import State
 
 
@@ -13,8 +15,6 @@ from DESops.automata.state.state import State
 Convert an 'fsm' filetype, which is used/defined by the DESUMA software,
 into an igraph Graph object.
 """
-
-
 def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
@@ -214,10 +214,3 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
 
 
     return g
-
-    # TODO WHEN NFA CLASS IS DEFINED
-
-    # if not g_defined:
-    #     g =
-    # else:
-    #     g = G
