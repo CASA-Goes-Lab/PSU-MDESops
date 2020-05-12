@@ -11,7 +11,7 @@ import sys
 from collections import OrderedDict
 from collections.abc import Iterable
 
-from DESops.automata.automata import _Automata
+import DESops.automata as automata
 
 
 def parallel_comp(
@@ -65,10 +65,19 @@ def parallel_comp(
     # IF ONE NFA IN THE INPUTE -> OUTPUT IS NFA
     # PFA PARALLEL COMPOSITION IS DIFFERENT
     # FOR NOW TREAT PFA AS NFA AND DO THE PARALLEL COMP -> OUTPUT NFA
+    if not input_list:
+        return
     output_defined = True
-    if not isinstance(output, _Automata):
+    if not output:
         output_defined = False
-        output = _Automata()
+        if any(isinstance(g, automata.PFA) for g in input_list):
+            output = automata.NFA() # warn
+            import warnings
+            warnings.warn("P-comp returning a DFA. Probabilistic information will be lost if type PFA.")
+        elif any(isinstance(g, automata.NFA) for g in input_list):
+            output = automata.NFA()
+        else:
+            output = automata.DFA()
 
     all_common_events = set()
     if common_events_i:
@@ -105,29 +114,6 @@ def parallel_comp(
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
         if i > 1 and save_state_names:
-            """
-            if isinstance(g2.vs["name"][0], Iterable):
-                new_name = list(g1.vs["name"][0])
-                new_name.append(",".join(g2.vs["name"][0]))
-            elif isinstance(g2.vs["name"][0], str):
-                new_name = list(g1.vs["name"][0])
-                new_name.append(g2.vs["name"][0])
-            else:
-                sys.exit("ERROR:\nState name must be str or list of str")
-            output_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
-        elif i == 1 and save_state_names:
-            if isinstance(g1.vs["name"][0], str) and isinstance(g2.vs["name"][0], Iterable):
-                new_name = list()
-                new_name.append(g1.vs["name"])
-            elif isinstance(g1.vs["name"][0], list) and isinstance(g2.vs["name"][0], str):
-                new_name = [",".join(g1.vs["name"][0]), g2.vs["name"][0]]
-            elif isinstance(g1.vs["name"][0], str) and isinstance(g2.vs["name"][0], str):
-                new_name = [g1.vs["name"][0], g2.vs["name"][0]]
-            elif isinstance(g1.vs["name"][0], Iterable) and isinstance(g2.vs["name"][0], Iterable):
-                new_name = [",".join(g1.vs["name"][0]), ",".join(g2.vs["name"][0])]
-            else:
-                sys.exit("ERROR:\nState name must be str or list of str")
-            """
             new_name = list()
             new_state_name(g1, g2, 0, 0, new_name)
             output_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
@@ -158,11 +144,13 @@ def parallel_comp(
             g1_labels = {e[1]: e[0] for e in g1_es}
             g2_labels = {e[1]: e[0] for e in g2_es}
 
-            l_set = set(g1_labels.keys()).union(g2_labels.keys())
-
+            l_set = set(g1_labels.items()).union(g2_labels.items())
+            # pcomp_det checks for set membership in g1_, g2_labels
+            # Maybe faster to store membership when computing set unions?
+            # (Significant time is spent in pcomp_det)
             for x in l_set:
                 pcomp_det(
-                    x,
+                    x[0],
                     vert_pair,
                     g1_labels,
                     g2_labels,
@@ -184,53 +172,10 @@ def parallel_comp(
                 if v not in output_vert:
                     index += 1
                     if i > 1 and save_state_names:
-                        """
-                        if isinstance(g2.vs["name"][v[1]], list):
-                            new_name = list(g1.vs["name"][v[0]])
-                            new_name.append(",".join(g2.vs["name"][0]))
-                        elif isinstance(g2.vs["name"][v[1]], str):
-                            new_name = list(g1.vs["name"][v[0]])
-                            new_name.append(g2.vs["name"][v[1]])
-                        else:
-                            sys.exit(
-                                "ERROR:\nState name must be str or list of str"
-                            )
-                        """
                         new_name = list()
                         new_state_name(g1, g2, v[0], v[1], new_name)
                         output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
                     elif i == 1 and save_state_names:
-                        """
-                        if isinstance(g1.vs["name"][v[0]], str) and isinstance(
-                            g2.vs["name"][v[1]], list
-                        ):
-                            new_name = [
-                                g1.vs["name"][v[0]],
-                                ",".join(g2.vs["name"][v[1]]),
-                            ]
-                        elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
-                            g2.vs["name"][v[1]], str
-                        ):
-                            new_name = [
-                                ",".join(g1.vs["name"][v[0]]),
-                                g2.vs["name"][v[1]],
-                            ]
-                        elif isinstance(g1.vs["name"][v[0]], str) and isinstance(
-                            g2.vs["name"][v[1]], str
-                        ):
-                            new_name = [g1.vs["name"][v[0]], g2.vs["name"][v[1]]]
-                        elif isinstance(g1.vs["name"][v[0]], list) and isinstance(
-                            g2.vs["name"][v[1]], list
-                        ):
-                            new_name = [
-                                ",".join(g1.vs["name"][v[0]]),
-                                ",".join(g2.vs["name"][v[1]]),
-                            ]
-                        else:
-                            sys.exit(
-                                "ERROR:\nState name must be str or list of str"
-                            )
-                        """
                         new_name = list()
                         new_state_name(g1, g2, v[0], v[1], new_name)
                         output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
@@ -240,9 +185,9 @@ def parallel_comp(
                     queue.append(v)
 
             # need to check the new states' neighbors
-
+        ttt = output_vert.values()
         if save_marked_states:
-            output_vert_mark = [marked_bool(g1, g2, v) for v in output_vert]
+            output_vert_mark = [marked_bool(g1, g2, v[2]) for v in output_vert.values()]
 
         assemble_graph(
             output,
@@ -262,20 +207,21 @@ def parallel_comp(
 
 
 def new_state_name(g1, g2, v1, v2, new_name):
-    if isinstance(g1.vs["name"][v1], Iterable) and isinstance(
-        g2.vs["name"][v2], Iterable
-    ):
+    if isinstance(g1.vs["name"][v1], str) and isinstance(g2.vs["name"][v2], str):
+        new_name.append(g1.vs["name"][v1])
+        new_name.append(g2.vs["name"][v2])
+
+    elif isinstance(g1.vs["name"][v1], str):
+        new_name.append(g1.vs["name"][v1])
+        new_name.extend(g2.vs["name"][v2])
+
+    elif isinstance(g2.vs["name"][v2], str):
+        new_name.extend(g1.vs["name"][v1])
+        new_name.append(g2.vs["name"][v2])
+        
+    else:
         new_name.extend(g1.vs["name"][v1])
         new_name.extend(g2.vs["name"][v2])
-    elif isinstance(g1.vs["name"][v1], Iterable):
-        new_name.extend(g1.vs["name"][v1])
-        new_name.append(g2.vs["name"][v2])
-    elif isinstance(g2.vs["name"][v2], Iterable):
-        new_name.append(g1.vs["name"][v1])
-        new_name.extend(g2, vs["name"][v2])
-    else:
-        new_name.append(g1.vs["name"][v1])
-        new_name.append(g2.vs["name"][v2])
 
 
 def assemble_graph(
@@ -301,12 +247,16 @@ def assemble_graph(
 
     # add items to new graph
     output._graph.delete_vertices(i for i in range(0, output.vcount()))
-    output.add_vertices(index + 1)
-    if save_marked_states:
-        output.vs["marked"] = output_vert_mark
-    output.add_edges(output_edges_list, output_edge_labels)
+    if not save_marked_states:
+        output_vert_mark = None
     if save_state_names:
-        output.vs["name"] = [v[1] for v in output_vert.values()]
+        names = [v[1] for v in output_vert.values()]
+    else:
+        names = [i for i in range(len(output_vert))]
+
+    output.add_vertices(index + 1, names, output_vert_mark)
+    output.add_edges(output_edges_list, output_edge_labels)
+
     if adj:
         # print(adj)
         # print(output_vert.values())

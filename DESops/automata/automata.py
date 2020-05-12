@@ -112,12 +112,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
 from DESops.automata.event.event import Event
-from DESops.automata.state.state import State
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
     DependencyNotInstalledError,
     IncongruencyError,
     MissingAttributeError,
+    ConversionError,
 )
 
 try:
@@ -181,6 +181,9 @@ class _Automata:
 
         if "out" not in self._graph.vs.attributes():
             self._graph.vs["out"] = [""]
+
+        if "marked" not in self._graph.vs.attributes():
+            self._graph.vs["marked"] = []
 
         # Allow references to graph instance's edge & vertex sequence methods
         # from the Automata (e.g. self.es as opposed to doing self._graph.es)
@@ -257,29 +260,75 @@ class _Automata:
         if probs:
             self._graph.es["prob"] = new_probs
 
-    def add_vertex(self, name=None):
+    def add_vertex(self, name=None, marked=None, **kwargs):
         self._graph.add_vertex()
         if name:
             self._graph.vs[self.vcount() - 1].update_attributes({"name": name})
+        if marked:
+            self._graph.vs[self.vcount() - 1].update_attributes({"marked" : marked})
 
-    def add_vertices(self, number_vertices, names=None):
+        for arg in kwargs.items():
+            if arg[0] in self._graph.vs.attributes():
+                self._graph.vs[self.vcount() - 1].update_attributes({arg[0] : arg[1]})
+            else:
+                self._graph.vs[arg[0]] = arg[1]
+
+    def add_vertices(self, number_vertices, names=None, marked=None, **kwargs):
         if names:
             if number_vertices != len(names):
                 raise IncongruencyError(
                     "Number vertices to be added != number of names provided"
                 )
             new_names = list(self._graph.vs["name"])
-            new_names.extend(names)
-        self._graph.add_vertices(number_vertices)
-        if names:
-            self._graph.vs["name"] = new_names
 
+            try:
+                new_names.extend(n for n in names if isinstance(n, str) or isinstance(n, int) or isinstance(n, Iterable))
+            except:
+                raise ConversionError("Could not convert state names of type {0}, need str/int/Iterable".format(type(names[0])))
+        else:
+            # if no names given, fill in with index names
+            new_names = list(self.vs["name"])
+            new_names.extend(i for i in range(self.vcount(), self.vcount() + number_vertices))
+
+        if marked:
+            if number_vertices != len(marked):
+                raise IncongruencyError(
+                    "Number vertices to be added != number of names provided"
+                )
+            new_marked = list(self._graph.vs["marked"])
+            new_marked.extend(marked)
+
+        self._graph.add_vertices(number_vertices)
+
+        self._graph.vs["name"] = new_names
+
+        if marked:
+            # if not marked, igraph will fill with whatever the last value in marked vertices was
+            # TODO: change this behavior? default false/true?
+            self._graph.vs["marked"] = new_marked
+
+        for arg in kwargs.items():
+            if number_vertices != len(arg[1]):
+                raise IncongruencyError(
+                    "Number vertices to be added != number of names provided"
+                )
+            if arg[0] in self._graph.vs.attributes():
+                new_list = list(self._graph.vs[arg[0]])
+                new_list.extend(arg[1])
+            else:
+                self._graph.vs[arg[0]] = arg[1]
+
+    def update_names(self, names):
+        # update vertex names from list of names
+        self.vs["name"] = names
     def copy(self):
         """
         Copy from self to other, as in:
         >>> other = self.copy()
+
+        TODO: This needs to be an abstract method?
         """
-        A = Automata(self)
+        A = _Automata(self)
         return A
 
     # Methods to store event info in an Automata instance
@@ -310,6 +359,9 @@ class _Automata:
         >>> A.dead_state = 7
         """
         self.dead_state = dead_state_index
+
+    def generate_adj_list(self):
+        self.vs["out"] = self._graph.get_inclist()
 
     # Methods to interface w/ functions from automata_operations/basic/generic_functions
     # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
