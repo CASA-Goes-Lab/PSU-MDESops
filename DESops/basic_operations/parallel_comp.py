@@ -71,9 +71,12 @@ def parallel_comp(
     if not output:
         output_defined = False
         if any(isinstance(g, automata.PFA) for g in input_list):
-            output = automata.NFA() # warn
+            output = automata.NFA()  # warn
             import warnings
-            warnings.warn("P-comp returning a DFA. Probabilistic information will be lost if type PFA.")
+
+            warnings.warn(
+                "P-comp returning a DFA. Probabilistic information will be lost if type PFA."
+            )
         elif any(isinstance(g, automata.NFA) for g in input_list):
             output = automata.NFA()
         else:
@@ -141,16 +144,18 @@ def parallel_comp(
             g1_es = g1.vs["out"][vert_pair[0]]
             g2_es = g2.vs["out"][vert_pair[1]]
 
+            # THIS ONLY WORKS WITH DFAS
+            # SHOULD NOT USE DICT IF WANT TO EXTEND TO NFAs
+            # FOR NFAs should be different: returning to DFAs case only
             g1_labels = {e[1]: e[0] for e in g1_es}
             g2_labels = {e[1]: e[0] for e in g2_es}
-
-            l_set = set(g1_labels.items()).union(g2_labels.items())
+            l_set = set(g1_labels.keys()).union(g2_labels.keys())
             # pcomp_det checks for set membership in g1_, g2_labels
             # Maybe faster to store membership when computing set unions?
             # (Significant time is spent in pcomp_det)
             for x in l_set:
                 pcomp_det(
-                    x[0],
+                    x,
                     vert_pair,
                     g1_labels,
                     g2_labels,
@@ -218,7 +223,7 @@ def new_state_name(g1, g2, v1, v2, new_name):
     elif isinstance(g2.vs["name"][v2], str):
         new_name.extend(g1.vs["name"][v1])
         new_name.append(g2.vs["name"][v2])
-        
+
     else:
         new_name.extend(g1.vs["name"][v1])
         new_name.extend(g2.vs["name"][v2])

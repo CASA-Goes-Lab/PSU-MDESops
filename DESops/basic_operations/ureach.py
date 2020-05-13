@@ -59,6 +59,7 @@ def ureach_from_set(x_set, S, g, e):
 
     return
 
+
 def ureach_from_set_adj(S, g, e):
     """
     Find the collected unobservable reach for all states in S
@@ -72,19 +73,26 @@ def ureach_from_set_adj(S, g, e):
     if not e:
         return x_set
 
-
     # adj_S = [t for s in S for t in g.vs["adj"][s] if t[1] in e and t[0] not in x_set]
     # print(S,adj_S)
     # uc_neighbors = {t.target for t in g.es(_source_in = S) if t["label"] in e and t.target not in x_set}
-    uc_neighbors = {t[0] for s in S for t in g.vs["out"][s] if t[1] in e and t[0] not in x_set}
+    uc_neighbors = {
+        t[0] for s in S for t in g.vs["out"][s] if t[1] in e and t[0] not in x_set
+    }
     # print(uc_neighbors)
     while uc_neighbors:
         x_set.update(uc_neighbors)
-        uc_neighbors = {t[0] for s in uc_neighbors for t in g.vs["out"][s] if t[1] in e and t[0] not in x_set}
+        uc_neighbors = {
+            t[0]
+            for s in uc_neighbors
+            for t in g.vs["out"][s]
+            if t[1] in e and t[0] not in x_set
+        }
         # print(uc_neighbors)
         # uc_neighbors = {t.target for t in g.es(_source_in = uc_neighbors) if t["label"] in e and t.target not in x_set}
 
     return x_set
+
 
 def ureach_from_set_adjlist(S, g, e, adj_list):
     x_set = set()
@@ -92,22 +100,24 @@ def ureach_from_set_adjlist(S, g, e, adj_list):
     if not e:
         return x_set
 
-
     # adj_S = [t for s in S for t in g.vs["adj"][s] if t[1] in e and t[0] not in x_set]
     # print(S,adj_S)
     # uc_neighbors = {t.target for t in g.es(_source_in = S) if t["label"] in e and t.target not in x_set}
     labels = g.es["label"]
 
-    cond = lambda edge : edge["label"] in e and edge.target not in x_set
+    # IS THIS FASTER THAN GETTING FROM THE OUT?
+    cond = lambda edge: edge["label"] in e and edge.target not in x_set
     uc_neighbors = {g.es[t].target for s in S for t in adj_list[s] if cond(g.es[t])}
-    # print(uc_neighbors)
     while uc_neighbors:
         x_set.update(uc_neighbors)
-        uc_neighbors = {g.es[t].target for s in uc_neighbors for t in adj_list[s] if cond(g.es[t])}
+        uc_neighbors = {
+            g.es[t].target for s in uc_neighbors for t in adj_list[s] if cond(g.es[t])
+        }
         # print(uc_neighbors)
         # uc_neighbors = {t.target for t in g.es(_source_in = uc_neighbors) if t["label"] in e and t.target not in x_set}
 
     return x_set
+
 
 def extended_ureach(x_set, state, g, e, Euo):
     """

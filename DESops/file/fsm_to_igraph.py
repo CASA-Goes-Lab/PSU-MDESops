@@ -3,10 +3,9 @@ import sys
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.PFA import PFA
-from DESops.automata.NFA import NFA
 from DESops.automata.event.event import Event
-
+from DESops.automata.NFA import NFA
+from DESops.automata.PFA import PFA
 from DESops.automata.state.state import State
 
 
@@ -15,6 +14,8 @@ from DESops.automata.state.state import State
 Convert an 'fsm' filetype, which is used/defined by the DESUMA software,
 into an igraph Graph object.
 """
+
+
 def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
@@ -177,7 +178,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
 
-
     if g_defined:
         g.Euc = events_unctr.copy()
         g.Euo = events_unobs.copy()
@@ -186,7 +186,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     if type_aut == "DFA" or isinstance(g, DFA):
         if not g_defined:
             g = DFA(g, events_unctr, events_unobs, events, False)
-        g.add_edges(trans_list_int_names, trans_labels)
+        g.add_edges(trans_list_int_names, trans_labels, False)
 
     elif type_aut == "PFA" or isinstance(g, PFA):
         if not g_defined:
@@ -197,8 +197,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         if not g_defined:
             g = NFA(g, events_unctr, events_unobs, events)
         g.add_edges(trans_list_int_names, trans_labels)
-
-
 
     # print(events)
     trans_observable_bool = [x == "o" for x in trans_observable]
@@ -211,6 +209,5 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     ]
 
     g.vs["out"] = neighbors_list
-
 
     return g
