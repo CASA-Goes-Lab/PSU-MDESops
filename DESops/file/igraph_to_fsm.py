@@ -69,7 +69,7 @@ def write_fsm(fsm_filename, g, plot_prob=False):
             f.write("\n")
             for trans in edge_seq:
                 if isinstance(trans["label"], Event):
-                    f.write(str(trans.tuple))
+                    f.write(str(trans["label"]))
                 else:
                     f.write(str2(trans["label"]))
                 f.write("\t")
