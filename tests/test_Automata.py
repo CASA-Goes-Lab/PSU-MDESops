@@ -43,9 +43,11 @@ def test_product_comp():
 
 def test_observer():
     G_t = util.load_model("models/G_t.fsm")
-    obs = d.observer_comp(G_t)
+    obs = d.observer_comp(G_t, save_state_names=True)
     #G_t_obs = util.load_model("models/G_t_obs.fsm")
-    return obs
+    assert obs.vcount() == 5
+    assert obs.ecount() == 6
+    assert d.Event('a') in (v[1] for v in obs.vs["out"][0])
 
 def test_sup_controllable_normal():
     H_given, G_given, _ = util.load_cn_models()
