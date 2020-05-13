@@ -31,7 +31,7 @@ def load_basic_models(*model):
     return automata
 
 
-def load_cn_models() -> (Automata, Automata):
+def load_cn_models() -> (d.DFA, d.DFA):
     H_t = d.DFA()
     G_t = d.DFA()
     H2 = d.DFA()
