@@ -6,7 +6,6 @@ from DESops.automata.PFA import PFA
 from DESops.automata.NFA import NFA
 
 from DESops.automata.event.event import Event
-from DESops.automata.state.state import State
 
 from DESops.file.fsm_to_igraph import read_fsm
 from DESops.file.igraph_to_fsm import write_fsm
