@@ -61,7 +61,7 @@ def observer_comp(
     x0_obs = ureach_from_set_adj({0}, part_obs, Euo)
     x0_obs = frozenset(x0_obs)
     # SEQUENTIAL CONSTRUCTION VIA DICT
-    X_obs_dict = dict()
+    X_obs_dict = OrderedDict()
 
     trans_list = list()
     trans_label = list()
@@ -76,15 +76,15 @@ def observer_comp(
     search(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj)
 
     convert_to_graph(
-        part_obs._graph,
-        observer._graph,
+        part_obs,
+        observer,
         X_obs_dict,
         trans_list,
         trans_label,
-        x0_obs,
         save_state_names,
         save_marked_states,
     )
+
     observer.vs["out"] = out_adj
     observer.Euc = set(part_obs.Euc)
     observer.Euo = set(part_obs.Euo)
@@ -138,7 +138,6 @@ def convert_to_graph(
     X_obs_dict,
     trans_list,
     trans_label,
-    init_set,
     save_state_names,
     save_marked_states,
 ):
@@ -147,18 +146,18 @@ def convert_to_graph(
     """
     # IT WOULD BE FASTER IF WE DO THIS DURING CONSTRUCTION NOT AFTER
     # IT WOULD AVOID A FEW FOR LOOPS
-    observer.add_vertices(len(X_obs_dict.keys()))
-    vert_names_list = list()
-    # THIS MIGHT BE AVOIDED IF WE USE ORDERED DICT?
-    vert_names_list = [
-        k for k, v in sorted(X_obs_dict.items(), key=lambda item: item[1])
-    ]
-    observer.vs["name"] = vert_names_list
-    observer.add_edges(trans_list)
-    observer.es["label"] = trans_label
-    # THIS MARKING MIGHT NOT WORK WHEN SAVE NAMES IS IMPLEMENTED TODO
+
+    if save_state_names:
+        names = [frozenset(part_obs.vs[v]["name"] for v in x) for x in X_obs_dict]
+    else:
+        names = X_obs_dict.values()
+
     if save_marked_states:
-        observer.vs["marked"] = [
-            any(part_obs.vs[v]["marked"] for v in v_set) for v_set in vert_names_list
-        ]
+        marked = [any(part_obs.vs[v]["marked"] for v in x) for x in X_obs_dict]
+    else:
+        marks = None
+
+    observer.add_vertices(len(X_obs_dict.keys()), names, marks)
+
+    observer.add_edges(trans_list, trans_label)
 
