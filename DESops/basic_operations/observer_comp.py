@@ -70,9 +70,7 @@ def observer_comp(
     X_obs_dict[x0_obs] = 0
     X_obs.add(x0_obs)
     # search(part_obs._graph, Q, Euo, X_obs, H, adj_list)
-    search_list(
-        part_obs._graph, Q, Euo, X_obs, H, adj_list, X_obs_dict, trans_list, trans_label
-    )
+    search_list(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, adj_list)
     # print(X_obs_dict.keys())
     # convert_to_graph(part_obs._graph, observer._graph, X_obs, H, x0_obs, save_state_names,save_marked_states)
     convert_to_graph_list(
@@ -91,9 +89,7 @@ def observer_comp(
         return observer
 
 
-def search_list(
-    part_obs, Q, Euo, X_obs, H, adj_list, X_obs_dict, trans_list, trans_label
-):
+def search_list(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, adj_list):
     """
     BFS of the states of part_obs (the partially observed automaton).
     Uses queue-system via list Q.
@@ -128,12 +124,8 @@ def search_list(
                 Q.append(frozenset(s[0]))
                 X_obs_dict[frozenset(s[0])] = i
                 i += 1
-            # if s[0] not in X_obs:
-            #     Q.append(frozenset(s[0]))
-            # EXPLIT H IN TWO LISTS ADJ + LABEL
             trans_list.append((X_obs_dict[q], X_obs_dict[frozenset(s[0])]))
             trans_label.append(s[1])
-            # H.add((q, s[1], frozenset(s[0])))
 
 
 def search(part_obs, Q, Euo, X_obs, H, adj_list):
@@ -193,25 +185,15 @@ def convert_to_graph_list(
     # IT WOULD BE FASTER IF WE DO THIS DURING CONSTRUCTION NOT AFTER
     # IT WOULD AVOID A FEW FOR LOOPS
     observer.add_vertices(len(X_obs_dict.keys()))
-    # X_obs.remove(init_set)
-    # vert_names = dict()
     vert_names_list = list()
     # THIS MIGHT BE AVOIDED IF WE USE ORDERED DICT?
     vert_names_list = [
         k for k, v in sorted(X_obs_dict.items(), key=lambda item: item[1])
     ]
-    # vert_names[init_set] = 0
-    # vert_names_list.append(init_set)
-    # for i, x in enumerate(X_obs, 1):
-    # vert_names_list.append(x)
-    # vert_names[x] = i
-    # edge_list = list(H)
-    # trans_labels = [q[1] for q in H]
-    # trans_pairs = [(vert_names[q[0]], vert_names[q[2]]) for q in H]
-
     observer.vs["name"] = vert_names_list
     observer.add_edges(trans_list)
     observer.es["label"] = trans_label
+    # THIS MARKING MIGHT NOT WORK WHEN SAVE NAMES IS IMPLEMENTED TODO
     if save_marked_states:
         observer.vs["marked"] = [
             any(part_obs.vs[v]["marked"] for v in v_set) for v_set in vert_names_list
