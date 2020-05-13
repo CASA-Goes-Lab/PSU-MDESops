@@ -19,9 +19,6 @@ def test_parallel_comp():
     g1, g2, g3 = util.load_basic_models()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-    d.write_fsm("pcomp.fsm", g)
-    t = g.vs["name"]
-    tt = g.vs["marked"]
     assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs )
     assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs )
 
