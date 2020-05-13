@@ -197,7 +197,7 @@ class _Automata:
 
         self.__bool__ = self._graph.__bool__()
 
-    def add_edge(self, source, target, label=None, prob=None):
+    def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
         of vertex indices according to the igraph Graph add_edge() method.
@@ -212,13 +212,20 @@ class _Automata:
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
+
+        # SHOULD label be optional?
+        # e.g. 'label=None' vs just 'label' in function arguments
+        # when would an edge need to be added without a label?
         self._graph.add_edge(source, target)
         if label:
-            self._graph.es[self.ecount() - 1].update_attributes({"label": label})
+            self.es[self.ecount() - 1].update_attributes({"label": label})
         if prob:
-            self._graph.es[self.ecount() - 1].update_attributes({"prob": prob})
+            self.es[self.ecount() - 1].update_attributes({"prob": prob})
 
-    def add_edges(self, pair_list, labels=None, probs=None):
+        if fill_out:
+            self.vs["out"].append((target, label))
+
+    def add_edges(self, pair_list, labels, probs=None, fill_out=False):
         """
         Add an iterable of edges to the Automata instance.
         Calls the igraph Graph add_edges() method on the underlying graph
@@ -240,6 +247,9 @@ class _Automata:
 
         Returns nothing.
         """
+        # SHOULD label be optional?
+        # e.g. 'label=None' vs just 'label' in function arguments
+        # when would an edge need to be added without a label?
         if labels:
             if len(pair_list) != len(labels):
                 raise IncongruencyError("Length of pairs != length of labels")
@@ -255,17 +265,21 @@ class _Automata:
         self._graph.add_edges(pair_list)
 
         if labels:
-            self._graph.es["label"] = new_labels
+            self.es["label"] = new_labels
 
         if probs:
-            self._graph.es["prob"] = new_probs
+            self.es["prob"] = new_probs
+
+        if fill_out:
+            for label, pair in zip(labels, pair_list):
+                self.vs["out"][pair[0]].append((pair[1], label))
 
     def add_vertex(self, name=None, marked=None, **kwargs):
         self._graph.add_vertex()
         if name:
-            self._graph.vs[self.vcount() - 1].update_attributes({"name": name})
+            self.vs[self.vcount() - 1].update_attributes({"name": name})
         if marked:
-            self._graph.vs[self.vcount() - 1].update_attributes({"marked" : marked})
+            self.vs[self.vcount() - 1].update_attributes({"marked" : marked})
 
         for arg in kwargs.items():
             if arg[0] in self._graph.vs.attributes():
@@ -292,9 +306,7 @@ class _Automata:
 
         if marked:
             if number_vertices != len(marked):
-                raise IncongruencyError(
-                    "Number vertices to be added != number of names provided"
-                )
+                raise IncongruencyError("Number vertices to be added != number names")
             new_marked = list(self._graph.vs["marked"])
             new_marked.extend(marked)
 
