@@ -9,6 +9,12 @@ def load_model(path):
     return d.read_fsm(str(cwd.joinpath(path)))
 
 
+def load_nfa_dfa_models():
+    dfa1 = load_model("models/dfa_test1.fsm")
+    nfa1 = load_model("models/nfa_test1.fsm")
+    nfa2 = load_model("models/nfa_test2.fsm")
+    return dfa1, nfa1, nfa2
+
 def load_basic_models(*model):
     g1 = g2 = g3 = None
     load_all = len(model) == 0
