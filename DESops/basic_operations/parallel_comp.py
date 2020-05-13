@@ -114,6 +114,8 @@ def parallel_comp(
 
         g2 = input_list[i]
 
+        if g1.vcount() == 0 or g2.vcount() == 0:
+            continue
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
         if i > 1 and save_state_names:
@@ -219,7 +221,7 @@ def new_state_name(g1, g2, v1, v2, new_name):
     elif isinstance(g1.vs["name"][v1], str):
         new_name.append(g1.vs["name"][v1])
         new_name.extend(g2.vs["name"][v2])
-
+    
     elif isinstance(g2.vs["name"][v2], str):
         new_name.extend(g1.vs["name"][v1])
         new_name.append(g2.vs["name"][v2])
