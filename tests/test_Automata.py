@@ -45,9 +45,18 @@ def test_observer():
     G_t = util.load_model("models/G_t.fsm")
     obs = d.observer_comp(G_t, save_state_names=True)
     #G_t_obs = util.load_model("models/G_t_obs.fsm")
+    t = obs.vs["name"]
+    tt = obs.vs["out"]
     assert obs.vcount() == 5
     assert obs.ecount() == 6
     assert d.Event('a') in (v[1] for v in obs.vs["out"][0])
+
+    for out in obs.vs["out"][0]:
+        names = obs.vs["name"][out[0]]
+        if out[1] == d.Event('a'):
+            assert names == frozenset(('3', '4', '5'))
+        if out[1] == d.Event('b'):
+            assert names == frozenset(('2', '5'))
 
 def test_sup_controllable_normal():
     H_given, G_given, _ = util.load_cn_models()
