@@ -3,10 +3,10 @@ import sys
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
-from DESops.automata.NFA import NFA
 from DESops.automata.PFA import PFA
-from DESops.automata.state.state import State
+from DESops.automata.NFA import NFA
+from DESops.automata.event.event import Event
+
 
 
 # pylint: disable=C0103
@@ -14,8 +14,6 @@ from DESops.automata.state.state import State
 Convert an 'fsm' filetype, which is used/defined by the DESUMA software,
 into an igraph Graph object.
 """
-
-
 def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
@@ -63,6 +61,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     trans_prob = list()
     neighbors_list = list()
 
+    is_NFA = False
+
     with open(fsm_filename, "r") as f:
         # First line in fsm is # of states
         g.add_vertices(int(f.readline()))
@@ -84,12 +84,16 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             # print(states_tuple)
             state_names.append(states_tuple[0])
             # states.append(State(states_tuple[0]))
-            state_markings.append(states_tuple[1])
+            state_markings.append(states_tuple[1] == '1')
             if len(states_tuple) > 3:
                 state_crit.append(states_tuple[2])
             i += 1
             total = 0
             neigh = list()
+
+            # set for each vertex to see if any nondeterminism, i.e. repeated labels
+            # if any found, set type to NFA, and future vertices won't do this check
+            unique_labels = set()
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
                 if trans_tuple == ["\n"]:
@@ -119,7 +123,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                         "ERROR %s in line %d:\nPFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob "
                         % (fsm_filename, i)
                     )
-                elif type_aut == "DFA" and len(trans_tuple) != 4:
+                elif (type_aut == "DFA" or type_aut == "NFA") and len(trans_tuple) != 4:
                     sys.exit(
                         "ERROR %s in line %d:\nDFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo"
                         % (fsm_filename, i)
@@ -157,7 +161,10 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                     )
                 else:
                     neigh.append((trans_tuple[1], Event(trans_tuple[0])))
-                    type_aut = "DFA"
+                    if type_aut == "DFA" and trans_tuple[0] in unique_labels:
+                        type_aut = "NFA"
+                    elif type_aut != "NFA":
+                        unique_labels.add(trans_tuple[0])
                 i += 1
             neighbors_list.append(neigh)
             if total > 0 and total != 1:
@@ -168,7 +175,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
 
     # Construct graph
 
-    g.vs["marked"] = bool(state_markings == "1")
+    # alternative to: [bool(x) for x in state_markings]
+    g.vs["marked"] = state_markings
     if state_crit:
         g.vs["crit"] = state_crit
     g.vs["name"] = state_names
@@ -178,6 +186,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
 
+
     if g_defined:
         g.Euc = events_unctr.copy()
         g.Euo = events_unobs.copy()
@@ -186,7 +195,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     if type_aut == "DFA" or isinstance(g, DFA):
         if not g_defined:
             g = DFA(g, events_unctr, events_unobs, events, False)
-        g.add_edges(trans_list_int_names, trans_labels, False)
+        g.add_edges(trans_list_int_names, trans_labels)
 
     elif type_aut == "PFA" or isinstance(g, PFA):
         if not g_defined:
@@ -197,6 +206,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         if not g_defined:
             g = NFA(g, events_unctr, events_unobs, events)
         g.add_edges(trans_list_int_names, trans_labels)
+
+
 
     # print(events)
     trans_observable_bool = [x == "o" for x in trans_observable]
@@ -209,5 +220,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     ]
 
     g.vs["out"] = neighbors_list
+
 
     return g
