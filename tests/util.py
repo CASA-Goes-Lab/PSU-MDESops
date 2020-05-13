@@ -31,7 +31,7 @@ def load_basic_models(*model):
         automata.append(g2)
     if 3 in model or load_all:
         g3 = d.DFA()
-        d.read_fsm(str(cwd.joinpath("models", "model3.fsm")), g1)
+        d.read_fsm(str(cwd.joinpath("models", "model3.fsm")), g3)
         automata.append(g3)
 
     return automata

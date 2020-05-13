@@ -19,8 +19,11 @@ def test_parallel_comp():
     g1, g2, g3 = util.load_basic_models()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-
-    assert g.vs.find(marked=True)["name"] == [1, 1, 0]
+    d.write_fsm("pcomp.fsm", g)
+    t = g.vs["name"]
+    tt = g.vs["marked"]
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs )
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs )
 
 
 def test_parallel_comp_same():
@@ -43,8 +46,9 @@ def test_product_comp():
 
 def test_observer():
     G_t = util.load_model("models/G_t.fsm")
+    obs = d.observer_comp(G_t)
     #G_t_obs = util.load_model("models/G_t_obs.fsm")
-    pass
+    return obs
 
 def test_sup_controllable_normal():
     H_given, G_given, _ = util.load_cn_models()
