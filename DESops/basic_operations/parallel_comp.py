@@ -209,6 +209,9 @@ def parallel_comp(
         )
         # to iterate through list of inputs
         # input_list[i] = output
+
+    # update events attribute
+    output.events = set(all_common_events)
     if not output_defined:
         return output
 
