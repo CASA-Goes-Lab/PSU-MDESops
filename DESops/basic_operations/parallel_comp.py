@@ -118,14 +118,9 @@ def parallel_comp(
             continue
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
-        if i > 1 and save_state_names:
-            new_name = list()
-            new_state_name(g1, g2, 0, 0, new_name)
-            output_vert[(0, 0)] = [index, new_name, (0, 0), (0, 0)]
-        else:
-            new_name = list()
-            new_state_name(g1, g2, 0, 0, new_name)
-            output_vert[(0, 0)] = [index, new_name, (0, 0)]
+        new_name = list()
+        new_state_name(g1, g2, (0, 0), new_name)
+        output_vert[(0, 0)] = [index, new_name, (0, 0)]
 
         if save_marked_states:
             output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
@@ -178,21 +173,15 @@ def parallel_comp(
             for v in new_vert_pairs:
                 if v not in output_vert:
                     index += 1
-                    if i > 1 and save_state_names:
+                    if save_state_names:
                         new_name = list()
-                        new_state_name(g1, g2, v[0], v[1], new_name)
-                        output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
-                    elif i == 1 and save_state_names:
-                        new_name = list()
-                        new_state_name(g1, g2, v[0], v[1], new_name)
-                        output_vert[(v[0], v[1])] = [index, new_name, (v[0], v[1])]
+                        new_state_name(g1, g2, v, new_name)
+                        output_vert[v] = [index, new_name, v]
                     else:
-                        output_vert[(v[0], v[1])] = [index, [str(v[0]), str(v[1])]]
+                        output_vert[v] = [index, [str(v[0]), str(v[1])], v]
 
                     queue.append(v)
 
-            # need to check the new states' neighbors
-        ttt = output_vert.values()
         if save_marked_states:
             output_vert_mark = [marked_bool(g1, g2, v[2]) for v in output_vert.values()]
 
@@ -216,7 +205,9 @@ def parallel_comp(
         return output
 
 
-def new_state_name(g1, g2, v1, v2, new_name):
+def new_state_name(g1, g2, v, new_name):
+    v1 = v[0]
+    v2 = v[1]
     if isinstance(g1.vs["name"][v1], str) and isinstance(g2.vs["name"][v2], str):
         new_name.append(g1.vs["name"][v1])
         new_name.append(g2.vs["name"][v2])
@@ -257,6 +248,7 @@ def assemble_graph(
 
     # add items to new graph
     output._graph.delete_vertices(i for i in range(0, output.vcount()))
+    
     if not save_marked_states:
         output_vert_mark = None
     if save_state_names:

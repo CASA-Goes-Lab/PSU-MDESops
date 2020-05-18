@@ -12,7 +12,7 @@ from collections import OrderedDict
 
 from DESops.automata.automata import _Automata
 
-from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
+from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool, new_state_name
 
 
 def product_comp(input_list, output=None, save_state_names=True, save_marked_states=False):
@@ -85,19 +85,15 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state in the second position
         # of the lists in output_vert's values.
-        if i > 1 and save_state_names:
-            # If this isn't the first iteration, store the name of vertex 0
-            # from the last computation as the start of this vertex name.
-            # The result of the last product is stored in place of
-            # the first multiplicand, g1.
-            output_vert[(0, 0)] = [index, list(g1.vs["name"][0]) + [0]]
-        else:
-            output_vert[(0, 0)] = [index, [0, 0]]
+        new_name = list()
+        new_state_name(g1, g2, (0, 0), new_name)
+        output_vert[(0, 0)] = [index, new_name, (0, 0)]
 
         if save_marked_states:
             output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
 
-
+        adj = dict()
+        adj[(0,0)] = list()
         queue = list()
         queue.append((0,0))
         while queue:
@@ -119,34 +115,35 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
 
                 a = [i[0] for i in g1_es if i[1] == x][0]
                 b = [i[0] for i in g2_es if i[1] == x][0]
-                new_vert_pair = (a, b)
+                new_vert = (a, b)
+
+                adj[vert_pair].append((new_vert, x))
 
                 # see if this is a new vertex pair
-                if new_vert_pair not in output_vert:
+                if new_vert not in output_vert:
                     # this is a new vertex pair: add it to the dict with value 'index'
                     # index just makes it easier later to map edge names from key to index
-                    index = index + 1
-                    if i > 1 and save_state_names:
-                        # Stores the index, final name of the vertex as the set of states
-                        # in the composition.
-                        output_vert[new_vert_pair] = [
-                            index,
-                            list(g1.vs["name"][new_vert_pair[0]])
-                            + [new_vert_pair[1]],
-                        ]
+                    index += 1
+                    if save_state_names:
+                        new_name = list()
+                        new_state_name(g1, g2, new_vert, new_name)
+                        output_vert[new_vert] = [index, new_name, new_vert]
+
                     else:
-                        output_vert[new_vert_pair] = [index, new_vert_pair]
+                        output_vert[new_vert] = [index, (str(new_vert[0]), str(new_vert[1])), new_vert]
+
 
                     # check if this vertex pair should get marked
                     # maybe only do this with a flag passed into fn?
                     if save_marked_states:
-                        output_vert_mark.append(marked_bool(g1, g2, new_vert_pair))
+                        output_vert_mark.append(marked_bool(g1, g2, new_vert))
                     # need to check the new states' neighbors
-                    queue.append(new_vert_pair)
-                new_edge_pair = (vert_pair, new_vert_pair)
+                    queue.append(new_vert)
+                    adj[new_vert] = list()
+
+                new_edge_pair = (vert_pair, new_vert)
                 output_edges.append(new_edge_pair)
                 output_edge_labels.append(x)
-
 
         assemble_graph(
             output,
@@ -157,6 +154,7 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
             output_vert,
             save_state_names,
             save_marked_states,
+            adj
         )
     if not output_def:
         return output
