@@ -43,6 +43,6 @@ def load_cn_models() -> (d.DFA, d.DFA):
     H2 = d.DFA()
     d.read_fsm(str(cwd.joinpath("models", "H_t.fsm")), H_t)
     d.read_fsm(str(cwd.joinpath("models", "G_t.fsm")), G_t)
-    d,read_fsm(str(cwd.joinpath("models", "H2.fsm")), H2)
+    d.read_fsm(str(cwd.joinpath("models", "H2.fsm")), H2)
 
     return (H_t, G_t, H2)

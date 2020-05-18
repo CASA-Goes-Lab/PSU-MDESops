@@ -1,4 +1,4 @@
-from DESops.supremal.cn_pp import cn_preprocessing
+from DESops.supervisory_control.cn_pp import cn_preprocessing
 from tests.util import load_cn_models
 
 
