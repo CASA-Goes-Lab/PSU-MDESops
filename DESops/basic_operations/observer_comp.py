@@ -72,7 +72,7 @@ def observer_comp(
 
     X_obs_dict[x0_obs] = 0
 
-    out_adj = []
+    out_adj = list()
     search(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj)
 
     convert_to_graph(
@@ -83,14 +83,13 @@ def observer_comp(
         trans_label,
         save_state_names,
         save_marked_states,
+        out_adj
     )
 
-    observer.vs["out"] = out_adj
     observer.Euc = set(part_obs.Euc)
     observer.Euo = set(part_obs.Euo)
     if not observer_defined:
         return observer
-
 
 def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     """
@@ -100,7 +99,6 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     i = 1
     while Q:
         q, index = Q.pop(0)
-        out_adj_list.append([])
 
         adj_states = dict() # maps label->set of states
 
@@ -119,16 +117,19 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
 
         adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
 
+
+        out_adj_list.append([])
+
         for s in adj_sets:
-            next_states = frozenset(s[0])
-            out_adj_list[index].append((i, s[1]))
-            if next_states not in X_obs_dict.keys():
-                Q.append((next_states, i))
-                X_obs_dict[next_states] = i
+            s_f = frozenset(s[0])
+            out_adj_list[index].append((s_f, s[1]))
+            if s_f not in X_obs_dict.keys():
+                Q.append((s_f, i))
+                X_obs_dict[s_f] = i
 
                 i += 1
 
-            trans_list.append((X_obs_dict[q], X_obs_dict[next_states]))
+            trans_list.append((X_obs_dict[q], X_obs_dict[s_f]))
             trans_label.append(s[1])
 
 
@@ -140,6 +141,7 @@ def convert_to_graph(
     trans_label,
     save_state_names,
     save_marked_states,
+    adj
 ):
     """
     Convert sets/lists of states/transitions into final igraph Graph in observer.
@@ -160,4 +162,7 @@ def convert_to_graph(
     observer.add_vertices(len(X_obs_dict.keys()), names, marked)
 
     observer.add_edges(trans_list, trans_label)
+
+    out = [[(X_obs_dict[s[0]], s[1]) for s in vert] for vert in adj]
+    observer.vs["out"] = out
 
