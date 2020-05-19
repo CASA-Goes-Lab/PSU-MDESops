@@ -64,10 +64,10 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
     for gi in input_list[1:]:
         all_events = set(all_events).intersection(gi.es["label"])
 
+    # types are objects. This doesn't show up in VSCODE but it works
     ref_type = str if save_names_as=="str" else int
 
     for i in range(1, len(input_list)):
-        # Intermediate storage for output vertices and edges
 
         # Storage for vertice pairs
         output_vert = OrderedDict()
@@ -91,6 +91,11 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
         if save_state_names and save_names_as=="str":
             g1_names = g1.vs["name"]
             g2_names = g2.vs["name"]
+        elif save_state_names and i > 1:
+            # Carry over names from last iter: since names were saved as indices,
+            # g1_names now has the running collection of indices
+            g1_names = g1.vs["name"]
+            g2_names = [i for i in range(g2.vcount())]
         else:
             g1_names = [i for i in range(g1.vcount())]
             g2_names = [i for i in range(g2.vcount())]
