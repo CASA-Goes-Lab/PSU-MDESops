@@ -60,7 +60,7 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
 
     dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False, True)
 
-    t = G_t.vs["out"]
+    print(G_t.vs["out"])
 
     construct_spa(G_t, G, Euo)
     
