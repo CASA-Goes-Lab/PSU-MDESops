@@ -20,6 +20,7 @@ def parallel_comp(
     save_state_names=True,
     save_marked_states=False,
     common_events_i=None,
+    save_names_as="str"
 ):
     """
     Computes the parallel composition of 2 (or more) automata (igraph Graphs),
@@ -56,6 +57,11 @@ def parallel_comp(
         but no active transitions, including 'c' in common_events_i forces 'c' not
         to be a private event.
 
+    save_names_as (default "str"):   
+        If storing names, store as either pairs of old names or pairs of old vertices
+        e.g.    save_names_as=="str" --> ("state1","state2")
+                save_names_as==any_other_str --> (1, 1)
+
     Doesn't return anything to avoid potentially making redundant copies.
 
     """
@@ -90,6 +96,8 @@ def parallel_comp(
             set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
         )
 
+    ref_type = str if save_names_as=="str" else int
+
     # set the first multiplicand term
 
     for i in range(1, len(input_list)):
@@ -114,12 +122,19 @@ def parallel_comp(
 
         g2 = input_list[i]
 
+        if save_state_names and save_names_as=="str":
+            g1_names = g1.vs["name"]
+            g2_names = g2.vs["name"]
+        else:
+            g1_names = [i for i in range(g1.vcount())]
+            g2_names = [i for i in range(g2.vcount())]
+        
         if g1.vcount() == 0 or g2.vcount() == 0:
             continue
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state
         new_name = list()
-        new_state_name(g1, g2, (0, 0), new_name)
+        new_state_name(g1_names, g2_names, (0, 0), new_name, save_state_names, ref_type)
         output_vert[(0, 0)] = [index, new_name, (0, 0)]
 
         if save_marked_states:
@@ -173,12 +188,10 @@ def parallel_comp(
             for v in new_vert_pairs:
                 if v not in output_vert:
                     index += 1
-                    if save_state_names:
-                        new_name = list()
-                        new_state_name(g1, g2, v, new_name)
-                        output_vert[v] = [index, new_name, v]
-                    else:
-                        output_vert[v] = [index, [str(v[0]), str(v[1])], v]
+                    new_name = list()
+                    new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type)
+                    output_vert[v] = [index, new_name, v]
+
 
                     queue.append(v)
 
@@ -205,24 +218,27 @@ def parallel_comp(
         return output
 
 
-def new_state_name(g1, g2, v, new_name):
+def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
     v1 = v[0]
     v2 = v[1]
-    if isinstance(g1.vs["name"][v1], str) and isinstance(g2.vs["name"][v2], str):
-        new_name.append(g1.vs["name"][v1])
-        new_name.append(g2.vs["name"][v2])
 
-    elif isinstance(g1.vs["name"][v1], str):
-        new_name.append(g1.vs["name"][v1])
-        new_name.extend(g2.vs["name"][v2])
-    
-    elif isinstance(g2.vs["name"][v2], str):
-        new_name.extend(g1.vs["name"][v1])
-        new_name.append(g2.vs["name"][v2])
+    if save_state_names:
+        if isinstance(g1_names[v1], ref_type) and isinstance(g2_names[v2], ref_type):
+            new_name.append(g1_names[v1])
+            new_name.append(g2_names[v2])
 
-    else:
-        new_name.extend(g1.vs["name"][v1])
-        new_name.extend(g2.vs["name"][v2])
+        elif isinstance(g2_names[v2], ref_type):
+            new_name.extend(g1_names[v1])
+            new_name.append(g2_names[v2])
+
+        elif isinstance(g1_names[v1], ref_type):
+            new_name.append(g1_names[v1])
+            new_name.extend(g2_names[v2])
+        
+        else:
+            new_name.extend(g1_names[v1])
+            new_name.extend(g2_names[v2])
+
 
 
 def assemble_graph(
@@ -251,10 +267,8 @@ def assemble_graph(
     
     if not save_marked_states:
         output_vert_mark = None
-    if save_state_names:
-        names = [v[1] for v in output_vert.values()]
-    else:
-        names = [i for i in range(len(output_vert))]
+
+    names = [v[1] for v in output_vert.values()]
 
     output.add_vertices(index + 1, names, output_vert_mark)
     output.add_edges(output_edges_list, output_edge_labels)

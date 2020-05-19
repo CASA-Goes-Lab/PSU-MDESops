@@ -15,7 +15,7 @@ from DESops.automata.automata import _Automata
 from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool, new_state_name
 
 
-def product_comp(input_list, output=None, save_state_names=True, save_marked_states=False):
+def product_comp(input_list, output=None, save_state_names=True, save_marked_states=False, save_names_as="str"):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.
@@ -40,6 +40,11 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
         An error will be raised if this parameter is True, but not all Automata
         in the composition have the "marked" parameter on their vertices.
 
+    save_names_as (default "str"):   
+        If storing names, store as either pairs of old names or pairs of old vertices
+        e.g.    save_names_as=="str" --> ("state1","state2")
+                save_names_as==any_other_str --> (1, 1)
+
     Returns an Automata object.
 
     """
@@ -58,6 +63,8 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
     all_events = input_list[0].es["label"]
     for gi in input_list[1:]:
         all_events = set(all_events).intersection(gi.es["label"])
+
+    ref_type = str if save_names_as=="str" else int
 
     for i in range(1, len(input_list)):
         # Intermediate storage for output vertices and edges
@@ -81,12 +88,22 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
 
         g2 = input_list[i]
 
+        if save_state_names and save_names_as=="str":
+            g1_names = g1.vs["name"]
+            g2_names = g2.vs["name"]
+        else:
+            g1_names = [i for i in range(g1.vcount())]
+            g2_names = [i for i in range(g2.vcount())]
+
+        if g1.vcount() == 0 or g2.vcount() == 0:
+            continue
+
         # Saving the index is useful in converting this OrderedDict into
         # If saving state names, need to keep track of vertices from each automata
         # that 'contributed' to this composite state in the second position
         # of the lists in output_vert's values.
         new_name = list()
-        new_state_name(g1, g2, (0, 0), new_name)
+        new_state_name(g1_names, g2_names, (0, 0), new_name, save_state_names, ref_type)
         output_vert[(0, 0)] = [index, new_name, (0, 0)]
 
         if save_marked_states:
@@ -124,14 +141,10 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
                     # this is a new vertex pair: add it to the dict with value 'index'
                     # index just makes it easier later to map edge names from key to index
                     index += 1
-                    if save_state_names:
-                        new_name = list()
-                        new_state_name(g1, g2, new_vert, new_name)
-                        output_vert[new_vert] = [index, new_name, new_vert]
 
-                    else:
-                        output_vert[new_vert] = [index, (str(new_vert[0]), str(new_vert[1])), new_vert]
-
+                    new_name = list()
+                    new_state_name(g1_names, g2_names, new_vert, new_name, save_state_names, ref_type)
+                    output_vert[new_vert] = [index, new_name, new_vert]
 
                     # check if this vertex pair should get marked
                     # maybe only do this with a flag passed into fn?
