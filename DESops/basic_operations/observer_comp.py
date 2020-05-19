@@ -148,16 +148,16 @@ def convert_to_graph(
     # IT WOULD AVOID A FEW FOR LOOPS
 
     if save_state_names:
-        names = [frozenset(part_obs.vs[v]["name"] for v in x) for x in X_obs_dict]
+        names = [frozenset(tuple(part_obs.vs[v]["name"]) for v in x) for x in X_obs_dict]
     else:
         names = X_obs_dict.values()
 
     if save_marked_states:
         marked = [any(part_obs.vs[v]["marked"] for v in x) for x in X_obs_dict]
     else:
-        marks = None
+        marked = None
 
-    observer.add_vertices(len(X_obs_dict.keys()), names, marks)
+    observer.add_vertices(len(X_obs_dict.keys()), names, marked)
 
     observer.add_edges(trans_list, trans_label)
 

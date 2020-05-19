@@ -9,12 +9,14 @@ import copy
 import igraph as ig
 from pydash import flatten_deep
 
-from DESops.basic.construct_spa import construct_spa as construct_spa
-from DESops.basic.construct_subautomata import (
+from DESops.basic_operations.construct_spa import construct_spa as construct_spa
+from DESops.basic_operations.construct_subautomata import (
     construct_subautomata as construct_subautomata,
 )
-from DESops.basic.generic_functions import write_transition_attributes
+from DESops.basic_operations.generic_functions import write_transition_attributes
 
+# Need to figure out what types for this still:
+from DESops.automata.automata_ctor import construct_automata
 
 def cn_preprocessing(H_given, G_given, Euc, Euo):
     """
@@ -49,14 +51,23 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
     # Save marked states of H
     marked_H_given = [v.attributes().get("marked", False) for v in H_given.vs]
 
-    G = ig.Graph(directed=True)
-    H = ig.Graph(directed=True)
+    # TODO: does the automata type of these matter? DFA/NFA/PFA?
+    G = construct_automata(G_given)
+    H = construct_automata(H_given)
 
-    G_t = ig.Graph(directed=True)
-    H_t = ig.Graph(directed=True)
+    G_t = construct_automata(G_given)
+    H_t = construct_automata(H_given)
 
     dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False, True)
+
+    t = G_t.vs["out"]
+
     construct_spa(G_t, G, Euo)
+    
+    t = H_t.vs["name"]
+    tt = H_t.es["label"]
+    ttt = G_t.vs["name"]
+    tttt = G_t.es["label"]
 
     # After constructing SPA equivalent of G, H can be found by deleting dead states in G
     G_states_to_delete = list()

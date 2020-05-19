@@ -29,7 +29,7 @@ def construct_subautomata(
 
     # Find G := H_given_with_dead x G
     # (This G does not have proper markings yet)
-    product_comp([H_given, G_given], G, True)
+    product_comp([H_given, G_given], G, save_state_names=True, save_names_as="int")
     dead_state_index = H_given.vcount() - 1
 
     if find_H:
@@ -48,8 +48,10 @@ def construct_subautomata(
         # Add markings to G
         if "marked" in G_given.vs.attributes():
             marked_labels = [False] * G.vcount()
+            t = G.vs["name"]
             for state in G.vs:
-                if G_given.vs[state["name"][1]]["marked"]:
+                g_vert = state["name"][1]
+                if G_given.vs[g_vert]["marked"]:
                     marked_labels[state.index] = True
             G.vs["marked"] = marked_labels
 
