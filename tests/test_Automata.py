@@ -19,9 +19,12 @@ def test_parallel_comp():
     g1, g2, g3 = util.load_basic_models()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs )
-    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs )
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs)
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs)
 
+    g_int = d.parallel_comp([g1, g2, g3], save_marked_states=True, save_names_as="int")
+    assert all(v["marked"] if v["name"] == [1, 1, 0] else True for v in g.vs)
+    assert all(v["marked"] if v["name"] == [0, 1, 2] else True for v in g.vs)
 
 def test_parallel_comp_same():
     g1, g2 = util.load_basic_models(1, 2)
@@ -37,6 +40,10 @@ def test_product_comp():
 
     g = d.product_comp([g2, g3], save_marked_states=True)
     assert g.vs.find(marked=True)["name"] == ['state2', 'state3']
+
+    g_ind = d.product_comp([g2, g3], save_marked_states=True, save_names_as="int")
+
+    assert g_ind.vs.find(marked=True)["name"] == [2, 2]
 
 
 def test_observer():
