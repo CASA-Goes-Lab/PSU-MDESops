@@ -1,4 +1,6 @@
-def write_svg(automata, fname, layout="auto", width=None, height=None, \
+import igraph as ig
+
+def write_svg(fname, automata, layout="auto", width=None, height=None, \
                   vlabels="name", elabels="label", colors="color", shapes="shape", \
                   vertex_size=10, edge_colors="color", \
                   edge_stroke_widths="width", \
@@ -230,7 +232,7 @@ def write_svg(automata, fname, layout="auto", width=None, height=None, \
             #  startOffset required to move labels off vertices (should be in the middle of vertices)
             print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
             # Text stored in elabels
-            print('{0}'.format(str2(elabels[eidx])), file=f)
+            print('{0}'.format(str(elabels[eidx])), file=f)
             print('    </textPath>', file=f)
             print('</text>', file = f)
 
@@ -276,7 +278,7 @@ def write_svg(automata, fname, layout="auto", width=None, height=None, \
                     format(vertex_width / 2., vertex_height / 2., vertex_width, vertex_height, vidx, colors[vidx]), file=f)
 
             print('      <text sodipodi:linespacing="125%" y="{0}" x="0" id="text{1}" style="font-size:{2}px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans">'.format(vertex_size / 2.,vidx, font_size), file=f)
-            print('<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(vertex_size / 2., vidx, str2(vlabels[vidx])), file=f)
+            print('<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(vertex_size / 2., vidx, str(vlabels[vidx])), file=f)
             print('    </g>', file=f)
 
         print('</g>', file=f)
@@ -285,3 +287,11 @@ def write_svg(automata, fname, layout="auto", width=None, height=None, \
 
         if our_file:
             f.close()
+
+def str2(label):
+    """
+    Converts frozenset to set, easier to read
+    """
+    if isinstance(label, frozenset):
+        return str(set(label))
+    return str(label)
