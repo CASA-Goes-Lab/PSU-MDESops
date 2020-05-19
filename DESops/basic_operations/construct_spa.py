@@ -21,9 +21,7 @@ def construct_spa(G_given, G, Euo=set()):
         Euo = {edge["label"] for edge in G_given.es if not edge["obs"]}
     observer_comp(G_given, G_o, Euo, True, True)
 
-
-    # works until here:
-    parallel_comp([G_given, G_o], G, True, True)
+    parallel_comp([G_given, G_o], G, True, True, save_names_as="int")
     names = [
         (G_given.vs["name"][pair[0]], G_o.vs["name"][pair[1]]) for pair in G.vs["name"]
     ]

@@ -151,9 +151,7 @@ def parallel_comp(
 
         while queue:
             vert_pair = queue.pop()
-            
-            if vert_pair == (4,4):
-                print("pause")
+
             # select edges with source at current vertex
             new_vert_pairs = list()
             new_edge_pairs = list()
