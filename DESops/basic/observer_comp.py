@@ -6,7 +6,7 @@ Only observer_comp is used outside this module; the rest are included as helper 
 only used by observer_comp.
 """
 from DESops.basic.generic_functions import find_Euo
-from DESops.basic.ureach import unobservable_reach
+from DESops.basic.ureach import ureach_from_set
 
 
 def observer_comp(
@@ -22,9 +22,15 @@ def observer_comp(
     if not g_po.vcount():
         return
     find_Euo([g_po], Euo)
+
+    if "init" in g_po.vs.attributes():
+        X0 = {v.index for v in g_po.vs if v["init"]}
+    else:
+        X0 = {0}
+
     # 1. Determine x0_obs = u-reach(x0), add to X_obs
     x0_obs = set()
-    unobservable_reach(x0_obs, 0, g_po, Euo)
+    ureach_from_set(x0_obs, X0, g_po, Euo)
     x0_obs = frozenset(x0_obs)
     X_obs, H = set(), set()
     Q = list()

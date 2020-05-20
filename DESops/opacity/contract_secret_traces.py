@@ -39,15 +39,15 @@ def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
     R.update([e.target for e in g.es.select(label_notin=Euo)])
     Rlist = list(R)
 
-    h.add_vertices(len(R), ["S-"+str(ind) for ind in R])
-    h.add_vertices(len(R), ["NS-"+str(ind) for ind in R])
-    h.vs.select(range(len(R)))["orig_vert"]=Rlist
+    h.add_vertices(len(R), [(ind, 1) for ind in R])
+    h.add_vertices(len(R), [(ind, 0) for ind in R])
+    h.vs.select(range(len(R)))["orig_vert"] = Rlist
     h.vs.select(range(len(R)))["secret"] = True
-    h.vs.select(range(len(R), 2*len(R)))["orig_vert"] = Rlist
+    h.vs.select(range(len(R), 2 * len(R)))["orig_vert"] = Rlist
     h.vs.select(range(len(R), 2 * len(R)))["secret"] = False
 
     secret_dict = {r: x for (x, r) in enumerate(Rlist)}
-    nonsecret_dict = {r: (x+len(R)) for (x, r) in enumerate(Rlist)}
+    nonsecret_dict = {r: (x + len(R)) for (x, r) in enumerate(Rlist)}
 
     Rs = set()
     Rns = set()
@@ -89,12 +89,35 @@ def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
         obs_sec_succ_events = g.es.select(_source_in=secret_succ, label_notin=Euo)
         obs_nonsec_succ_events = g.es.select(_source_in=nonsecret_succ, label_notin=Euo)
 
-        h.add_edges([(secret_dict[r], secret_dict[e.target]) for e in obs_sec_succ_events if e.target in Rs],
-                    labels=[e["label"] for e in obs_sec_succ_events if e.target in Rs])
-        h.add_edges([(secret_dict[r], nonsecret_dict[e.target]) for e in obs_sec_succ_events if e.target in Rns],
-                    labels=[e["label"] for e in obs_sec_succ_events if e.target in Rns])
-        h.add_edges([(nonsecret_dict[r], secret_dict[e.target]) for e in obs_nonsec_succ_events if e.target in Rs],
-                    labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rs])
-        h.add_edges([(nonsecret_dict[r], nonsecret_dict[e.target]) for e in obs_nonsec_succ_events if e.target in Rns],
-                    labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rns])
-
+        h.add_edges(
+            [
+                (secret_dict[r], secret_dict[e.target])
+                for e in obs_sec_succ_events
+                if e.target in Rs
+            ],
+            labels=[e["label"] for e in obs_sec_succ_events if e.target in Rs],
+        )
+        h.add_edges(
+            [
+                (secret_dict[r], nonsecret_dict[e.target])
+                for e in obs_sec_succ_events
+                if e.target in Rns
+            ],
+            labels=[e["label"] for e in obs_sec_succ_events if e.target in Rns],
+        )
+        h.add_edges(
+            [
+                (nonsecret_dict[r], secret_dict[e.target])
+                for e in obs_nonsec_succ_events
+                if e.target in Rs
+            ],
+            labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rs],
+        )
+        h.add_edges(
+            [
+                (nonsecret_dict[r], nonsecret_dict[e.target])
+                for e in obs_nonsec_succ_events
+                if e.target in Rns
+            ],
+            labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rns],
+        )

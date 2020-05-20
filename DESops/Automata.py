@@ -110,6 +110,8 @@ copy_event_sets
 
 from collections.abc import Iterable
 
+from .basic.construct_complement import construct_complement
+from .basic.construct_reverse import construct_reverse
 from .basic.generic_functions import find_Euc as find_Euc_i
 from .basic.generic_functions import find_Euo as find_Euo_i
 from .basic.generic_functions import find_obs_contr
@@ -426,12 +428,16 @@ class Automata:
 
         Returns the observer as an Automata
 
-        Requires the unobersvable events in the system be notated in some way.
+        Requires the unobservable events in the system be notated in some way.
         If Euo is not empty, those events will be used as the unobservable event set.
         Otherwise, the observer_comp function will check the igraph Graph edges
         for an "Euo" attribute, {G.es()["Euo"]} and from that construct the unobservable
         event set (legacy, shouldn't happen anymore; any initialization method from igraph Graphs
         should find the Euo set already).
+
+        If the "init" attribute is defined for self.vs, then the initial state of the observer
+        will be the unobservable reach from the set of vertices for which "init" is true.
+        Otherwise, the initial state will be the unobservable reach from the vertex with index 0.
 
         Parameters:
         save_state_names (default True): currently does nothing (!!!!)
@@ -454,9 +460,58 @@ class Automata:
                 )
         PO = ig.Graph(directed=True)
         observer_comp(self._graph, PO, self.Euo, save_state_names, save_marked_states)
-        PO_A = Automata(graph=PO)
+        PO_A = Automata(init=PO)
         PO_A.type = "obs"
         return PO_A
+
+    def complement(self, events=None, save_state_names=False):
+        """
+        Returns the complement of the given marked automaton.
+
+        Parameters:
+        events (default None): the set of events associated with the automaton.
+            This must provided if it includes events that don't label any transition in the automaton.
+            If this parameter is not provided, the event set will be taken to be the set of events that
+            label at least one existing transition in the automaton.
+
+        save_state_names (default False): whether state names should be saved.
+            If state names are saved, the dead state will be named "x_d".
+
+        Usage:
+        >>> G_comp = G.complement()
+
+        Depends on construct_complement, implemented in basic/construct_complement
+        """
+        if "marked" not in self._graph.vs.attributes():
+            raise MissingAttributeError(
+                'Graph does not have "marked" attribute on states'
+            )
+        comp = Automata()
+        construct_complement(self._graph, comp, events, save_state_names)
+        return comp
+
+    def reverse(self, save_state_names=False, save_marked_states=False):
+        """
+        Returns the reverse of the given automaton
+
+        Parameters:
+        save_state_names (default False): whether state names should be saved
+
+        save_marked_states (default False): whether state markings should be saved
+
+        Usage:
+        >>> G_r = G.reverse()
+
+        Depends on construct_reverse, implemented in basic/construct_reverse
+        """
+        if save_marked_states:
+            if "marked" not in self._graph.vs.attributes():
+                raise MissingAttributeError(
+                    'Graph does not have "marked" attribute on states'
+                )
+        rev = Automata()
+        construct_reverse(self._graph, rev, save_state_names, save_marked_states)
+        return rev
 
     def plot(self, layout_i="kk", bbox_i=(0, 0, 2000, 2000), margin_i=100):
         """
