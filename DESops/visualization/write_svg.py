@@ -86,7 +86,7 @@ def write_svg(fname, automata, layout="auto", width=None, height=None, \
             try:
                 vlabels = automata._graph.vs.get_attribute_values(vlabels)
                 # Added below to write nothing ("") instead of "None"
-                vlabels = ["" if not vl else vl for vl in vlabels]
+                vlabels = ["" if not vl else str2(vl) for vl in vlabels]
             except KeyError:
                 vlabels = [x+1 for x in range(automata.vcount())]
         elif vlabels is None:
@@ -144,6 +144,10 @@ def write_svg(fname, automata, layout="auto", width=None, height=None, \
         else:
             f = fname
             our_file = False
+
+
+        vertex_size_l = [max(vertex_size, 3.5*len(i)) for i in vlabels]
+        #vertex_size = max(vertex_size_l)
 
         # BoundingBox is a graph method  (changed)
         bbox = ig.BoundingBox(layout.bounding_box())
@@ -259,26 +263,26 @@ def write_svg(fname, automata, layout="auto", width=None, height=None, \
                 c = str(colors[vidx])
                 if " " in c:
                     c = c.split(" ")
-                    vs = str(vertex_size)
+                    vs = str(vertex_size_l[vidx])
                     print('     <path d="M -{0},0 A{0},{0} 0 0,0 {0},0 L \
                                 -{0},0" fill="{1}"/>'.format(vs, c[0]), file=f)
                     print('     <path d="M -{0},0 A{0},{0} 0 0,1 {0},0 L \
                                 -{0},0" fill="{1}"/>'.format(vs, c[1]), file=f)
-                    print('     <circle cx="0" cy="0" r="{0}" fill="none"/>'\
-                                .format(vs), file=f)
+                    print('     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="none"/>'\
+                                .format(vs, str(vertex_size)), file=f)
                 else:
-                    print('     <circle cx="0" cy="0" r="{0}" fill="{1}"/>'.\
-                        format(str(vertex_size), str(colors[vidx])), file=f)
+                    print('     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="{2}"/>'.\
+                        format(str(vertex_size_l[vidx]), str(vertex_size), str(colors[vidx])), file=f)
             elif shapes[vidx] == 2:
                 print('      <rect x="-{0}" y="-{0}" width="{1}" height="{1}" id="rect{2}" style="fill:{3};fill-opacity:1" />'.\
                     format(vertex_size, vertex_size * 2, vidx, colors[vidx]), file=f)
             elif shapes[vidx] == 3:
-                (vertex_width, vertex_height) = (font.measure(str(vlabels[vidx])) + 2, font.metrics("linespace") + 2)
+                (vertex_width, vertex_height) = (font.measure(str2(vlabels[vidx])) + 2, font.metrics("linespace") + 2)
                 print('      <rect ry="5" rx="5" x="-{0}" y="-{1}" width="{2}" height="{3}" id="rect{4}" style="fill:{5};fill-opacity:1" />'.\
                     format(vertex_width / 2., vertex_height / 2., vertex_width, vertex_height, vidx, colors[vidx]), file=f)
 
             print('      <text sodipodi:linespacing="125%" y="{0}" x="0" id="text{1}" style="font-size:{2}px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans">'.format(vertex_size / 2.,vidx, font_size), file=f)
-            print('<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(vertex_size / 2., vidx, str(vlabels[vidx])), file=f)
+            print('<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(vertex_size / 2., vidx, vlabels[vidx]), file=f)
             print('    </g>', file=f)
 
         print('</g>', file=f)
