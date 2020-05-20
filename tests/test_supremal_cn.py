@@ -9,7 +9,10 @@ def test_preprocessing_mark():
     Euo = H_given.Euo | G_given.Euo
 
     H, G, deleted = cn_preprocessing(H_given, G_given, Euc, Euo)
+    # assert (len(G.vs.select(marked_eq=True)) == 3)
+    # assert (len(H.vs.select(marked_eq=True)) == 2)
 
-    assert (
-        len(G.vs.select(marked_eq=True)) == 3 and len(H.vs.select(marked_eq=True)) == 2
-    )
+    # Jack: I tried working it out by hand and got 1 marked state for G & H
+    #       but it's very possible I got something wrong
+    assert (len(G.vs.select(marked_eq=True)) == 1)
+    assert (len(H.vs.select(marked_eq=True)) == 1)

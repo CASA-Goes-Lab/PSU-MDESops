@@ -48,13 +48,14 @@ def construct_subautomata(
         # Add markings to G
         if "marked" in G_given.vs.attributes():
             marked_labels = [False] * G.vcount()
-            t = G.vs["name"]
             for state in G.vs:
                 g_vert = state["name"][1]
                 if G_given.vs[g_vert]["marked"]:
                     marked_labels[state.index] = True
             G.vs["marked"] = marked_labels
 
+    G.Euc = G_given.Euc.union(H_given.Euc)
+    G.Euo = G_given.Euo.union(H_given.Euo)
     return dead_state_index
 
 
