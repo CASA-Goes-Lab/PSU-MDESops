@@ -67,16 +67,27 @@ def add_transitions_to_dead(H_given, E):
     """
     trans_to_dead_pairs = list()
     trans_to_dead_labels = list()
-    H_given.add_vertex("dead")
     # Add edges to dead state
+    t = H_given.vs["out"]
+    out = []
+    dead_index = H_given.vcount()
+
+    H_given.add_vertex("dead")
+    H_given.vs[dead_index].update_attributes({"out" : []})
+    
     for state in H_given.vs():
-        active_event_set = H_given.es(_source=state.index)["label"]
+        neighbors = []
+        active_event_set = {v[1] for v in H_given.vs["out"][state.index]}
         for label in E:
             if label not in active_event_set:
                 # Transition from current state index to "dead" state index (last state added)
                 trans_to_dead_pairs.append((state.index, H_given.vcount() - 1))
                 trans_to_dead_labels.append(label)
-
+                neighbors.append((dead_index, label))
+        out.append(neighbors)
+    out.append([])
+    out = [[*old, *new] for old, new in zip(H_given.vs["out"], out)]
+    H_given.vs["out"] = out
     # Add transitions to H_given:
     H_given.add_edges(trans_to_dead_pairs, trans_to_dead_labels)
 
