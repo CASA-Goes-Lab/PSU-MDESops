@@ -25,7 +25,7 @@ from DESops.basic.observer_comp import observer_comp
 from DESops.supremal.cn_pp import cn_preprocessing as cn_preprocessing
 
 
-def supremal_cn_supervisor(H_given, G_given, Euc=None, Euo=None):
+def supr_contr_norm(H_given, G_given, Euc=None, Euo=None):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
