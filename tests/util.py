@@ -46,3 +46,9 @@ def load_cn_models() -> (d.DFA, d.DFA):
     d.read_fsm(str(cwd.joinpath("models", "H2.fsm")), H2)
 
     return (H_t, G_t, H2)
+
+def same_size(g1, g2):
+    """
+    Returns true if graphs g1 and g2 have same # vertices and edges
+    """
+    return g1.vcount() == g2.vcount() and g1.ecount() == g2.ecount()

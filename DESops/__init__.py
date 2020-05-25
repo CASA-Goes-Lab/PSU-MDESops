@@ -18,4 +18,6 @@ from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.product_comp import product_comp
 from DESops.basic_operations.observer_comp import observer_comp
 
+from DESops.supervisory_control.supremal_controllable import supr_contr
+
 __version__ = "20.3.1"

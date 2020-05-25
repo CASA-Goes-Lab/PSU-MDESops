@@ -18,44 +18,11 @@ The other functions are used in supremal_controllable_supervisor()
 
 """
 
-import igraph as ig
+import DESops.automata as a
+from ..basic_operations.product_comp import product_comp
+from ..basic_operations.refine_product import refine_product_SCS
 
-from ..basic.product_comp import product_comp
-from ..basic.refine_product import refine_product_SCS
-
-
-def supremal_controllable_supervisor_pp(G, H, Euc=None, mark_states=False):
-    """
-    Computes the supremal controllable supervisor for the given plant
-    and specficiation Automata. This function handles preprocessing,
-    but eventually calls supremal_controllable_supervisor()
-
-    If K is not a sublanguage of M (where L(H) = K, L(G) = M)
-    then using this function will construct H_o such that the sublanguage
-    requirement is satisfied.
-
-    Returns the supremal controllable supervisor as an Automata.
-
-    Parameters:
-    G: igraph Graph representing the system as an automaton
-    H: igraph Graph representing the specification as an automaton
-
-    The set of uncontrollable events, Euc, is found as the union
-    of the Euc sets in the plant & specification.
-
-
-    Depends on supremal_controllable_supervisor, implemented in
-    automata_operations/supremal/supremal_controllable_supervisor
-    """
-
-    H_o = ig.Graph(directed=True)
-    # Ho = (H || G) x G
-    refine_product_SCS(H_o, H, G)
-    set_contr_attr(H_o.es(), Euc)
-    return supremal_controllable_supervisor(G, H_o, Euc, mark_states)
-
-
-def supremal_controllable_supervisor(G, H, Euc, mark_states=False):
+def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
     """
     Actual function to compute the SCS.
     Assumes K is a sublanguage of M (where L(H) = K, L(G) = M)
@@ -70,9 +37,23 @@ def supremal_controllable_supervisor(G, H, Euc, mark_states=False):
     Find the supremal controllable supervisor, given a plant G and specification H
     """
 
+    if not Euc:
+        Euc = G.Euc.union(H.Euc)
+
+    if preprocess:
+        # Default False
+        H_pp = a.automata_ctor.construct_automata(H)
+        refine_product_SCS(H_pp, H, G)
+        H = H_pp
+
     # Compose G,H to find the supervisor H_o (which may have controllability-condition violations)
-    H_o = ig.Graph(directed=True)
-    product_comp(H_o, [G, H], save_state_names=True)
+    H_o = a.automata_ctor.construct_automata(H)
+    product_comp([G, H], H_o, save_state_names=True)
+
+    print(H_o.vs["name"])
+    print(H_o.es["label"])
+    #import DESops.visualization as v
+    #v.write_svg.write_svg("H_o.svg", H_o, width=1500, height=1500)
 
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
@@ -87,7 +68,7 @@ def supremal_controllable_supervisor(G, H, Euc, mark_states=False):
         # Iterative search; completes when there are no new states to check (exhausted the
         # uncontrollable traces).
         # trim() to remove inaccessible states; potentially saves some computation.
-        inacc_states = trim(H_o, states_removed)
+        inacc_states = find_inacc(H_o, states_removed)
         states_removed.update(states_to_remove)
         states_removed.update(inacc_states)
         states_to_check = {
@@ -112,15 +93,10 @@ def supremal_controllable_supervisor(G, H, Euc, mark_states=False):
     return H_o
 
 
-def trim(G, states_removed):
+def find_inacc(G, states_removed):
     """
-    Compute the trim automaton of G --- does not remove any states.
     Returns a list of vertex indices of G that are inaccessible
     and should be removed.
-
-    E.g.: code to compute the trim automaton of G:
-    >>> v_list = trim(G, states_removed)
-    >>> G.delete_vertices(v_list)
 
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
@@ -142,22 +118,6 @@ def trim(G, states_removed):
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
-
-
-def set_contr_attr(Ho_es, Euc):
-    """
-    Set Ho to have proper un/controllable attribute
-    Ho_es: EdgeSeq attribute of H_o
-    """
-    contr_attr = list()
-    for trans in Ho_es:
-        if trans["label"] in Euc:
-            contr_attr.append(False)
-        else:
-            contr_attr.append(True)
-    Ho_es["contr"] = contr_attr
-    return
-
 
 def set_obs_attr(G_es, H_o_es):
     """
