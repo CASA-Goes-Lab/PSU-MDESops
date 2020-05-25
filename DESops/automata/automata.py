@@ -197,6 +197,8 @@ class _Automata:
 
         self.__bool__ = self._graph.__bool__()
 
+        self.delete_vertices = self._graph.delete_vertices
+
     def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
