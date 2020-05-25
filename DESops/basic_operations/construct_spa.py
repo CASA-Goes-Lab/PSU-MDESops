@@ -23,6 +23,6 @@ def construct_spa(G_given, G, Euo=set()):
 
     parallel_comp([G_given, G_o], G, True, True, save_names_as="int")
     names = [
-        (G_given.vs["name"][pair[0]], G_o.vs["name"][pair[1]]) for pair in G.vs["name"]
+        (tuple(G_given.vs["name"][pair[0]]), G_o.vs["name"][pair[1]]) for pair in G.vs["name"]
     ]
     G.vs["name"] = names
