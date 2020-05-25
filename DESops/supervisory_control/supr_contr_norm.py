@@ -18,14 +18,14 @@ preprocessing and calls supremal_cn_supervisor(), which performs
 no preprocessing (similar to how the SCS is handled).
 """
 
-import igraph as ig
 
-from DESops.basic.generic_functions import find_obs_contr
-from DESops.basic.observer_comp import observer_comp
-from DESops.supremal.cn_pp import cn_preprocessing as cn_preprocessing
+import DESops.automata as a
+from DESops.basic_operations.generic_functions import find_obs_contr
+from DESops.basic_operations.observer_comp import observer_comp
+from DESops.supervisory_control.cn_pp import cn_preprocessing
 
 
-def supr_contr_norm(H_given, G_given, Euc=None, Euo=None):
+def supr_contr_norm(G_given, H_given, Euc=None, Euo=None):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
@@ -43,34 +43,37 @@ def supr_contr_norm(H_given, G_given, Euc=None, Euo=None):
     controllable-normal supervisor.
 
     Parameters:
-    system: igraph Graph representing the plant/system as an automaton.
-    specification: igraph Graph representing the specification as an automaton.
+    G_given: plant/system as an automaton.
+    H_Given: specification as an automaton.
 
-    Euc: optionally provided set of uncontrollable events. Will attempt to find
-    with find_obs_contr() via labels on the graphs' edges, if Euc isn't provided.
+    Euc: optionally provided set of uncontrollable events
 
-    Euo: optionally provided set of unobservable events. Will attempt to find
-    with find_obs_contr() via labels on the graphs' edges, if Euo isn't provided.
+    Euo: optionally provided set of unobservable events
 
     """
 
     # Find set of events that are unobservable/uncontrollable
-    find_obs_contr([H_given, G_given], Euc, Euo)
+    if not Euc:
+        Euc = G_given.Euc.union(H_given.Euc)
+    if not Euo:
+        Euo = G_given.Euo.union(H_given.Euo)
 
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
-    # NOTE: The states in H are not yet deleted and must be deleted in SCS!
+    # NOTE: The states in H are not yet deleted and must be deleted in SCS
+    
     [H, G, states_to_remove] = cn_preprocessing(H_given, G_given, Euc, Euo)
 
     # For each state:
     # 2.1: Compute normality condition
     # 2.2: Compute controllability condition
-    # 2.3: Trim (or ensure we are only checking accessible states in the first place)
+    # 2.3: find_inacc (ensure we are only checking accessible states in the first place)
     # Collect set of good states, find set diff total_states - good_states = bad_states
     # delete all bad states, resulting in K^CN
     states_removed = set()
-    G_obs = ig.Graph(directed=True)
+    G_obs = a.automata_ctor.construct_automata(G)
+
     observer_comp(G, G_obs, Euo=Euo, save_state_names=False, save_marked_states=True)
 
     first_iter = True
@@ -99,15 +102,10 @@ def invalid_state(G, H, Euc, H_state):
     return H_uc_count < G_uc_count
 
 
-def trim(G):
+def find_inacc(G):
     """
-    Compute the trim automaton of G --- does not remove any states.
     Returns a list of vertex indices of G that are inaccessible
     and should be removed.
-
-    E.g.: code to compute the trim automaton of G:
-    >>> v_list = trim(G)
-    >>> G.delete_vertices(v_list)
 
     """
     Q = list()
@@ -159,10 +157,10 @@ def scs(G, S, Euc, states_to_remove, first_iter):
     """
     inacc_states = set()
     if not first_iter:
-        inacc_states = trim(S)
-    # states_removed = {S.vs[v]["name"][1] for v in states_to_remove}
+        inacc_states = find_inacc(S)
+    
     states_removed = set(states_to_remove).difference(inacc_states)
-    # S_states_to_remove = {v.index for v in S.vs if v["name"][1] in states_to_remove}
+
     states_to_check = {
         e.source
         for e in S.es(_target_in=states_to_remove)

@@ -28,10 +28,13 @@ def scn_test_all():
     h1_pp_test, g1_pp_test, _ = cn_preprocessing(h1, g1, Euc, Euo)
 
     assert(same_size(g1_pp, g1_pp_test))
-    assert(same_size(h1_pp, h1_pp_test))
 
     h1 = d.DFA()
     d.read_fsm("tests/models/scn_tests/cn_test1_h.fsm", h1)
+
+    h1_n_test = d.supr_contr_norm(g1, h1)
+    
+    assert(same_size(h_n, h1_n_test))
 
 def sc_test_all():
     g1 = d.read_fsm("tests/models/sc_tests/book_ex_3_11_G.fsm")
