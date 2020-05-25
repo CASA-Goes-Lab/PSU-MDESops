@@ -50,11 +50,6 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
     H_o = a.automata_ctor.construct_automata(H)
     product_comp([G, H], H_o, save_state_names=True)
 
-    print(H_o.vs["name"])
-    print(H_o.es["label"])
-    #import DESops.visualization as v
-    #v.write_svg.write_svg("H_o.svg", H_o, width=1500, height=1500)
-
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
     states_to_remove = [
