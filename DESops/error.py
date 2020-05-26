@@ -29,3 +29,7 @@ class SolverNotFoundError(Exception):
 
 class IncongruencyError(Exception):
     pass
+
+
+class ConversionError(Exception):
+    pass

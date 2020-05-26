@@ -1,35 +1,64 @@
 import DESops as d
-from tests.util import load_basic_models, load_cn_models
+import tests.util as util
+
+
+def test_type():
+    # test if correctly recognize NFA vs DFA vs PFA
+
+    dfa1, nfa1, nfa2 = util.load_nfa_dfa_models()
+
+    assert isinstance(dfa1, d.DFA)
+    assert isinstance(nfa1, d.NFA)
+    assert isinstance(nfa2, d.NFA)
+
+    # TODO: test copies and type-specific operations,
+    # like parallel_comp
 
 
 def test_parallel_comp():
-    g1, g2, g3 = load_basic_models()
+    g1, g2, g3 = util.load_basic_models()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs)
+    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs)
 
-    assert g.vs.find(marked=True)["name"] == [1, 1, 0]
-
+    g_int = d.parallel_comp([g1, g2, g3], save_marked_states=True, save_names_as="int")
+    assert all(v["marked"] if v["name"] == [1, 1, 0] else True for v in g.vs)
+    assert all(v["marked"] if v["name"] == [0, 1, 2] else True for v in g.vs)
 
 def test_parallel_comp_same():
-    g1, g2 = load_basic_models(1, 2)
+    g1, g2 = util.load_basic_models(1, 2)
     g3 = g2.copy()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-
     # FIXME: This assertion fails
     assert g.vs.find(marked=True)["name"] == [1, 1, 1]
 
 
 def test_product_comp():
-    g2, g3 = load_basic_models(2, 3)
+    g2, g3 = util.load_basic_models(2, 3)
 
     g = d.product_comp([g2, g3], save_marked_states=True)
+    assert g.vs.find(marked=True)["name"] == ['state2', 'state3']
 
-    assert g.vs.find(marked=True)["name"] == (2, 2)
+    g_ind = d.product_comp([g2, g3], save_marked_states=True, save_names_as="int")
+
+    assert g_ind.vs.find(marked=True)["name"] == [2, 2]
 
 
-def test_sup_controllable_normal():
-    H_given, G_given, _ = load_cn_models()
-    sup = d.supremal_cn_supervisor(G_given, H_given)
+def test_observer():
+    G_t = util.load_model("models/G_t.fsm")
+    obs = d.observer_comp(G_t, save_state_names=True)
+    #G_t_obs = util.load_model("models/G_t_obs.fsm")
+    t = obs.vs["name"]
+    tt = obs.vs["out"]
+    assert obs.vcount() == 5
+    assert obs.ecount() == 6
+    assert d.Event('a') in (v[1] for v in obs.vs["out"][0])
 
-    sup._graph.write("sup.dot")
+    for out in obs.vs["out"][0]:
+        names = obs.vs["name"][out[0]]
+        if out[1] == d.Event('a'):
+            assert names == frozenset(('3', '4', '5'))
+        if out[1] == d.Event('b'):
+            assert names == frozenset(('2', '5'))

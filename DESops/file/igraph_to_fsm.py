@@ -4,10 +4,11 @@ Convert an igraph Graph instance into an 'fsm' filetype,
 which is used/defined by the DESUMA software.
 """
 
-from DESops.Event import Event
+from DESops.automata.event.event import Event
+from DESops.automata.state.state import State
 
 
-def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
+def write_fsm(fsm_filename, g, plot_prob=False):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
     g: igraph Graph object to read from (an Automata instance would work as well).
@@ -34,10 +35,10 @@ def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
 
     # If obs/contr attributes are not defined, mark them as true
     if "obs" not in g.es.attributes():
-        if not Euo:
+        if not g.Euo:
             g.es["obs"] = [True]
     if "contr" not in g.es.attributes():
-        if not Euc:
+        if not g.Euc:
             g.es["contr"] = [True]
 
     not_marked = False
@@ -53,7 +54,8 @@ def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
 
         for v in g.vs:
             # print(','.join(v["name"]))
-            f.write(",".join(v["name"]))
+            t = v["name"]
+            f.write(str2(v["name"]))
             f.write("\t")
             if not_marked:
                 f.write("0")
@@ -67,19 +69,19 @@ def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
             f.write("\n")
             for trans in edge_seq:
                 if isinstance(trans["label"], Event):
-                    f.write(str(trans.tuple))
+                    f.write(str(trans["label"]))
                 else:
                     f.write(str2(trans["label"]))
                 f.write("\t")
-                f.write(",".join(g.vs["name"][trans.target]))
+                f.write(str2(g.vs["name"][trans.target]))
                 f.write("\t")
-                if Euc:
-                    f.write("c" if trans["label"] not in Euc else "uc")
+                if g.Euc:
+                    f.write("c" if trans["label"] not in g.Euc else "uc")
                 else:
                     f.write("c" if trans["contr"] else "uc")
                 f.write("\t")
-                if Euo:
-                    f.write("o" if trans["label"] not in Euo else "uo")
+                if g.Euo:
+                    f.write("o" if trans["label"] not in g.Euo else "uo")
                 else:
                     f.write("o" if trans["obs"] else "uo")
                 if plot_prob and "prob" in g.es.attributes():
