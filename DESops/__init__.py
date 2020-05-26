@@ -15,4 +15,7 @@ from DESops.supervisory_control.AES.AES import construct_AES, construct_compact_
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
+from DESops.supervisory_control.supr_contr import supr_contr
+from DESops.supervisory_control.supr_contr_norm import supr_contr_norm
+
 __version__ = "20.3.1"

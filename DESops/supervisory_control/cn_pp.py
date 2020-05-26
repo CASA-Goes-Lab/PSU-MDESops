@@ -60,14 +60,7 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
 
     dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False, True)
 
-    print(G_t.vs["out"])
-
     construct_spa(G_t, G, Euo)
-    
-    t = H_t.vs["name"]
-    tt = H_t.es["label"]
-    ttt = G_t.vs["name"]
-    tttt = G_t.es["label"]
 
     # After constructing SPA equivalent of G, H can be found by deleting dead states in G
     G_states_to_delete = list()

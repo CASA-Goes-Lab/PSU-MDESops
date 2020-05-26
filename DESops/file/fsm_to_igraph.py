@@ -94,6 +94,11 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             # set for each vertex to see if any nondeterminism, i.e. repeated labels
             # if any found, set type to NFA, and future vertices won't do this check
             unique_labels = set()
+            try:
+                x = int(states_tuple[2])
+            except ValueError:
+                sys.exit("ERROR {0}:\nExpected integer number of neighbors on line {1}.\nDid previous state have more transitions than noted?".format(fsm_filename, i))
+
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
                 if trans_tuple == ["\n"]:

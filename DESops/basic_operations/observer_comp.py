@@ -54,7 +54,9 @@ def observer_comp(
         observer_defined = False
     if not part_obs.vcount():
         return
-    Euo = part_obs.Euo
+
+    if not Euo:
+        Euo = part_obs.Euo
     # 1. Determine x0_obs = u-reach(x0), add to X_obs
     x0_obs = set()
 
@@ -152,7 +154,7 @@ def convert_to_graph(
     if save_state_names:
         names = [frozenset(tuple(part_obs.vs[v]["name"]) for v in x) for x in X_obs_dict]
     else:
-        names = X_obs_dict.values()
+        names = X_obs_dict.keys()
 
     if save_marked_states:
         marked = [any(part_obs.vs[v]["marked"] for v in x) for x in X_obs_dict]
