@@ -1,22 +1,35 @@
 import igraph as ig
 
-def write_svg(fname, automata, layout="auto", width=None, height=None, \
-                  vlabels="name", elabels="label", colors="color", shapes="shape", \
-                  vertex_size=10, edge_colors="color", \
-                  edge_stroke_widths="width", \
-                  font_size=16, *args, **kwds):
 
-        try:
-            import math
-        except:
-            raise DependencyNotInstalledError('Math library not found')
+def write_svg(
+    fname,
+    automata,
+    layout="auto",
+    width=None,
+    height=None,
+    vlabels="name",
+    elabels="label",
+    colors="color",
+    shapes="shape",
+    vertex_size=10,
+    edge_colors="color",
+    edge_stroke_widths="width",
+    font_size=16,
+    *args,
+    **kwds
+):
 
-        """Saves the graph as an SVG (Scalable Vector Graphics) file
+    try:
+        import math
+    except:
+        raise DependencyNotInstalledError("Math library not found")
+
+    """Saves the graph as an SVG (Scalable Vector Graphics) file
 
         *************
         NOTE for Automata class :: this is taken from the igraph library.
         Most of the function is copied directly from the write_svg function
-        in the igraph Graph class, but with some modifications to include 
+        in the igraph Graph class, but with some modifications to include
         labels in edge attributes.
 
         Changes to declaration:
@@ -65,232 +78,311 @@ def write_svg(fname, automata, layout="auto", width=None, height=None, \
           is interpreted as pixel size and converted to the proper attribute
           value accordingly.
         """
-        if width is None and height is None:
-            width = 400
-            height = 400
-        elif width is None:
-            width = height
-        elif height is None:
-            height = width
+    if width is None and height is None:
+        width = 400
+        height = 400
+    elif width is None:
+        width = height
+    elif height is None:
+        height = width
 
-        if width <= 0 or height <= 0:
-            raise ValueError("width and height must be positive")
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must be positive")
 
-        if isinstance(layout, str):
-            # Changed automata.layout to ig.layout --> layout is a member of igraph imported as ig (changed)
-            layout = automata._graph.layout(layout, *args, **kwds)
+    if isinstance(layout, str):
+        # Changed automata.layout to ig.layout --> layout is a member of igraph imported as ig (changed)
+        layout = automata._graph.layout(layout, *args, **kwds)
 
-        
-        if isinstance(vlabels, str):
-            # Changed instances of labels here to vlabels (changed)
-            try:
-                vlabels = automata._graph.vs.get_attribute_values(vlabels)
-                # Added below to write nothing ("") instead of "None"
-                vlabels = ["" if not vl else str2(vl) for vl in vlabels]
-            except KeyError:
-                vlabels = [x+1 for x in range(automata.vcount())]
-        elif vlabels is None:
-            vlabels = [""] * automata.vcount()
+    if isinstance(vlabels, str):
+        # Changed instances of labels here to vlabels (changed)
+        try:
+            vlabels = automata._graph.vs.get_attribute_values(vlabels)
+            # Added below to write nothing ("") instead of "None"
+            vlabels = ["" if not vl else str2(vl) for vl in vlabels]
+        except KeyError:
+            vlabels = [x + 1 for x in range(automata.vcount())]
+    elif vlabels is None:
+        vlabels = [""] * automata.vcount()
 
-        if isinstance(elabels, str):
-            # Created as a slightly modified copy of above vlabels logic  (changed)
-            try:
-                elabels = automata._graph.es.get_attribute_values(elabels)
-                # Added below to write nothing ("") instead of "None"
-                elabels = ["" if not el else el for el in elabels]
-            except KeyError:
-                elabels = [x+1 for x in range(automata.ecount())]
-        elif elabels is None:
-            elabels = [""] * automata.ecount()
+    if isinstance(elabels, str):
+        # Created as a slightly modified copy of above vlabels logic  (changed)
+        try:
+            elabels = automata._graph.es.get_attribute_values(elabels)
+            # Added below to write nothing ("") instead of "None"
+            elabels = ["" if not el else el for el in elabels]
+        except KeyError:
+            elabels = [x + 1 for x in range(automata.ecount())]
+    elif elabels is None:
+        elabels = [""] * automata.ecount()
 
-        if isinstance(colors, str):
-            try:
-                colors = automata.vs.get_attribute_values(colors)
-            except KeyError:
-                colors = ["red"] * automata.vcount()
+    if isinstance(colors, str):
+        try:
+            colors = automata.vs.get_attribute_values(colors)
+        except KeyError:
+            colors = ["#80b3ff"] * automata.vcount()
 
-        if isinstance(shapes, str):
-            try:
-                shapes = automata.vs.get_attribute_values(shapes)
-            except KeyError:
-                shapes = [1] * automata.vcount()
+    if isinstance(shapes, str):
+        try:
+            shapes = automata.vs.get_attribute_values(shapes)
+        except KeyError:
+            shapes = [1] * automata.vcount()
 
-        if isinstance(edge_colors, str):
-            try:
-                edge_colors = automata.es.get_attribute_values(edge_colors)
-            except KeyError:
-                edge_colors = ["black"] * automata.ecount()
+    if isinstance(edge_colors, str):
+        try:
+            edge_colors = automata.es.get_attribute_values(edge_colors)
+        except KeyError:
+            edge_colors = ["black"] * automata.ecount()
 
-        if isinstance(edge_stroke_widths, str):
-            try:
-                edge_stroke_widths = automata.es.get_attribute_values(edge_stroke_widths)
-            except KeyError:
-                edge_stroke_widths = [2] * automata.ecount()
+    if isinstance(edge_stroke_widths, str):
+        try:
+            edge_stroke_widths = automata.es.get_attribute_values(edge_stroke_widths)
+        except KeyError:
+            edge_stroke_widths = [2] * automata.ecount()
 
-        if not isinstance(font_size, str):
-            font_size = "%spx" % str(font_size)
+    if not isinstance(font_size, str):
+        font_size = "%spx" % str(font_size)
+    else:
+        if ";" in font_size:
+            raise ValueError("font size can't contain a semicolon")
+
+    vcount = automata.vcount()
+    # labels --> vlabels  (changed)
+    vlabels.extend(str(i + 1) for i in range(len(vlabels), vcount))
+    colors.extend(["red"] * (vcount - len(colors)))
+
+    if isinstance(fname, str):
+        f = open(fname, "w")
+        our_file = True
+    else:
+        f = fname
+        our_file = False
+
+    vertex_size_l = [max(vertex_size, 3.5 * len(i)) for i in vlabels]
+    # vertex_size = max(vertex_size_l)
+
+    # BoundingBox is a graph method  (changed)
+    bbox = ig.BoundingBox(layout.bounding_box())
+
+    sizes = [width - 2 * vertex_size, height - 2 * vertex_size]
+    w, h = bbox.width, bbox.height
+
+    ratios = []
+    if w == 0:
+        ratios.append(1.0)
+    else:
+        ratios.append(sizes[0] / w)
+    if h == 0:
+        ratios.append(1.0)
+    else:
+        ratios.append(sizes[1] / h)
+
+    layout = [
+        [
+            (row[0] - bbox.left) * ratios[0] + vertex_size,
+            (row[1] - bbox.top) * ratios[1] + vertex_size,
+        ]
+        for row in layout
+    ]
+
+    # Should all be directed anyways: (changed)
+    directed = True  # automata._graph.is_directed()
+
+    print('<?xml version="1.0" encoding="UTF-8" standalone="no"?>', file=f)
+    print(
+        "<!-- Created by igraph (http://igraph.org/) for use in Inkscape (http://www.inkscape.org/) -->",
+        file=f,
+    )
+    print(file=f)
+    print(
+        '<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"',
+        file=f,
+    )
+    print('width="{0}px" height="{1}px">'.format(width, height), end=" ", file=f)
+
+    edge_color_dict = {}
+    print('<defs id="defs3">', file=f)
+    for e_col in set(edge_colors):
+        if e_col == "#000000":
+            marker_index = ""
         else:
-            if ";" in font_size:
-                raise ValueError("font size can't contain a semicolon")
+            marker_index = str(len(edge_color_dict))
+        # Print an arrow marker for each possible line color
+        # This is a copy of Inkscape's standard Arrow 2 marker
+        print("<marker", file=f)
+        print('   inkscape:stockid="Arrow2Mend{0}"'.format(marker_index), file=f)
+        print('   orient="auto"', file=f)
+        print('   refY="0.0"', file=f)
+        print('   refX="0.0"', file=f)
+        print('   id="Arrow2Mend{0}"'.format(marker_index), file=f)
+        print('   style="overflow:visible;">', file=f)
+        print("  <path", file=f)
+        print('     id="pathArrow{0}"'.format(marker_index), file=f)
+        print(
+            '     style="font-size:12.0;fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;fill:{0}"'.format(
+                e_col
+            ),
+            file=f,
+        )
+        print(
+            '     d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "',
+            file=f,
+        )
+        print('     transform="scale(0.7) rotate(180) translate(1,0)" />', file=f)
+        print("</marker>", file=f)
 
-        vcount = automata.vcount()
-        # labels --> vlabels  (changed)
-        vlabels.extend(str(i+1) for i in range(len(vlabels), vcount))
-        colors.extend(["red"] * (vcount - len(colors)))
+        edge_color_dict[e_col] = "Arrow2Mend{0}".format(marker_index)
+    print("</defs>", file=f)
+    print(
+        '<g inkscape:groupmode="layer" id="layer2" inkscape:label="Lines" sodipodi:insensitive="true">',
+        file=f,
+    )
 
-        if isinstance(fname, str):
-            f = open(fname, "w")
-            our_file = True
-        else:
-            f = fname
-            our_file = False
+    for eidx, edge in enumerate(automata.es):
+        vidxs = edge.tuple
+        x1 = layout[vidxs[0]][0]
+        y1 = layout[vidxs[0]][1]
+        x2 = layout[vidxs[1]][0]
+        y2 = layout[vidxs[1]][1]
+        angle = math.atan2(y2 - y1, x2 - x1)
+        x2 = x2 - vertex_size * math.cos(angle)
+        y2 = y2 - vertex_size * math.sin(angle)
 
+        print("<path", file=f)
+        print(
+            '    style="fill:none;stroke:{0};stroke-width:{2};stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none{1}"'.format(
+                edge_colors[eidx],
+                ";marker-end:url(#{0})".format(edge_color_dict[edge_colors[eidx]])
+                if directed
+                else "",
+                edge_stroke_widths[eidx],
+            ),
+            file=f,
+        )
+        print('    d="M {0},{1} {2},{3}"'.format(x1, y1, x2, y2), file=f)
+        print('    id="path{0}"'.format(eidx), file=f)
+        print('    inkscape:connector-type="polyline"', file=f)
+        print('    inkscape:connector-curvature="0"', file=f)
+        print('    inkscape:connection-start="#g{0}"'.format(edge.source), file=f)
+        print('    inkscape:connection-start-point="d4"', file=f)
+        print('    inkscape:connection-end="#g{0}"'.format(edge.target), file=f)
+        print('    inkscape:connection-end-point="d4" />', file=f)
 
-        vertex_size_l = [max(vertex_size, 3.5*len(i)) for i in vlabels]
-        #vertex_size = max(vertex_size_l)
+        # Additions to write label attributes to edges: (changed)
+        print('<text dy="-2%">', file=f)  # Move the labels off arrows slightly
+        # textPath's for associateed paths made above,
+        #  startOffset required to move labels off vertices (should be in the middle of vertices)
+        print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
+        # Text stored in elabels
+        print("{0}".format(str(elabels[eidx])), file=f)
+        print("    </textPath>", file=f)
+        print("</text>", file=f)
 
-        # BoundingBox is a graph method  (changed)
-        bbox = ig.BoundingBox(layout.bounding_box())
+    print("  </g>", file=f)
+    print(file=f)
 
-        sizes = [width-2*vertex_size, height-2*vertex_size]
-        w, h = bbox.width, bbox.height
+    print(
+        '  <g inkscape:label="Nodes" \
+                    inkscape:groupmode="layer" id="layer1">',
+        file=f,
+    )
+    print("  <!-- Vertices -->", file=f)
 
-        ratios = []
-        if w == 0:
-            ratios.append(1.0)
-        else:
-            ratios.append(sizes[0] / w)
-        if h == 0:
-            ratios.append(1.0)
-        else:
-            ratios.append(sizes[1] / h)
+    if any(x == 3 for x in shapes):
+        # Only import tkFont if we really need it. Unfortunately, this will
+        # flash up an unneccesary Tk window in some cases
+        import tkinter.font
+        import tkinter as tk
 
-        layout = [[(row[0] - bbox.left) * ratios[0] + vertex_size, \
-                  (row[1] - bbox.top) * ratios[1] + vertex_size] \
-                  for row in layout]
+        # This allows us to dynamically size the width of the nodes
+        font = tkinter.font.Font(
+            root=tk.Tk(), font=("Sans", font_size, tkinter.font.NORMAL)
+        )
 
-        # Should all be directed anyways: (changed)
-        directed = True #automata._graph.is_directed()
-
-        print('<?xml version="1.0" encoding="UTF-8" standalone="no"?>', file=f)
-        print('<!-- Created by igraph (http://igraph.org/) for use in Inkscape (http://www.inkscape.org/) -->', file=f)
-        print(file=f)
-        print('<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"', file=f)
-        print('width="{0}px" height="{1}px">'.format(width, height), end=' ', file=f)
-
-
-        edge_color_dict = {}
-        print('<defs id="defs3">', file=f)
-        for e_col in set(edge_colors):
-            if e_col == "#000000":
-                marker_index = ""
+    for vidx in range(automata.vcount()):
+        print(
+            '    <g id="g{0}" transform="translate({1},{2})">'.format(
+                vidx, layout[vidx][0], layout[vidx][1]
+            ),
+            file=f,
+        )
+        if shapes[vidx] == 1:
+            # Undocumented feature: can handle two colors but only for circles
+            c = str(colors[vidx])
+            if " " in c:
+                c = c.split(" ")
+                vs = str(vertex_size_l[vidx])
+                print(
+                    '     <path d="M -{0},0 A{0},{0} 0 0,0 {0},0 L \
+                                -{0},0" fill="{1}"/>'.format(
+                        vs, c[0]
+                    ),
+                    file=f,
+                )
+                print(
+                    '     <path d="M -{0},0 A{0},{0} 0 0,1 {0},0 L \
+                                -{0},0" fill="{1}"/>'.format(
+                        vs, c[1]
+                    ),
+                    file=f,
+                )
+                print(
+                    '     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="none"/>'.format(
+                        vs, str(vertex_size)
+                    ),
+                    file=f,
+                )
             else:
-                marker_index = str(len(edge_color_dict))
-            # Print an arrow marker for each possible line color
-            # This is a copy of Inkscape's standard Arrow 2 marker
-            print('<marker', file=f)
-            print('   inkscape:stockid="Arrow2Lend{0}"'.format(marker_index), file=f)
-            print('   orient="auto"', file=f)
-            print('   refY="0.0"', file=f)
-            print('   refX="0.0"', file=f)
-            print('   id="Arrow2Lend{0}"'.format(marker_index), file=f)
-            print('   style="overflow:visible;">', file=f)
-            print('  <path', file=f)
-            print('     id="pathArrow{0}"'.format(marker_index), file=f)
-            print('     style="font-size:12.0;fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;fill:{0}"'.format(e_col), file=f)
-            print('     d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "', file=f)
-            print('     transform="scale(1.1) rotate(180) translate(1,0)" />', file=f)
-            print('</marker>', file=f)
+                print(
+                    '     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="{2}"/>'.format(
+                        str(vertex_size_l[vidx]), str(vertex_size), str(colors[vidx])
+                    ),
+                    file=f,
+                )
+        elif shapes[vidx] == 2:
+            print(
+                '      <rect x="-{0}" y="-{0}" width="{1}" height="{1}" id="rect{2}" style="fill:{3};fill-opacity:1" />'.format(
+                    vertex_size, vertex_size * 2, vidx, colors[vidx]
+                ),
+                file=f,
+            )
+        elif shapes[vidx] == 3:
+            (vertex_width, vertex_height) = (
+                font.measure(str2(vlabels[vidx])) + 2,
+                font.metrics("linespace") + 2,
+            )
+            print(
+                '      <rect ry="5" rx="5" x="-{0}" y="-{1}" width="{2}" height="{3}" id="rect{4}" style="fill:{5};fill-opacity:1" />'.format(
+                    vertex_width / 2.0,
+                    vertex_height / 2.0,
+                    vertex_width,
+                    vertex_height,
+                    vidx,
+                    colors[vidx],
+                ),
+                file=f,
+            )
 
-            edge_color_dict[e_col] = "Arrow2Lend{0}".format(marker_index)
-        print('</defs>', file=f)
-        print('<g inkscape:groupmode="layer" id="layer2" inkscape:label="Lines" sodipodi:insensitive="true">', file=f)
+        print(
+            '      <text sodipodi:linespacing="125%" y="{0}" x="0" id="text{1}" style="font-size:{2}px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans">'.format(
+                vertex_size / 2.0, vidx, font_size
+            ),
+            file=f,
+        )
+        print(
+            '<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(
+                vertex_size / 2.0, vidx, vlabels[vidx]
+            ),
+            file=f,
+        )
+        print("    </g>", file=f)
 
-        for eidx, edge in enumerate(automata.es):
-            vidxs = edge.tuple
-            x1 = layout[vidxs[0]][0]
-            y1 = layout[vidxs[0]][1]
-            x2 = layout[vidxs[1]][0]
-            y2 = layout[vidxs[1]][1]
-            angle = math.atan2(y2 - y1, x2 - x1)
-            x2 = x2 - vertex_size * math.cos(angle)
-            y2 = y2 - vertex_size * math.sin(angle)
+    print("</g>", file=f)
+    print(file=f)
+    print("</svg>", file=f)
 
-            print('<path', file=f)
-            print('    style="fill:none;stroke:{0};stroke-width:{2};stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none{1}"'\
-                        .format(edge_colors[eidx], ";marker-end:url(#{0})".\
-                                format(edge_color_dict[edge_colors[eidx]]) \
-                                if directed else "", edge_stroke_widths[eidx]), file=f)
-            print('    d="M {0},{1} {2},{3}"'.format(x1, y1, x2, y2), file=f)
-            print('    id="path{0}"'.format(eidx), file=f)
-            print('    inkscape:connector-type="polyline"', file=f)
-            print('    inkscape:connector-curvature="0"', file=f)
-            print('    inkscape:connection-start="#g{0}"'.format(edge.source), file=f)
-            print('    inkscape:connection-start-point="d4"', file=f)
-            print('    inkscape:connection-end="#g{0}"'.format(edge.target), file=f)
-            print('    inkscape:connection-end-point="d4" />', file=f)
-            
-            # Additions to write label attributes to edges: (changed)
-            print('<text dy="-2%">', file = f) # Move the labels off arrows slightly
-            # textPath's for associateed paths made above, 
-            #  startOffset required to move labels off vertices (should be in the middle of vertices)
-            print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
-            # Text stored in elabels
-            print('{0}'.format(str(elabels[eidx])), file=f)
-            print('    </textPath>', file=f)
-            print('</text>', file = f)
+    if our_file:
+        f.close()
 
-        print("  </g>", file=f)
-        print(file=f)
-
-        print('  <g inkscape:label="Nodes" \
-                    inkscape:groupmode="layer" id="layer1">', file=f)
-        print('  <!-- Vertices -->', file=f)
-
-        if any(x == 3 for x in shapes):
-            # Only import tkFont if we really need it. Unfortunately, this will
-            # flash up an unneccesary Tk window in some cases
-            import tkinter.font
-            import tkinter as tk
-            # This allows us to dynamically size the width of the nodes
-            font = tkinter.font.Font(root=tk.Tk(), font=("Sans", font_size, tkinter.font.NORMAL))
-
-        for vidx in range(automata.vcount()):
-            print('    <g id="g{0}" transform="translate({1},{2})">'.\
-                        format(vidx, layout[vidx][0], layout[vidx][1]), file=f)
-            if shapes[vidx] == 1:
-                # Undocumented feature: can handle two colors but only for circles
-                c = str(colors[vidx])
-                if " " in c:
-                    c = c.split(" ")
-                    vs = str(vertex_size_l[vidx])
-                    print('     <path d="M -{0},0 A{0},{0} 0 0,0 {0},0 L \
-                                -{0},0" fill="{1}"/>'.format(vs, c[0]), file=f)
-                    print('     <path d="M -{0},0 A{0},{0} 0 0,1 {0},0 L \
-                                -{0},0" fill="{1}"/>'.format(vs, c[1]), file=f)
-                    print('     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="none"/>'\
-                                .format(vs, str(vertex_size)), file=f)
-                else:
-                    print('     <ellipse cx="0" cy="0" rx="{0}" ry="{1}" fill="{2}"/>'.\
-                        format(str(vertex_size_l[vidx]), str(vertex_size), str(colors[vidx])), file=f)
-            elif shapes[vidx] == 2:
-                print('      <rect x="-{0}" y="-{0}" width="{1}" height="{1}" id="rect{2}" style="fill:{3};fill-opacity:1" />'.\
-                    format(vertex_size, vertex_size * 2, vidx, colors[vidx]), file=f)
-            elif shapes[vidx] == 3:
-                (vertex_width, vertex_height) = (font.measure(str2(vlabels[vidx])) + 2, font.metrics("linespace") + 2)
-                print('      <rect ry="5" rx="5" x="-{0}" y="-{1}" width="{2}" height="{3}" id="rect{4}" style="fill:{5};fill-opacity:1" />'.\
-                    format(vertex_width / 2., vertex_height / 2., vertex_width, vertex_height, vidx, colors[vidx]), file=f)
-
-            print('      <text sodipodi:linespacing="125%" y="{0}" x="0" id="text{1}" style="font-size:{2}px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans">'.format(vertex_size / 2.,vidx, font_size), file=f)
-            print('<tspan y="{0}" x="0" id="tspan{1}" sodipodi:role="line">{2}</tspan></text>'.format(vertex_size / 2., vidx, vlabels[vidx]), file=f)
-            print('    </g>', file=f)
-
-        print('</g>', file=f)
-        print(file=f)
-        print('</svg>', file=f)
-
-        if our_file:
-            f.close()
 
 def str2(label):
     """
