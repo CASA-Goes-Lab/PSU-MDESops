@@ -374,8 +374,13 @@ class _Automata:
         """
         self.dead_state = dead_state_index
 
-    def generate_adj_list(self):
-        self.vs["out"] = self._graph.get_inclist()
+    def generate_out(self):
+        """
+        Generates the "out" attribute for a graph
+        >>> automata.vs["out"][v] // -> [(target vert, event transition), (...), ...]
+        """
+        adj_list = self._graph.get_inclist()
+        self.vs["out"] = [[(self._graph.es[e].target, self._graph.es[e]["label"]) for e in row] for row in adj_list]
 
     # Methods to interface w/ functions from automata_operations/basic/generic_functions
     # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
