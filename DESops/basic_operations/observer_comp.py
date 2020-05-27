@@ -14,7 +14,7 @@ from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
 def observer_comp(
-    part_obs, observer=None, Euo=set(), save_state_names=False, save_marked_states=False
+    part_obs, observer=None, Euo=set(), save_state_names=False, save_marked_states=False, dynamic=True
 ):
     """
     Compute an observer automata
@@ -75,8 +75,10 @@ def observer_comp(
     X_obs_dict[x0_obs] = 0
 
     out_adj = list()
-    search(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj)
-
+    if dynamic:
+        search_d(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj)
+    else:
+        search(part_obs._graph, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj)
     convert_to_graph(
         part_obs,
         observer,
@@ -93,12 +95,67 @@ def observer_comp(
     if not observer_defined:
         return observer
 
+def search_d(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
+    """
+    BFS of the states of part_obs (the partially observed automaton).
+    Uses queue-system via list Q.
+    """
+    i = 1
+    S_dict = dict()
+    while Q:
+        q, index = Q.pop(0)
+
+        adj_states = dict() # maps label->set of states
+
+        for vert in q:
+            for target, label in part_obs.vs["out"][vert]:
+                if label in adj_states:
+                    adj_states[label].add(target)
+                elif label not in Euo:
+                    s = set()
+                    s.add(target)
+                    adj_states[label] = s
+
+        # From current state estimate q, find all adjacent state estimates:
+        # adj_states stores the destination states reached by observable transitions in q
+        # adj_sets extends each state estimate in adj_states by its unoberservable reach
+        adj_sets = list()
+        for S in adj_states.items():
+            set_states = frozenset(S[1])
+            if set_states not in S_dict:
+                ur = ureach_from_set_adj(S[1], part_obs, Euo)
+                S_dict[set_states] = (ur, S[0])
+                adj_sets.append((ur, S[0]))
+            else:
+                set_states = frozenset(S[1])
+                adj_sets.append(S_dict[set_states])
+
+
+
+        #adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
+
+
+        out_adj_list.append([])
+
+        for s in adj_sets:
+            s_f = frozenset(s[0])
+            out_adj_list[index].append((s_f, s[1]))
+            if s_f not in X_obs_dict.keys():
+                Q.append((s_f, i))
+                X_obs_dict[s_f] = i
+
+                i += 1
+
+            trans_list.append((X_obs_dict[q], X_obs_dict[s_f]))
+            trans_label.append(s[1])
+
 def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     """
     BFS of the states of part_obs (the partially observed automaton).
     Uses queue-system via list Q.
     """
     i = 1
+    S_dict = dict()
     while Q:
         q, index = Q.pop(0)
 
@@ -118,8 +175,6 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
         # adj_sets extends each state estimate in adj_states by its unoberservable reach
 
         adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
-
-
         out_adj_list.append([])
 
         for s in adj_sets:
@@ -133,7 +188,6 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
 
             trans_list.append((X_obs_dict[q], X_obs_dict[s_f]))
             trans_label.append(s[1])
-
 
 def convert_to_graph(
     part_obs,
