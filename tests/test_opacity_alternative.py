@@ -1,11 +1,12 @@
 import DESops as d
+from DESops.opacity.opacity_verification import verify_joint_k_step_opacity
 from DESops.opacity.opacity_verification_alternative import (
     verify_joint_infinite_step_opacity_alternative,
     verify_joint_k_step_opacity_alternative,
 )
 
 
-def test_joint_k_step_opacity_alternative():
+def test_joint_k_step_opacity_1():
     g = d.Automata()
     g.add_vertices(6, range(6))
     g.add_edges(
@@ -25,6 +26,8 @@ def test_joint_k_step_opacity_alternative():
     g.vs["secret"] = False
     g.vs[secret_states]["secret"] = True
 
+    assert verify_joint_k_step_opacity(g, 1) is True
+    assert verify_joint_k_step_opacity(g, 2) is False
     assert verify_joint_k_step_opacity_alternative(g, 1) is True
     assert verify_joint_k_step_opacity_alternative(g, 2) is False
 
@@ -32,30 +35,58 @@ def test_joint_k_step_opacity_alternative():
     g.vs["secret"] = False
     g.vs[secret_states]["secret"] = True
 
-    assert verify_joint_k_step_opacity_alternative(g, 1) is False
-    assert verify_joint_k_step_opacity_alternative(g, 2) is False
+    assert verify_joint_k_step_opacity(g, 0) is False
+    assert verify_joint_k_step_opacity_alternative(g, 0) is False
 
+
+def test_joint_k_step_opacity_2():
     g = d.Automata()
-    g.add_vertices(5, range(5))
+    g.add_vertices(4, range(4))
     g.add_edges(
-        [(0, 1), (0, 3), (0, 2), (1, 4), (2, 2), (3, 4), (4, 4)],
-        labels=["b", "a", "u", "b", "a", "b", "a"],
+        [(0, 1), (1, 0), (1, 2), (2, 2), (2, 3), (3, 0)],
+        labels=["b", "b", "b", "b", "a", "a"],
     )
 
-    g.vs["init"] = True
+    g.vs["init"] = False
+    g.vs[0]["init"] = True
+
+    secret_states = [2]
+    g.vs["secret"] = False
+    g.vs[secret_states]["secret"] = True
 
     Eo = ["a", "b"]
     g.es["obs"] = False
     g.es.select(label_in=Eo)["obs"] = True
     g.find_Euc_Euo()
 
-    secret_states = [0]
+    assert verify_joint_k_step_opacity(g, 0) is True
+    assert verify_joint_k_step_opacity(g, 1) is False
+    assert verify_joint_k_step_opacity_alternative(g, 0) is True
+    assert verify_joint_k_step_opacity_alternative(g, 1) is False
+
+
+def test_joint_k_step_opacity_3():
+    g = d.Automata()
+    g.add_vertices(4, range(4))
+    g.add_edges(
+        [(0, 1), (0, 2), (1, 0), (1, 3), (2, 2), (3, 0)],
+        labels=["a", "a", "b", "a", "a", "a"],
+    )
+
+    g.vs["init"] = False
+    g.vs[0]["init"] = True
+
+    secret_states = [3]
     g.vs["secret"] = False
     g.vs[secret_states]["secret"] = True
 
-    assert verify_joint_k_step_opacity_alternative(g, 1) is True
-    assert verify_joint_k_step_opacity_alternative(g, 2) is False
+    assert verify_joint_k_step_opacity(g, 2) is True
+    assert verify_joint_k_step_opacity(g, 3) is False
+    assert verify_joint_k_step_opacity_alternative(g, 2) is True
+    assert verify_joint_k_step_opacity_alternative(g, 3) is False
 
+
+def test_joint_k_step_opacity_4():
     g = d.Automata()
     g.add_vertices(2)
     g.add_edges([(0, 0), (0, 1)], labels=["u", "u"])
@@ -70,10 +101,11 @@ def test_joint_k_step_opacity_alternative():
     g.vs["secret"] = False
     g.vs[secret_states]["secret"] = True
 
+    assert verify_joint_k_step_opacity(g, 0) is False
     assert verify_joint_k_step_opacity_alternative(g, 0) is False
 
 
-def test_joint_infinite_step_opacity_alternative():
+def test_joint_infinite_step_opacity():
     g = d.Automata()
     g.add_vertices(5, range(5))
     g.add_edges(

@@ -6,14 +6,17 @@ Motivated by Estimation and Inference in Discrete Event Systems by Christoforos 
 """
 import igraph as ig
 
+
 """
 The StateMapping class represents possible state transitions for finite systems.
 
 The state transition information is represented in the state mapping as a directed bipartite graph with parts named
 source and target. Both source and target consist of one node for each state of the original system. Possible
 transitions from a state s to a state t is encoded in the graph by an edge from the node representing s in source to the
-node representing t in target. 
+node representing t in target.
 """
+
+
 class StateMapping:
     def __init__(self, num_states):
         """
@@ -26,7 +29,7 @@ class StateMapping:
 
         # The bipartite graph
         self.g = ig.Graph(directed=True)
-        self.g.add_vertices(2*num_states)
+        self.g.add_vertices(2 * num_states)
 
     def add_transitions(self, transitions):
         """
@@ -35,7 +38,7 @@ class StateMapping:
         Parameters:
         transitions: transitions to add to the state mapping represented as a collection of tuples (source, target)
         """
-        self.g.add_edges([(s, self.num_states+t) for (s, t) in transitions])
+        self.g.add_edges([(s, self.num_states + t) for (s, t) in transitions])
 
     def targets_from_source(self, state):
         """
@@ -44,7 +47,9 @@ class StateMapping:
         Parameters:
         state: the source state of the original system
         """
-        return {target - self.num_states for target in self.g.neighbors(state, mode="OUT")}
+        return {
+            target - self.num_states for target in self.g.neighbors(state, mode="OUT")
+        }
 
     def sources_from_target(self, state):
         """
@@ -53,7 +58,7 @@ class StateMapping:
         Parameters:
         state: the target state of the original system
         """
-        return set(self.g.neighbors(state+self.num_states, mode="IN"))
+        return set(self.g.neighbors(state + self.num_states, mode="IN"))
 
     def active_sources(self):
         """
@@ -89,6 +94,7 @@ def compose_state_mapping(sm_dest, sm1, sm2):
             target_set.update(sm2.targets_from_source(inter))
         sm_dest.add_transitions([(source, target) for target in target_set])
 
+
 """
 The StateTrajectory class represents possible state trajectories of fixed length for a finite system.
 
@@ -99,6 +105,8 @@ node representing s in the k^th part to the node representing t in the (k+1)^th 
 
 This structure is also known as a trellis diagram.
 """
+
+
 class StateTrajectory:
     def __init__(self, num_states, num_steps):
         """
@@ -113,7 +121,7 @@ class StateTrajectory:
 
         # the partite graph
         self.g = ig.Graph(directed=True)
-        self.g.add_vertices(num_states * (num_steps+1))
+        self.g.add_vertices(num_states * (num_steps + 1))
 
         # the terminal states with incoming transitions
         self.active_terminal = set()
@@ -125,9 +133,19 @@ class StateTrajectory:
         Parameters:
         transitions: transitions to add to the trajectories as a collection of tuples (source, target, step)
         """
-        self.g.add_edges([(source + self.num_states*step, target + self.num_states*(step+1))
-                          for (source, target, step) in transitions])
-        self.active_terminal.update([target for (source, target, step) in transitions if step == self.num_steps-1])
+        self.g.add_edges(
+            [
+                (source + self.num_states * step, target + self.num_states * (step + 1))
+                for (source, target, step) in transitions
+            ]
+        )
+        self.active_terminal.update(
+            [
+                target
+                for (source, target, step) in transitions
+                if step == self.num_steps - 1
+            ]
+        )
 
     def successors(self, state, step):
         """
@@ -139,7 +157,10 @@ class StateTrajectory:
         """
         if step == self.num_steps:
             return {}
-        return {target-(step+1)*self.num_states for target in self.g.neighbors(state+step*self.num_states, mode="OUT")}
+        return {
+            target - (step + 1) * self.num_states
+            for target in self.g.neighbors(state + step * self.num_states, mode="OUT")
+        }
 
     def predecessors(self, state, step):
         """
@@ -151,7 +172,12 @@ class StateTrajectory:
         """
         if step == -1:
             return {}
-        return {source-step*self.num_states for source in self.g.neighbors(state+(step+1)*self.num_states, mode="IN")}
+        return {
+            source - step * self.num_states
+            for source in self.g.neighbors(
+                state + (step + 1) * self.num_states, mode="IN"
+            )
+        }
 
     def active_states(self, step):
         """
@@ -177,7 +203,10 @@ class StateTrajectory:
         Parameters:
         other: the other state trajectory to compute equality to
         """
-        if not self.num_states == other.num_states or not self.num_steps == other.num_steps:
+        if (
+            not self.num_states == other.num_states
+            or not self.num_steps == other.num_steps
+        ):
             return False
         for s in range(self.num_states):
             for step in range(self.num_steps):
@@ -197,7 +226,7 @@ class StateTrajectory:
         """
         not_avoid_states = set(range(self.num_states)).difference(avoid_states)
         backwards_reachable = not_avoid_states.intersection(self.active_terminal)
-        for step in range(self.num_steps-1, -1, -1):
+        for step in range(self.num_steps - 1, -1, -1):
             if not backwards_reachable:
                 return False
             new_reachable = set()
@@ -234,7 +263,9 @@ def construct_initial_state_trajectory(initial_states, num_states, num_steps):
     num_steps: the length of trajectories considered
     """
     st = StateTrajectory(num_states, num_steps)
-    st.add_transitions([(s, s, step) for s in initial_states for step in range(num_steps)])
+    st.add_transitions(
+        [(s, s, step) for s in initial_states for step in range(num_steps)]
+    )
     st.active_terminal.update(initial_states)
     return st
 
@@ -263,25 +294,33 @@ def compose_state_trajectory_and_mapping(st_dest, st, sm):
     sm: the state mapping to compose
     """
     if not st_dest.num_states == st.num_states or not st.num_states == sm.num_states:
-        raise ValueError("Number of states in trajectories and mappings does not match.")
+        raise ValueError(
+            "Number of states in trajectories and mappings does not match."
+        )
     if not st_dest.num_steps == st.num_steps:
         raise ValueError("Number of steps in trajectories does not match.")
     n = st_dest.num_states
+
+    # state trajectories have no transitions when k = 0, so this case is handled separately
+    if st.num_steps == 0:
+        for s in st.active_terminal:
+            st_dest.active_terminal.update(sm.targets_from_source(s))
+        return
 
     active = set()
     transitions = []
     for inter in range(n):
         targets = sm.targets_from_source(inter)
-        sources = st.predecessors(inter, st_dest.num_steps-1)
+        sources = st.predecessors(inter, st_dest.num_steps - 1)
         if targets and sources:
-            active.update(sources)
-            transitions.extend([(inter, t, st_dest.num_steps-1) for t in targets])
+            active.add(inter)
+            transitions.extend([(inter, t, st_dest.num_steps - 1) for t in targets])
             # transitions.extend([(s, inter, st_dest.num_steps-2) for s in sources])
 
-    for step in range(st_dest.num_steps-2, -1, -1):
+    for step in range(st_dest.num_steps - 2, -1, -1):
         new_active = set()
         for t in active:
-            sources = st.predecessors(t, step)
+            sources = st.predecessors(t, step + 1)
             if sources:
                 new_active.update(sources)
                 transitions.extend([(s, t, step) for s in sources])
@@ -304,14 +343,22 @@ def construct_induced_state_mappings(g, events):
     state_mappings = {}
     for event in events:
         sm = StateMapping(num_states)
-        sm.add_transitions([(trans.source, trans.target) for trans in g.es.select(label=event)])
+        sm.add_transitions(
+            [(trans.source, trans.target) for trans in g.es.select(label=event)]
+        )
         state_mappings[event] = sm
 
     return state_mappings
 
 
-def construct_induced_state_trajectory_automata(traj_auto, induced_trajectories, num_states, num_steps,
-                                                state_mappings, initial_states):
+def construct_induced_state_trajectory_automata(
+    traj_auto,
+    induced_trajectories,
+    num_states,
+    num_steps,
+    state_mappings,
+    initial_states,
+):
     """
     Construct the induced state trajectory automataon from the provided state mappings dictionary.
 
@@ -323,7 +370,9 @@ def construct_induced_state_trajectory_automata(traj_auto, induced_trajectories,
     state_mappings: a dictionary of state_mappings of the original system indexed by events
     initial_states: a collection of initial states of the original system
     """
-    initial_trajectory = construct_initial_state_trajectory(initial_states, num_states, num_steps)
+    initial_trajectory = construct_initial_state_trajectory(
+        initial_states, num_states, num_steps
+    )
     induced_trajectories.append(initial_trajectory)
     traj_auto.add_vertices(1)
     events = state_mappings
@@ -335,8 +384,10 @@ def construct_induced_state_trajectory_automata(traj_auto, induced_trajectories,
         current_index = unexplored.pop()
         for event in events:
             new_traj = StateTrajectory(num_states, num_steps)
-            compose_state_trajectory_and_mapping(new_traj, induced_trajectories[current_index], state_mappings[event])
-            if new_traj.is_empty():
+            compose_state_trajectory_and_mapping(
+                new_traj, induced_trajectories[current_index], state_mappings[event]
+            )
+            if not new_traj.active_terminal:
                 continue
             # print([(edge.source, edge.target - num_states * num_steps) for edge in new_traj.g.es])
             try:
