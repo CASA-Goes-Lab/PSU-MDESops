@@ -5,7 +5,9 @@ which is used/defined by the DESUMA software.
 """
 
 from ..Event import Event
-#from ..Event.Event import Event
+
+
+# from ..Event.Event import Event
 def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
@@ -46,46 +48,46 @@ def igraph_to_fsm(fsm_filename, g, Euc=None, Euo=None, plot_prob=False):
     if "name" not in g.vs.attributes():
         g.vs["name"] = [i for i in range(0, g.vcount())]
 
-    with open(fsm_filename, 'w') as f:
+    with open(fsm_filename, "w") as f:
         f.write(str(g.vcount()))
-        f.write('\n\n')
+        f.write("\n\n")
 
         for v in g.vs:
             # print(','.join(v["name"]))
-            f.write(','.join(v["name"]))
-            f.write('\t')
+            f.write(str2(v["name"]))
+            f.write("\t")
             if not_marked:
-                f.write('0')
+                f.write("0")
             else:
                 t = v["marked"]
-                f.write('1' if t else '0')
-            f.write('\t')
+                f.write("1" if t else "0")
+            f.write("\t")
 
             edge_seq = g.es.select(_source=v.index)
             f.write(str(len(edge_seq)))
-            f.write('\n')
+            f.write("\n")
             for trans in edge_seq:
                 if isinstance(trans["label"], Event):
                     f.write(str(trans.tuple))
                 else:
                     f.write(str2(trans["label"]))
-                f.write('\t')
-                f.write(','.join(g.vs["name"][trans.target]))
-                f.write('\t')
+                f.write("\t")
+                f.write(str2(g.vs["name"][trans.target]))
+                f.write("\t")
                 if Euc:
-                    f.write('c' if trans["label"] not in Euc else 'uc')
+                    f.write("c" if trans["label"] not in Euc else "uc")
                 else:
-                    f.write('c' if trans["contr"] else 'uc')
-                f.write('\t')
+                    f.write("c" if trans["contr"] else "uc")
+                f.write("\t")
                 if Euo:
-                    f.write('o' if trans["label"] not in Euo else 'uo')
+                    f.write("o" if trans["label"] not in Euo else "uo")
                 else:
-                    f.write('o' if trans["obs"] else 'uo')
+                    f.write("o" if trans["obs"] else "uo")
                 if plot_prob and "prob" in g.es.attributes():
-                    f.write('\t')
+                    f.write("\t")
                     f.write(trans["prob"])
-                f.write('\n')
-            f.write('\n')
+                f.write("\n")
+            f.write("\n")
 
 
 def str2(name):

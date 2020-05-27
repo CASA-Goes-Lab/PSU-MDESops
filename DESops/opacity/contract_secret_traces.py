@@ -39,7 +39,9 @@ def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
     R.update([e.target for e in g.es.select(label_notin=Euo)])
     Rlist = list(R)
 
-    h.add_vertices(len(R), [(ind, 1) for ind in R])
+    h.add_vertices(
+        len(R), [(ind, 1) for ind in R]
+    )  # names must be in this form for verify_joint_k_step_opacity_alternative
     h.add_vertices(len(R), [(ind, 0) for ind in R])
     h.vs.select(range(len(R)))["orig_vert"] = Rlist
     h.vs.select(range(len(R)))["secret"] = True
