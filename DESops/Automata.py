@@ -110,8 +110,8 @@ copy_event_sets
 
 from collections.abc import Iterable
 
-from .basic.construct_complement import construct_complement
-from .basic.construct_reverse import construct_reverse
+from .basic.construct_complement import construct_complement, inplace_complement
+from .basic.construct_reverse import construct_reverse, inplace_reverse
 from .basic.generic_functions import find_Euc as find_Euc_i
 from .basic.generic_functions import find_Euo as find_Euo_i
 from .basic.generic_functions import find_obs_contr
@@ -464,9 +464,9 @@ class Automata:
         PO_A.type = "obs"
         return PO_A
 
-    def complement(self, events=None, save_state_names=False):
+    def complement(self, events=None, inplace=False, save_state_names=False):
         """
-        Returns the complement of the given marked automaton.
+        Constructs the complement of the given marked automaton.
 
         Parameters:
         events (default None): the set of events associated with the automaton.
@@ -474,11 +474,16 @@ class Automata:
             If this parameter is not provided, the event set will be taken to be the set of events that
             label at least one existing transition in the automaton.
 
-        save_state_names (default False): whether state names should be saved.
-            If state names are saved, the dead state will be named "x_d".
+        inplace (default False): if True, the complement will be constructed in-place
+            Otherwise, the complement will be returned as a new automaton
+
+        save_state_names (default False): whether state names should be saved
+            If state names are saved, the dead state will be named "x_d"
 
         Usage:
         >>> G_comp = G.complement()
+          or
+        >>> G.complement(inplace=True)
 
         Depends on construct_complement, implemented in basic/construct_complement
         """
@@ -486,21 +491,31 @@ class Automata:
             raise MissingAttributeError(
                 'Graph does not have "marked" attribute on states'
             )
-        comp = Automata()
-        construct_complement(self._graph, comp, events, save_state_names)
-        return comp
+        if inplace:
+            inplace_complement(self, events, save_state_names)
+        else:
+            comp = Automata()
+            construct_complement(self, comp, events, save_state_names)
+            return comp
 
-    def reverse(self, save_state_names=False, save_marked_states=False):
+    def reverse(self, inplace=False, save_state_names=False, save_marked_states=False):
         """
-        Returns the reverse of the given automaton
+        Constructs the reverse of the given automaton
 
         Parameters:
+        inplace (default False): if true, the reverse will be constructed in-place
+            Otherwise, the reverse will be returned as a new automaton
+
         save_state_names (default False): whether state names should be saved
+            Does nothing if inplace is True
 
         save_marked_states (default False): whether state markings should be saved
+            Does nothing if inplace is True
 
         Usage:
         >>> G_r = G.reverse()
+          or
+        >>> G.reverse(inplace=True)
 
         Depends on construct_reverse, implemented in basic/construct_reverse
         """
@@ -509,9 +524,12 @@ class Automata:
                 raise MissingAttributeError(
                     'Graph does not have "marked" attribute on states'
                 )
-        rev = Automata()
-        construct_reverse(self._graph, rev, save_state_names, save_marked_states)
-        return rev
+        if inplace:
+            inplace_reverse(self)
+        else:
+            rev = Automata()
+            construct_reverse(self, rev, save_state_names, save_marked_states)
+            return rev
 
     def plot(self, layout_i="kk", bbox_i=(0, 0, 2000, 2000), margin_i=100):
         """

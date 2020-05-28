@@ -24,13 +24,15 @@ def verify_joint_k_step_opacity_alternative(g, k):
     g_contracted = Automata()
     contract_secret_traces(g, g_contracted, Euo, False)
 
-    g_r = g_contracted.reverse(save_state_names=True)
-    g_r.vs["marked"] = [g.vs[i]["init"] for i in [state[0] for state in g_r.vs["name"]]]
-    g_r.vs["secret"] = [v["name"][1] for v in g_r.vs]
+    g_contracted.reverse(inplace=True)
+    g_contracted.vs["marked"] = [
+        g.vs[i]["init"] for i in [state[0] for state in g_contracted.vs["name"]]
+    ]
+    g_contracted.vs["secret"] = [v["name"][1] for v in g_contracted.vs]
 
-    h = construct_unfolded_automaton(g_r, g.vs, k)
+    h = construct_unfolded_automaton(g_contracted, g.vs, k)
 
-    return language_inclusion(g_r, h, Eo)
+    return language_inclusion(g_contracted, h, Eo)
 
 
 def verify_joint_infinite_step_opacity_alternative(g):
@@ -108,8 +110,8 @@ def language_inclusion(g, h, Eo):
     """
     g_det = g.observer(save_marked_states=True)
     h_det = h.observer(save_marked_states=True)
-    h_det_comp = h_det.complement(Eo)
-    prod = product_comp([g_det, h_det_comp], save_marked_states=True)
+    h_det.complement(events=Eo, inplace=True)
+    prod = product_comp([g_det, h_det], save_marked_states=True)
 
     for v in prod.vs:
         if v["marked"]:
