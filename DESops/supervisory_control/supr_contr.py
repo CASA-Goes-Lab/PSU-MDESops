@@ -19,8 +19,11 @@ The other functions are used in supremal_controllable_supervisor()
 """
 
 import DESops.automata as a
+
 from ..basic_operations.product_comp import product_comp
 from ..basic_operations.refine_product import refine_product_SCS
+from ..basic_operations.unary import find_inacc
+
 
 def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
     """
@@ -87,32 +90,6 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
 
     return H_o
 
-
-def find_inacc(G, states_removed):
-    """
-    Returns a list of vertex indices of G that are inaccessible
-    and should be removed.
-
-    states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
-    """
-    Q = list()
-    Q.append({0})
-    good_states = set()
-    good_states.add(0)
-    while Q:
-        q = Q.pop(0)
-        neighbors = {
-            t.target
-            for t in G.es(_source_in=q)
-            if t.target not in good_states and t.target not in states_removed
-        }
-        if not neighbors:
-            continue
-        good_states.update(neighbors)
-        Q.append(frozenset(neighbors))
-
-    bad_states = {v.index for v in G.vs if v.index not in good_states}
-    return bad_states
 
 def set_obs_attr(G_es, H_o_es):
     """
