@@ -19,12 +19,17 @@ def test_parallel_comp():
     g1, g2, g3 = util.load_basic_models()
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'init3'] else True for v in g.vs)
-    assert all(v["marked"] if v["name"] == ['mark1', 'mark2', 'state3'] else True for v in g.vs)
+    assert all(
+        v["marked"] if v["name"] == ["mark1", "mark2", "init3"] else True for v in g.vs
+    )
+    assert all(
+        v["marked"] if v["name"] == ["mark1", "mark2", "state3"] else True for v in g.vs
+    )
 
     g_int = d.parallel_comp([g1, g2, g3], save_marked_states=True, save_names_as="int")
     assert all(v["marked"] if v["name"] == [1, 1, 0] else True for v in g.vs)
     assert all(v["marked"] if v["name"] == [0, 1, 2] else True for v in g.vs)
+
 
 def test_parallel_comp_same():
     g1, g2 = util.load_basic_models(1, 2)
@@ -39,7 +44,7 @@ def test_product_comp():
     g2, g3 = util.load_basic_models(2, 3)
 
     g = d.product_comp([g2, g3], save_marked_states=True)
-    assert g.vs.find(marked=True)["name"] == ['state2', 'state3']
+    assert g.vs.find(marked=True)["name"] == ["state2", "state3"]
 
     g_ind = d.product_comp([g2, g3], save_marked_states=True, save_names_as="int")
 
@@ -49,16 +54,28 @@ def test_product_comp():
 def test_observer():
     G_t = util.load_model("models/G_t.fsm")
     obs = d.observer_comp(G_t, save_state_names=True)
-    #G_t_obs = util.load_model("models/G_t_obs.fsm")
+    # G_t_obs = util.load_model("models/G_t_obs.fsm")
     t = obs.vs["name"]
     tt = obs.vs["out"]
     assert obs.vcount() == 5
     assert obs.ecount() == 6
-    assert d.Event('a') in (v[1] for v in obs.vs["out"][0])
+    assert d.Event("a") in (v[1] for v in obs.vs["out"][0])
 
     for out in obs.vs["out"][0]:
         names = obs.vs["name"][out[0]]
-        if out[1] == d.Event('a'):
-            assert names == frozenset(('3', '4', '5'))
-        if out[1] == d.Event('b'):
-            assert names == frozenset(('2', '5'))
+        if out[1] == d.Event("a"):
+            assert names == frozenset(("3", "4", "5"))
+        if out[1] == d.Event("b"):
+            assert names == frozenset(("2", "5"))
+
+
+def test_trim():
+    G = util.load_model("models/textbook/exmp_2-16_modified.fsm")
+    inacc_states = {G.vs[i]["name"] for i in d.unary.find_inacc(G)}
+    assert inacc_states == {"6", "7", "8"}
+
+    incoacc_states = {G.vs[i]["name"] for i in d.unary.find_incoacc(G)}
+    assert incoacc_states == {"3", "4", "5"}
+
+    bad_states = {G.vs[i]["name"] for i in d.unary.trim(G)}
+    assert bad_states == inacc_states | incoacc_states
