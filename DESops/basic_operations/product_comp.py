@@ -11,11 +11,20 @@ parallel_comp but were essentially redundant.
 from collections import OrderedDict
 
 from DESops.automata.automata import _Automata
+from DESops.basic_operations.parallel_comp import (
+    assemble_graph,
+    marked_bool,
+    new_state_name,
+)
 
-from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool, new_state_name
 
-
-def product_comp(input_list, output=None, save_state_names=True, save_marked_states=False, save_names_as="str"):
+def product_comp(
+    input_list,
+    output=None,
+    save_state_names=True,
+    save_marked_states=False,
+    save_names_as="str",
+):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.
@@ -40,7 +49,7 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
         An error will be raised if this parameter is True, but not all Automata
         in the composition have the "marked" parameter on their vertices.
 
-    save_names_as (default "str"):   
+    save_names_as (default "str"):
         If storing names, store as either pairs of old names or pairs of old vertices
         e.g.    save_names_as=="str" --> ("state1","state2")
                 save_names_as==any_other_str --> (1, 1)
@@ -65,7 +74,7 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
         all_events = set(all_events).intersection(gi.es["label"])
 
     # types are objects. This doesn't show up in VSCODE but it works
-    ref_type = str if save_names_as=="str" else int
+    ref_type = str if save_names_as == "str" else int
 
     for i in range(1, len(input_list)):
 
@@ -88,7 +97,7 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
 
         g2 = input_list[i]
 
-        if save_state_names and save_names_as=="str":
+        if save_state_names and save_names_as == "str":
             g1_names = g1.vs["name"]
             g2_names = g2.vs["name"]
         elif save_state_names and i > 1:
@@ -115,12 +124,12 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
             output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
 
         adj = dict()
-        adj[(0,0)] = list()
+        adj[(0, 0)] = list()
         queue = list()
-        queue.append((0,0))
+        queue.append((0, 0))
         while queue:
             vert_pair = queue.pop()
-        
+
             # select edges with source at current vertex
             g1_es = g1.vs["out"][vert_pair[0]]
             g2_es = g2.vs["out"][vert_pair[1]]
@@ -148,7 +157,14 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
                     index += 1
 
                     new_name = list()
-                    new_state_name(g1_names, g2_names, new_vert, new_name, save_state_names, ref_type)
+                    new_state_name(
+                        g1_names,
+                        g2_names,
+                        new_vert,
+                        new_name,
+                        save_state_names,
+                        ref_type,
+                    )
                     output_vert[new_vert] = [index, new_name, new_vert]
 
                     # check if this vertex pair should get marked
@@ -172,7 +188,7 @@ def product_comp(input_list, output=None, save_state_names=True, save_marked_sta
             output_vert,
             save_state_names,
             save_marked_states,
-            adj
+            adj,
         )
     if not output_def:
         return output

@@ -114,10 +114,10 @@ from collections.abc import Iterable
 from DESops.automata.event.event import Event
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
+    ConversionError,
     DependencyNotInstalledError,
     IncongruencyError,
     MissingAttributeError,
-    ConversionError,
 )
 
 try:
@@ -197,7 +197,11 @@ class _Automata:
 
         self.__bool__ = self._graph.__bool__()
 
-        self.delete_vertices = self._graph.delete_vertices
+    def delete_vertices(self, vs):
+        self._graph.delete_vertices(vs)
+        for state in self.vs:
+            new_out = [(e.target, e["label"]) for e in state.out_edges()]
+            self.vs[state.index].update_attributes({"out": new_out})
 
     def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
@@ -225,7 +229,13 @@ class _Automata:
             self.es[self.ecount() - 1].update_attributes({"prob": prob})
 
         if fill_out:
-            self.vs["out"].append((target, label))
+            out = self.vs[source]["out"]
+            if out is not None:
+                out.append((target, label))
+            else:
+                out = [(target, label)]
+
+            self.vs[source].update_attributes({"out": out})
 
     def add_edges(self, pair_list, labels, probs=None, fill_out=False):
         """
@@ -280,14 +290,15 @@ class _Automata:
         self._graph.add_vertex()
         if name:
             self.vs[self.vcount() - 1].update_attributes({"name": name})
-        if marked:
-            self.vs[self.vcount() - 1].update_attributes({"marked" : marked})
+        if marked is not None:
+            self.vs[self.vcount() - 1].update_attributes({"marked": marked})
+
+        self.vs[self.vcount() - 1].update_attributes({"out": []})
 
         for arg in kwargs.items():
-            if arg[0] in self._graph.vs.attributes():
-                self._graph.vs[self.vcount() - 1].update_attributes({arg[0] : arg[1]})
-            else:
-                self._graph.vs[arg[0]] = arg[1]
+            self._graph.vs[self.vcount() - 1].update_attributes({arg[0]: arg[1]})
+
+        return self.vs[self.vcount() - 1]
 
     def add_vertices(self, number_vertices, names=None, marked=None, **kwargs):
         if names:
@@ -298,13 +309,25 @@ class _Automata:
             new_names = list(self._graph.vs["name"])
 
             try:
-                new_names.extend(n for n in names if isinstance(n, str) or isinstance(n, int) or isinstance(n, Iterable))
+                new_names.extend(
+                    n
+                    for n in names
+                    if isinstance(n, str)
+                    or isinstance(n, int)
+                    or isinstance(n, Iterable)
+                )
             except:
-                raise ConversionError("Could not convert state names of type {0}, need str/int/Iterable".format(type(names[0])))
+                raise ConversionError(
+                    "Could not convert state names of type {0}, need str/int/Iterable".format(
+                        type(names[0])
+                    )
+                )
         else:
             # if no names given, fill in with index names
             new_names = list(self.vs["name"])
-            new_names.extend(i for i in range(self.vcount(), self.vcount() + number_vertices))
+            new_names.extend(
+                i for i in range(self.vcount(), self.vcount() + number_vertices)
+            )
 
         if marked:
             if number_vertices != len(marked):
@@ -335,6 +358,7 @@ class _Automata:
     def update_names(self, names):
         # update vertex names from list of names
         self.vs["name"] = names
+
     def copy(self):
         """
         Copy from self to other, as in:
@@ -380,7 +404,10 @@ class _Automata:
         >>> automata.vs["out"][v] // -> [(target vert, event transition), (...), ...]
         """
         adj_list = self._graph.get_inclist()
-        self.vs["out"] = [[(self._graph.es[e].target, self._graph.es[e]["label"]) for e in row] for row in adj_list]
+        self.vs["out"] = [
+            [(self._graph.es[e].target, self._graph.es[e]["label"]) for e in row]
+            for row in adj_list
+        ]
 
     # Methods to interface w/ functions from automata_operations/basic/generic_functions
     # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
