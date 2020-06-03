@@ -84,8 +84,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             last_el = states_tuple.pop()
             states_tuple.append(last_el[0:-1])  # REMOVING \n
             # print(states_tuple)
-            names = states_tuple[0].split(",")
-            states_tuple[0] = names if len(names) > 1 else names[0]
+            name = states_tuple[0]
+            states_tuple[0] = ast.literal_eval(name) if name[0] == "(" else name
             state_names.append(states_tuple[0])
             # states.append(State(states_tuple[0]))
             state_markings.append(states_tuple[1] == "1")
@@ -146,9 +146,9 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                 trans_tuple.append(last_el[0:-1])
                 trans_labels.append(Event(trans_tuple[0]))
                 events.add(Event(trans_tuple[0]))
-                target_names = trans_tuple[1].split(",")
+                t_name = trans_tuple[1]
                 trans_tuple[1] = (
-                    target_names if len(target_names) > 1 else target_names[0]
+                    ast.literal_eval(t_name) if t_name[0] == "(" else t_name
                 )
                 trans_list.append((states_tuple[0], trans_tuple[1]))
                 if trans_tuple[2] == "uc":

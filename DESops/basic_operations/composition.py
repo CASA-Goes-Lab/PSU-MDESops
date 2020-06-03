@@ -1,8 +1,6 @@
 """
 Funcions relevant to the composition operations.
 """
-from pydash import flatten
-
 from DESops.automata.automata import _Automata
 from DESops.basic_operations.unary import find_inacc
 from DESops.error import MissingAttributeError
@@ -26,7 +24,7 @@ def product(*args: _Automata) -> _Automata:
         for x1 in G1.vs:
             for x2 in G2.vs:
                 G_out.add_vertex(
-                    name=flatten([x1["name"], x2["name"]]),
+                    name=(x1["name"], x2["name"]),
                     marked=x1["marked"] is True and x2["marked"] is True,
                     indexes=(x1.index, x2.index),
                 )
@@ -83,7 +81,7 @@ def parallel(*args: _Automata) -> _Automata:
         for x1 in G1.vs:
             for x2 in G2.vs:
                 G_out.add_vertex(
-                    name=flatten([x1["name"], x2["name"]]),
+                    name=(x1["name"], x2["name"]),
                     marked=x1["marked"] is True and x2["marked"] is True,
                     indexes=(x1.index, x2.index),
                 )

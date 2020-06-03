@@ -54,9 +54,8 @@ def write_fsm(fsm_filename, g, plot_prob=False):
 
         for v in g.vs:
             # print(','.join(v["name"]))
-            state = v["name"]
-            name = state if isinstance(state, str) else ",".join(state)
-            f.write(str2(name))
+            t = v["name"]
+            f.write(str2(v["name"]))
             f.write("\t")
             if not_marked:
                 f.write("0")
@@ -74,9 +73,7 @@ def write_fsm(fsm_filename, g, plot_prob=False):
                 else:
                     f.write(str2(trans["label"]))
                 f.write("\t")
-                tgt = g.vs["name"][trans.target]
-                tgt_name = tgt if isinstance(tgt, str) else ",".join(tgt)
-                f.write(str2(tgt_name))
+                f.write(str2(g.vs["name"][trans.target]))
                 f.write("\t")
                 if g.Euc:
                     f.write("c" if trans["label"] not in g.Euc else "uc")
