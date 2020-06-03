@@ -1,12 +1,12 @@
+import ast
 import sys
 
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.PFA import PFA
-from DESops.automata.NFA import NFA
 from DESops.automata.event.event import Event
-
+from DESops.automata.NFA import NFA
+from DESops.automata.PFA import PFA
 
 
 # pylint: disable=C0103
@@ -14,6 +14,8 @@ from DESops.automata.event.event import Event
 Convert an 'fsm' filetype, which is used/defined by the DESUMA software,
 into an igraph Graph object.
 """
+
+
 def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
@@ -82,9 +84,11 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             last_el = states_tuple.pop()
             states_tuple.append(last_el[0:-1])  # REMOVING \n
             # print(states_tuple)
+            names = states_tuple[0].split(",")
+            states_tuple[0] = names if len(names) > 1 else names[0]
             state_names.append(states_tuple[0])
             # states.append(State(states_tuple[0]))
-            state_markings.append(states_tuple[1] == '1')
+            state_markings.append(states_tuple[1] == "1")
             if len(states_tuple) > 3:
                 state_crit.append(states_tuple[2])
             i += 1
@@ -97,7 +101,11 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             try:
                 x = int(states_tuple[2])
             except ValueError:
-                sys.exit("ERROR {0}:\nExpected integer number of neighbors on line {1}.\nDid previous state have more transitions than noted?".format(fsm_filename, i))
+                sys.exit(
+                    "ERROR {0}:\nExpected integer number of neighbors on line {1}.\nDid previous state have more transitions than noted?".format(
+                        fsm_filename, i
+                    )
+                )
 
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
@@ -138,6 +146,10 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                 trans_tuple.append(last_el[0:-1])
                 trans_labels.append(Event(trans_tuple[0]))
                 events.add(Event(trans_tuple[0]))
+                target_names = trans_tuple[1].split(",")
+                trans_tuple[1] = (
+                    target_names if len(target_names) > 1 else target_names[0]
+                )
                 trans_list.append((states_tuple[0], trans_tuple[1]))
                 if trans_tuple[2] == "uc":
                     events_unctr.add(Event(trans_tuple[0]))
@@ -191,7 +203,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         target = state_names.index(pair[1])
         trans_list_int_names.append((source, target))
 
-
     if g_defined:
         g.Euc = events_unctr.copy()
         g.Euo = events_unobs.copy()
@@ -212,8 +223,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             g = NFA(g, events_unctr, events_unobs, events)
         g.add_edges(trans_list_int_names, trans_labels)
 
-
-
     # print(events)
     trans_observable_bool = [x == "o" for x in trans_observable]
     g.es["obs"] = trans_observable_bool
@@ -225,6 +234,5 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     ]
 
     g.vs["out"] = neighbors_list
-
 
     return g
