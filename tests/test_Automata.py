@@ -37,9 +37,9 @@ def test_parallel_comp_same():
 
     g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
     # FIXME: This assertion fails
-    assert {",".join(ms["name"]) for ms in g.vs.select(marked_eq=True)} == {
-        "mark1,mark2,mark2",
-        "mark1,state2,state2",
+    assert {ms["name"] for ms in g.vs.select(marked_eq=True)} == {
+        (("mark1", "mark2"), "mark2"),
+        (("mark1", "state2"), "state2"),
     }
 
 

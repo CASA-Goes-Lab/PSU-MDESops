@@ -8,10 +8,10 @@ def test_product():
 
     G = d.composition.product(G1, G2)
 
-    states = {",".join(s["name"]) for s in G.vs}
-    marked_states = {",".join(ms["name"]) for ms in G.vs.select(marked_eq=True)}
-    assert states == {"x,0", "x,1"}
-    assert marked_states == {"x,1"}
+    states = {s["name"] for s in G.vs}
+    marked_states = {ms["name"] for ms in G.vs.select(marked_eq=True)}
+    assert states == {("x", "0"), ("x", "1")}
+    assert marked_states == {("x", "1")}
     assert G.Euc == {d.Event("a")}
 
 
@@ -20,7 +20,7 @@ def test_parallel():
     G3 = G2.copy()
 
     G = d.composition.parallel(G1, G2, G3)
-    assert {",".join(ms["name"]) for ms in G.vs.select(marked_eq=True)} == {
-        "mark1,mark2,mark2",
-        "mark1,state2,state2",
+    assert {ms["name"] for ms in G.vs.select(marked_eq=True)} == {
+        (("mark1", "mark2"), "mark2"),
+        (("mark1", "state2"), "state2"),
     }
