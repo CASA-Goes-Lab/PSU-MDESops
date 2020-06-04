@@ -198,13 +198,17 @@ class FSM_Generator:
                 "max_trans_per_state can't be less than min_trans_per_state"
             )
 
-        if self.det and self.num_init != 1:
-            raise ValueError("num_init must be 1 for a deterministic atuomaton")
-
         if self.det and self.max_trans_per_state > self.num_events:
             raise ValueError(
                 "max_trans_per_state can't be greater than num_events for a deterministic automaton"
             )
+        if self.max_trans_per_state > self.num_events * self.num_states:
+            raise ValueError(
+                "max_trans_per_state can't be greater than num_events * num_states"
+            )
+
+        if self.det and self.num_init != 1:
+            raise ValueError("num_init must be 1 for a deterministic atuomaton")
 
         if self.num_init < 1 or self.num_init > self.num_states:
             raise ValueError("num_init must be between 1 and num_states")
@@ -421,22 +425,30 @@ class FSM_Generator:
             event = None
             next_state = None
 
-            # force deterministic for now; get a random (child) event
-            if avail_events:
-                event = choice(avail_events)
-                # For deterministic fsm's, don't allow the same event to be used more than once,
-                #  for a given state's transitions.
-                if self.det:
-                    avail_events.remove(event)
-            if event is None:
-                break
+            while next_state is None:
+                if avail_events:
+                    event = choice(avail_events)
+                    # For deterministic fsm's, don't allow the same event to be used more than once,
+                    #  for a given state's transitions.
+                    if self.det:
+                        avail_events.remove(event)
+                if event is None:
+                    continue
 
-            # Now get a random next state that this event will lead to
-            if avail_states:
-                next_state = choice(avail_states)
-                avail_states.remove(next_state)
-            if next_state is None:
-                break
+                # calculate avail_states to be the states
+                avail_states = list(range(self.num_states))
+                for t in self.g.vs[state].out_edges():
+                    if (
+                        t["label"] == self.event_names[event]
+                        and t.target in avail_states
+                    ):
+                        avail_states.remove(t.target)
+                # Now get a random next state that this event will lead to
+                if avail_states:
+                    next_state = choice(avail_states)
+                    # avail_states.remove(next_state)
+                else:
+                    avail_events.remove(event)
 
             self.g.add_edge(state, next_state, self.event_names[event])
 
