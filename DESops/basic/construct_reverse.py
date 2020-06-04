@@ -22,6 +22,9 @@ def inplace_reverse(g):
     Constructs the reverse of the given automaton in-place
     """
     g.vs["init"] = True
+
+    if g.ecount() == 0:
+        return
     t = g.es[0]
     for _ in range(g.ecount()):
         g.add_edge(t.target, t.source, t["label"])
