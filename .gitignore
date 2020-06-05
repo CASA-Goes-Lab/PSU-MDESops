@@ -144,3 +144,7 @@ static
 
 # Examples romulo
 Examples/
+
+
+# regal random_DFA executable (OS specific)
+*random_DFA/regal-1.08.0929/random_DFA
