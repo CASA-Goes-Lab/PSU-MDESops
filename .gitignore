@@ -144,3 +144,6 @@ static
 
 # Examples romulo
 Examples/
+
+#pycharm stuff
+.idea/
