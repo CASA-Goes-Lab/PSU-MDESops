@@ -8,13 +8,19 @@ only used by observer_comp.
 
 
 from collections import OrderedDict
+
 from DESops.automata.DFA import DFA
 from DESops.basic_operations.generic_functions import find_Euo
 from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
 def observer_comp(
-    part_obs, observer=None, Euo=set(), save_state_names=False, save_marked_states=False, dynamic=True
+    part_obs,
+    observer=None,
+    Euo=set(),
+    save_state_names=False,
+    save_marked_states=False,
+    dynamic=True,
 ):
     """
     Compute an observer automata
@@ -57,10 +63,14 @@ def observer_comp(
 
     if not Euo:
         Euo = part_obs.Euo
-    # 1. Determine x0_obs = u-reach(x0), add to X_obs
-    x0_obs = set()
 
-    x0_obs = ureach_from_set_adj({0}, part_obs, Euo)
+    if "init" in part_obs.vs.attributes():
+        x0 = {v.index for v in part_obs.vs if v["init"]}
+    else:
+        x0 = {0}
+
+    # 1. Determine x0_obs = u-reach(x0), add to X_obs
+    x0_obs = ureach_from_set_adj(x0, part_obs, Euo)
     x0_obs = frozenset(x0_obs)
     # SEQUENTIAL CONSTRUCTION VIA DICT
     X_obs_dict = OrderedDict()
@@ -87,13 +97,14 @@ def observer_comp(
         trans_label,
         save_state_names,
         save_marked_states,
-        out_adj
+        out_adj,
     )
 
     observer.Euc = set(part_obs.Euc)
     observer.Euo = set(part_obs.Euo)
     if not observer_defined:
         return observer
+
 
 def search_d(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     """
@@ -105,7 +116,7 @@ def search_d(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list
     while Q:
         q, index = Q.pop(0)
 
-        adj_states = dict() # maps label->set of states
+        adj_states = dict()  # maps label->set of states
 
         for vert in q:
             for target, label in part_obs.vs["out"][vert]:
@@ -124,16 +135,16 @@ def search_d(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list
             set_states = frozenset(S[1])
             if set_states not in S_dict:
                 ur = ureach_from_set_adj(S[1], part_obs, Euo)
-                S_dict[set_states] = (ur, S[0])
+                # S_dict[set_states] = (ur, S[0])
+                # adj_sets.append((ur, S[0]))
+                S_dict[set_states] = ur
                 adj_sets.append((ur, S[0]))
             else:
                 set_states = frozenset(S[1])
-                adj_sets.append(S_dict[set_states])
+                # adj_sets.append(S_dict[set_states])
+                adj_sets.append((S_dict[set_states], S[0]))
 
-
-
-        #adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
-
+        # adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
 
         out_adj_list.append([])
 
@@ -149,6 +160,7 @@ def search_d(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list
             trans_list.append((X_obs_dict[q], X_obs_dict[s_f]))
             trans_label.append(s[1])
 
+
 def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     """
     BFS of the states of part_obs (the partially observed automaton).
@@ -159,7 +171,7 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
     while Q:
         q, index = Q.pop(0)
 
-        adj_states = dict() # maps label->set of states
+        adj_states = dict()  # maps label->set of states
 
         for vert in q:
             for target, label in part_obs.vs["out"][vert]:
@@ -174,7 +186,9 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
         # adj_states stores the destination states reached by observable transitions in q
         # adj_sets extends each state estimate in adj_states by its unoberservable reach
 
-        adj_sets = ((ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items())
+        adj_sets = (
+            (ureach_from_set_adj(S[1], part_obs, Euo), S[0]) for S in adj_states.items()
+        )
         out_adj_list.append([])
 
         for s in adj_sets:
@@ -189,6 +203,7 @@ def search(part_obs, Q, Euo, X_obs_dict, trans_list, trans_label, out_adj_list):
             trans_list.append((X_obs_dict[q], X_obs_dict[s_f]))
             trans_label.append(s[1])
 
+
 def convert_to_graph(
     part_obs,
     observer,
@@ -197,7 +212,7 @@ def convert_to_graph(
     trans_label,
     save_state_names,
     save_marked_states,
-    adj
+    adj,
 ):
     """
     Convert sets/lists of states/transitions into final igraph Graph in observer.
@@ -206,7 +221,9 @@ def convert_to_graph(
     # IT WOULD AVOID A FEW FOR LOOPS
 
     if save_state_names:
-        names = [frozenset(tuple(part_obs.vs[v]["name"]) for v in x) for x in X_obs_dict]
+        names = [
+            frozenset(tuple(part_obs.vs[v]["name"]) for v in x) for x in X_obs_dict
+        ]
     else:
         names = X_obs_dict.keys()
 
@@ -221,4 +238,3 @@ def convert_to_graph(
 
     out = [[(X_obs_dict[s[0]], s[1]) for s in vert] for vert in adj]
     observer.vs["out"] = out
-

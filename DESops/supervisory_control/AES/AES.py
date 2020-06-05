@@ -82,12 +82,27 @@ def construct_AES(G, X_crit, debug=False):
 
 
 def construct_Tcomp(G, Qname, Q1, Q2, h1, h2, labelh1, labelh2, queue, X_crit):
+    # G: the plant automaton
+    # Qnames: list of names of each state in order of their vertex index
+    # Q1,Q2: dictionary state_names: index (position in Qnames)
+    # h1,h2: transition function based on Qnames index
+    # labelh1,labelh2: transition event label in order with h1,h2
+    # queue: list of states to visit in the arena
+    # X_crit: safety specification. It is used as a stop condition for the construction of T_comp
+
     # index counter saves the current vertex index
     vertex_counter = 1
+
     Eo = G.events - G.Euo
+
+    # used to not recompute UR
     UR_state_classes = dict()
+
+    # Finding the compact control decision set
+
     Gamma = find_compact_control_decisions_sets(G.events, G.Euc, G.Euo)
-    # print(Gamma)
+
+    # queue holds states that must be visited
     while queue:
         q = queue.pop(0)
         if Q1_state(q):
@@ -147,6 +162,14 @@ def construct_Tcomp(G, Qname, Q1, Q2, h1, h2, labelh1, labelh2, queue, X_crit):
 
 
 def construct_Tmax(G, Qname, Q1, Q2, h1, h2, labelh1, labelh2, queue, X_crit):
+    # G: the plant automaton
+    # Qnames: list of names of each state in order of their vertex index
+    # Q1,Q2: dictionary state_names: index (position in Qnames)
+    # h1,h2: transition function based on Qnames index
+    # labelh1,labelh2: transition event label in order with h1,h2
+    # queue: list of states to visit in the arena
+    # X_crit: safety specification. It is used as a stop condition for the construction of T_max
+
     # index counter saves the current vertex index
     vertex_counter = 1
     Eo = G.events - G.Euo

@@ -145,6 +145,11 @@ static
 # Examples romulo
 Examples/
 
+<<<<<<< HEAD
 
 # regal random_DFA executable (OS specific)
 *random_DFA/regal-1.08.0929/random_DFA
+=======
+#pycharm stuff
+.idea/
+>>>>>>> 08f42569359a349672fd29059f6ad89068269197
