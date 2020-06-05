@@ -3,6 +3,7 @@
 Function to transform an fsm with secret states and unobservable events into a nondeterminstic fsm without
  unobservable events while preserving the secrecy of trajectories
 """
+from DESops.automata.NFA import NFA
 from DESops.basic_operations.ureach import (
     unobservable_reach,
     ureach_from_set,
@@ -10,7 +11,7 @@ from DESops.basic_operations.ureach import (
 )
 
 
-def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
+def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
     """
     Function contracting unobservable events while preserving secrecy properties.
 
@@ -34,6 +35,11 @@ def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
     Euo: set of unobservable events
     anyNonsecIsNonsec:  if true then visiting a secret state is secret, if false then not visiting a nonsecret state is
     """
+    h_defined = True
+    if h is None:
+        h = NFA()
+        h_defined = False
+
     if Euo is None:
         Euo = g.Euo
     Q0 = g.vs.select(init=True).indices
@@ -132,3 +138,6 @@ def contract_secret_traces(g, h, Euo, any_nonsec_is_nonsec):
             labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rns],
             fill_out=True,
         )
+
+    if not h_defined:
+        return h

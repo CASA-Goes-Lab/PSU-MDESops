@@ -1,11 +1,9 @@
 """
 Functions related to the alternative method for k-step and infinite-step opacity that is based on language inclusion
 """
-import igraph as ig
-
-from DESops.automata.automata import _Automata
-from DESops.basic_operations.construct_complement import inplace_complement
-from DESops.basic_operations.construct_reverse import inplace_reverse
+from DESops.automata.NFA import NFA
+from DESops.basic_operations.construct_complement import complement
+from DESops.basic_operations.construct_reverse import reverse
 from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
@@ -26,10 +24,9 @@ def verify_joint_k_step_opacity_alternative(g, k):
     Euo = g.Euo
     Eo = set(g.es["label"]).difference(Euo)
 
-    g_c = _Automata()
-    contract_secret_traces(g, g_c, Euo, False)
+    g_c = contract_secret_traces(g)
 
-    inplace_reverse(g_c)
+    reverse(g_c, inplace=True)
     g_c.vs["marked"] = [g.vs[state[0]]["init"] for state in g_c.vs["name"]]
 
     h = construct_reverse_unfolded_automaton(g_c, g.vs, k)
@@ -48,8 +45,7 @@ def verify_joint_infinite_step_opacity_alternative(g):
     Euo = g.Euo
     Eo = set(g.es["label"]).difference(Euo)
 
-    g_c = _Automata()
-    contract_secret_traces(g, g_c, Euo, False)
+    g_c = contract_secret_traces(g)
     g_c.vs["marked"] = [g.vs[state[0]]["init"] for state in g_c.vs["name"]]
 
     h = g_c.copy()
@@ -84,7 +80,7 @@ def construct_reverse_unfolded_automaton(g_r, g_vs, k):
     g_vs: the vertex sequence of the original automaton g
     k: the number of steps
     """
-    h = _Automata()
+    h = NFA()
     # start with nonsecret states 0 steps from the end
     S0 = [((v, 0), 0) for v in g_vs.select(secret=False).indices]
     state_indices = dict()
@@ -139,8 +135,7 @@ def verify_separate_k_step_opacity_alternative(g, k):
     Euo = g.Euo
     Eo = set(g.es["label"]).difference(Euo)
 
-    g_c = _Automata()
-    contract_secret_traces(g, g_c, Euo, True)
+    g_c = contract_secret_traces(g, any_nonsec_is_nonsec=True)
     g_c.vs["marked"] = True
 
     # add self loops to each state so that runs reaching a dead state can be extended
@@ -164,7 +159,7 @@ def construct_forward_unfolded_automaton(g_c, k):
     g_vs: the vertex sequence of the original automaton g
     k: the number of steps
     """
-    h = _Automata()
+    h = NFA()
     # start with initial states of g_c at each step in {0,...,K}
     S0 = [(state["name"], i) for state in g_c.vs if state["init"] for i in range(k + 1)]
     state_indices = dict()
@@ -228,7 +223,7 @@ def language_inclusion(g, h, Eo):
     Eo: the set of observable events
     """
     h_det = observer_comp(h, save_marked_states=True)
-    inplace_complement(h_det, Eo)
+    complement(h_det, inplace=True, events=Eo)
 
     prod = product_NFA([g, h_det], save_marked_states=True)
 

@@ -82,3 +82,35 @@ def test_trim():
 
     bad_states = {G.vs[i]["name"] for i in d.unary.trim(G)}
     assert bad_states == inacc_states | incoacc_states
+
+
+def test_reverse():
+    g = util.load_model("models/textbook/fig_2-2.fsm")
+    # reverse transition tuples (source, target, label):
+    a = d.Event("a")
+    b = d.Event("b")
+    transitions = {(1, 0, a), (0, 0, b), (1, 1, a), (0, 1, b)}
+
+    g_r = d.reverse(g)
+    assert {(t.source, t.target, t["label"]) for t in g_r.es} == transitions
+    assert all([v["init"] for v in g_r.vs])
+
+    d.reverse(g, inplace=True)
+    assert {(t.source, t.target, t["label"]) for t in g.es} == transitions
+    assert all([v["init"] for v in g.vs])
+
+
+def test_complement():
+    g = util.load_model("models/textbook/fig_2-1.fsm")
+
+    g_c = d.complement(g)
+    assert g_c.vcount() == 4
+    assert g_c.ecount() == 12
+    assert (3, d.Event("b")) in g_c.vs[0]["out"]
+    assert g_c.vs["marked"] == [False, True, False, True]
+
+    d.complement(g, inplace=True)
+    assert g.vcount() == 4
+    assert g.ecount() == 12
+    assert (3, d.Event("b")) in g.vs[0]["out"]
+    assert g.vs["marked"] == [False, True, False, True]

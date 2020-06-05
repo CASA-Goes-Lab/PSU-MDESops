@@ -6,6 +6,8 @@ from DESops.automata.event.event import Event
 from DESops.automata.NFA import NFA
 from DESops.automata.PFA import PFA
 from DESops.basic_operations import composition, unary
+from DESops.basic_operations.construct_complement import complement
+from DESops.basic_operations.construct_reverse import reverse
 from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.product_comp import product_comp
