@@ -268,7 +268,7 @@ class _Automata:
             new_labels = list(self._graph.es["label"])
             new_labels.extend(labels)
 
-        if probs:
+        if probs is not None:
             if len(pair_list) != len(probs):
                 raise IncongruencyError("Length of pairs != length of probs")
             new_probs = list(self._graph.es["prob"])
@@ -279,12 +279,19 @@ class _Automata:
         if labels:
             self.es["label"] = new_labels
 
-        if probs:
+        if probs is not None:
             self.es["prob"] = new_probs
 
         if fill_out:
+            out_list = self.vs["out"]
             for label, pair in zip(labels, pair_list):
-                self.vs["out"][pair[0]].append((pair[1], label))
+                out = out_list[pair[0]]
+                if out is not None:
+                    out.append((pair[1], label))
+                else:
+                    out = [(pair[1], label)]
+                out_list[pair[0]] = out
+            self.vs["out"] = out_list
 
     def add_vertex(self, name=None, marked=None, **kwargs):
         self._graph.add_vertex()
@@ -306,54 +313,45 @@ class _Automata:
                 raise IncongruencyError(
                     "Number vertices to be added != number of names provided"
                 )
-            new_names = list(self._graph.vs["name"])
+            new_names = self._graph.vs["name"] + names
 
-            try:
-                new_names.extend(
-                    n
-                    for n in names
-                    if isinstance(n, str)
-                    or isinstance(n, int)
-                    or isinstance(n, Iterable)
-                )
-            except:
-                raise ConversionError(
-                    "Could not convert state names of type {0}, need str/int/Iterable".format(
-                        type(names[0])
-                    )
-                )
         else:
             # if no names given, fill in with index names
-            new_names = list(self.vs["name"])
+            new_names = self.vs["name"]
             new_names.extend(
                 i for i in range(self.vcount(), self.vcount() + number_vertices)
             )
 
-        if marked:
+        if marked is not None:
             if number_vertices != len(marked):
                 raise IncongruencyError("Number vertices to be added != number names")
-            new_marked = list(self._graph.vs["marked"])
-            new_marked.extend(marked)
+            new_marked = self._graph.vs["marked"] + marked
+
+        new_out = self._graph.vs["out"] + [[]] * number_vertices
+
+        extra_attrs = dict()
+        for key, val in kwargs.items():
+            if number_vertices != len(val):
+                raise IncongruencyError(
+                    "Number vertices to be added != number of names provided"
+                )
+            if key in self._graph.vs.attributes():
+                extra_attrs[key] = self._graph.vs[key] + val
+            else:
+                extra_attrs[key] = [None] * self.vcount() + val
 
         self._graph.add_vertices(number_vertices)
 
         self._graph.vs["name"] = new_names
+        self._graph.vs["out"] = new_out
 
-        if marked:
+        if marked is not None:
             # if not marked, igraph will fill with whatever the last value in marked vertices was
             # TODO: change this behavior? default false/true?
             self._graph.vs["marked"] = new_marked
 
-        for arg in kwargs.items():
-            if number_vertices != len(arg[1]):
-                raise IncongruencyError(
-                    "Number vertices to be added != number of names provided"
-                )
-            if arg[0] in self._graph.vs.attributes():
-                new_list = list(self._graph.vs[arg[0]])
-                new_list.extend(arg[1])
-            else:
-                self._graph.vs[arg[0]] = arg[1]
+        for key, val in extra_attrs.items():
+            self._graph.vs[key] = val
 
     def update_names(self, names):
         # update vertex names from list of names
