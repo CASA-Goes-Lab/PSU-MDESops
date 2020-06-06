@@ -1,9 +1,16 @@
 import igraph as ig
+from pydash import flatten_deep
 
 from DESops.automata.event.event import Event
 
 
-def plot(automata, layout_i="kk", bbox_i=(0, 0, 1000, 1000), margin_i=100):
+def plot(
+    automata,
+    layout_i="kk",
+    bbox_i=(0, 0, 1000, 1000),
+    margin_i=100,
+    flatten_state_name=False,
+):
     """
     Plot the Graph attribute of the Automata.
     If the automata is an IDA or similar, the plot will differentiate the two state types.
@@ -23,6 +30,11 @@ def plot(automata, layout_i="kk", bbox_i=(0, 0, 1000, 1000), margin_i=100):
 
     P = automata._graph.copy()
     P.es["label"] = [str2(l) for l in P.es["label"]]
+
+    if "name" not in g.vs.attributes():
+        P.vs["name"] = [i for i in range(0, g.vcount())]
+    elif flatten_state_name is True:
+        P.vs["name"] = [",".join(flatten_deep(v["name"])) for v in g.vs]
 
     P.vs["name"] = [str2(v) for v in P.vs["name"]]
 
