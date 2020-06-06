@@ -6,15 +6,15 @@ from DESops.basic_operations.unary import find_inacc
 from DESops.error import MissingAttributeError
 
 
-def product(*args: _Automata) -> _Automata:
+def product(*automata: _Automata) -> _Automata:
     """
     Computes the product composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
     """
-    if len(args) < 2:
+    if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
 
-    G1 = args[0]
-    input_list = args[1:]
+    G1 = automata[0]
+    input_list = automata[1:]
 
     for G2 in input_list:
         G_out = _Automata()
@@ -82,15 +82,15 @@ def product(*args: _Automata) -> _Automata:
     return G_out
 
 
-def parallel(*args: _Automata) -> _Automata:
+def parallel(*automata: _Automata) -> _Automata:
     """
     Computes the parallel composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
     """
-    if len(args) < 2:
+    if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
 
-    G1 = args[0]
-    input_list = args[1:]
+    G1 = automata[0]
+    input_list = automata[1:]
 
     for G2 in input_list:
         G_out = _Automata()
