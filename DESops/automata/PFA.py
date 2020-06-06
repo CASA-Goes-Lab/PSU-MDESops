@@ -1,5 +1,7 @@
 import sys
+
 from DESops.automata.automata import _Automata
+
 
 class PFA(_Automata):
     """docstring for """
@@ -10,25 +12,31 @@ class PFA(_Automata):
         if not prob and self.ecount() > 0:
             if "prob" not in self.es.attributes():
                 import warnings
-                #sys.exit("ERROR: prob attribute not defined for type PFA")
-                warnings.warn("prob attribute not defined for type PFA, setting to default")
+
+                # sys.exit("ERROR: prob attribute not defined for type PFA")
+                warnings.warn(
+                    "prob attribute not defined for type PFA, setting to default"
+                )
 
         elif prob:
             if len(prob) != self.ecount():
-                sys.exit("ERROR: {0} probabilities specified does not match {1} graph ecount".format(len(prob), self.ecount()))
+                sys.exit(
+                    "ERROR: {0} probabilities specified does not match {1} graph ecount".format(
+                        len(prob), self.ecount()
+                    )
+                )
 
             self._graph.es["prob"] = prob.copy()
         else:
             self._graph.es["prob"] = []
-            
-        
+
     def add_edges(self, pair_list, labels, probs):
-  
+
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
-        
+
         self._graph.add_edges(pair_list)
 
         self._graph.es["label"] = new_labels
