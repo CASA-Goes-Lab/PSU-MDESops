@@ -1,10 +1,11 @@
 import sys
-
 from collections.abc import Iterable
+
+
 class State:
     def __init__(self, name):
         self.attr = set()
-        
+
         if isinstance(name, str) or isinstance(name, int):
             self.name = name
         elif isinstance(name, Iterable):
@@ -21,8 +22,10 @@ class State:
 
     def __eq__(self, other):
         return self.name == other.name
+
     def __hash__(self):
         return hash(self.name)
+
 
 class StateEstimate(State):
     def __init__(self, name):

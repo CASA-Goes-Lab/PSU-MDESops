@@ -3,6 +3,8 @@
 # Not bothering to fix until after changes to event class
 
 import igraph as ig
+
+
 def write_pickle(filename, automata, compress=False):
     """
     Serialize Automata instance with pickle.
@@ -23,6 +25,7 @@ def write_pickle(filename, automata, compress=False):
         automata._graph.write_pickle(filename)
     else:
         automata._graph.write_picklez(filename)
+
 
 def read_pickle(filename, automata, compress=False):
     """

@@ -1,4 +1,5 @@
 import igraph as ig
+from pydash import flatten_deep
 
 
 def write_svg(
@@ -15,6 +16,7 @@ def write_svg(
     edge_colors="color",
     edge_stroke_widths="width",
     font_size=16,
+    flatten_state_name=False,
     *args,
     **kwds
 ):
@@ -89,55 +91,62 @@ def write_svg(
     if width <= 0 or height <= 0:
         raise ValueError("width and height must be positive")
 
+    g = automata.copy()  # to avoid side effects
+
+    if "name" not in g.vs.attributes():
+        g.vs["name"] = [i for i in range(0, g.vcount())]
+    elif flatten_state_name is True:
+        g.vs["name"] = [",".join(flatten_deep(v["name"])) for v in g.vs]
+
     if isinstance(layout, str):
         # Changed automata.layout to ig.layout --> layout is a member of igraph imported as ig (changed)
-        layout = automata._graph.layout(layout, *args, **kwds)
+        layout = g._graph.layout(layout, *args, **kwds)
 
     if isinstance(vlabels, str):
         # Changed instances of labels here to vlabels (changed)
         try:
-            vlabels = automata._graph.vs.get_attribute_values(vlabels)
+            vlabels = g._graph.vs.get_attribute_values(vlabels)
             # Added below to write nothing ("") instead of "None"
             vlabels = ["" if not vl else str2(vl) for vl in vlabels]
         except KeyError:
-            vlabels = [x + 1 for x in range(automata.vcount())]
+            vlabels = [x + 1 for x in range(g.vcount())]
     elif vlabels is None:
-        vlabels = [""] * automata.vcount()
+        vlabels = [""] * g.vcount()
 
     if isinstance(elabels, str):
         # Created as a slightly modified copy of above vlabels logic  (changed)
         try:
-            elabels = automata._graph.es.get_attribute_values(elabels)
+            elabels = g._graph.es.get_attribute_values(elabels)
             # Added below to write nothing ("") instead of "None"
             elabels = ["" if not el else el for el in elabels]
         except KeyError:
-            elabels = [x + 1 for x in range(automata.ecount())]
+            elabels = [x + 1 for x in range(g.ecount())]
     elif elabels is None:
-        elabels = [""] * automata.ecount()
+        elabels = [""] * g.ecount()
 
     if isinstance(colors, str):
         try:
-            colors = automata.vs.get_attribute_values(colors)
+            colors = g.vs.get_attribute_values(colors)
         except KeyError:
-            colors = ["#80b3ff"] * automata.vcount()
+            colors = ["#80b3ff"] * g.vcount()
 
     if isinstance(shapes, str):
         try:
-            shapes = automata.vs.get_attribute_values(shapes)
+            shapes = g.vs.get_attribute_values(shapes)
         except KeyError:
-            shapes = [1] * automata.vcount()
+            shapes = [1] * g.vcount()
 
     if isinstance(edge_colors, str):
         try:
-            edge_colors = automata.es.get_attribute_values(edge_colors)
+            edge_colors = g.es.get_attribute_values(edge_colors)
         except KeyError:
-            edge_colors = ["black"] * automata.ecount()
+            edge_colors = ["black"] * g.ecount()
 
     if isinstance(edge_stroke_widths, str):
         try:
-            edge_stroke_widths = automata.es.get_attribute_values(edge_stroke_widths)
+            edge_stroke_widths = g.es.get_attribute_values(edge_stroke_widths)
         except KeyError:
-            edge_stroke_widths = [2] * automata.ecount()
+            edge_stroke_widths = [2] * g.ecount()
 
     if not isinstance(font_size, str):
         font_size = "%spx" % str(font_size)
@@ -145,7 +154,7 @@ def write_svg(
         if ";" in font_size:
             raise ValueError("font size can't contain a semicolon")
 
-    vcount = automata.vcount()
+    vcount = g.vcount()
     # labels --> vlabels  (changed)
     vlabels.extend(str(i + 1) for i in range(len(vlabels), vcount))
     colors.extend(["red"] * (vcount - len(colors)))
@@ -237,7 +246,7 @@ def write_svg(
         file=f,
     )
 
-    for eidx, edge in enumerate(automata.es):
+    for eidx, edge in enumerate(g.es):
         vidxs = edge.tuple
         x1 = layout[vidxs[0]][0]
         y1 = layout[vidxs[0]][1]
@@ -298,7 +307,7 @@ def write_svg(
             root=tk.Tk(), font=("Sans", font_size, tkinter.font.NORMAL)
         )
 
-    for vidx in range(automata.vcount()):
+    for vidx in range(g.vcount()):
         print(
             '    <g id="g{0}" transform="translate({1},{2})">'.format(
                 vidx, layout[vidx][0], layout[vidx][1]

@@ -4,14 +4,18 @@ Convert an igraph Graph instance into an 'fsm' filetype,
 which is used/defined by the DESUMA software.
 """
 
+from pydash import flatten_deep
+
 from DESops.automata.event.event import Event
 from DESops.automata.state.state import State
 
 
-def write_fsm(fsm_filename, g, plot_prob=False):
+def write_fsm(fsm_filename, automaton, plot_prob=False, flatten_state_name=False):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
-    g: igraph Graph object to read from (an Automata instance would work as well).
+    automaton: igraph Graph object to read from (an Automata instance would work as well).
+    flatten_state_name: if this argument is true, then state names are flattened and concatenated with comma ","
+        e.g. (("1", "a"), "x") will be "1,a,x"
 
     Keyword attributes used in this package (for igraph Graph edge/vert sequences):
     "name": vertexseq label to refer to state names
@@ -33,6 +37,7 @@ def write_fsm(fsm_filename, g, plot_prob=False):
         > ...
     """
 
+    g = automaton.copy()  # to avoid side effects
     # If obs/contr attributes are not defined, mark them as true
     if "obs" not in g.es.attributes():
         if not g.Euo:
@@ -47,6 +52,8 @@ def write_fsm(fsm_filename, g, plot_prob=False):
 
     if "name" not in g.vs.attributes():
         g.vs["name"] = [i for i in range(0, g.vcount())]
+    elif flatten_state_name is True:
+        g.vs["name"] = [",".join(flatten_deep(v["name"])) for v in g.vs]
 
     with open(fsm_filename, "w") as f:
         f.write(str(g.vcount()))
