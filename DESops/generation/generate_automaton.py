@@ -177,7 +177,7 @@ class FSM_Generator:
         self.validate_parameters()
 
         self.g = _Automata()
-        self.g.add_vertices(self.num_states, range(self.num_states))
+        self.g.add_vertices(self.num_states, list(range(self.num_states)))
 
         self.event_names = list()
         self.generate_event_names()
@@ -479,3 +479,5 @@ class FSM_Generator:
 
                 f.write("\n\nUncontrollable Events:\n")
                 f.write(" ".join(self.g.Euc))
+
+                f.write("\n")

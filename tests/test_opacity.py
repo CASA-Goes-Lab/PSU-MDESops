@@ -1,5 +1,3 @@
-from DESops.automata.automata import _Automata
-from DESops.file.fsm_to_igraph import read_fsm
 from DESops.opacity.opacity_verification import (
     verify_joint_k_step_opacity,
     verify_separate_k_step_opacity,

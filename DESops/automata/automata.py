@@ -172,6 +172,8 @@ class _Automata:
             self.events = init.events.copy()
             self.states = init.states.copy()
             self.type = init.type
+            self.Euo = init.Euo.copy()
+            self.Euc = init.Euc.copy()
 
         if "label" not in self._graph.es.attributes():
             self._graph.es["label"] = [""]
@@ -327,7 +329,8 @@ class _Automata:
                 raise IncongruencyError("Number vertices to be added != number names")
             new_marked = self._graph.vs["marked"] + marked
 
-        new_out = self._graph.vs["out"] + [[]] * number_vertices
+        # list comprehension used instead of [[]] * number_vertices because latter gives list of references to the same object
+        new_out = self._graph.vs["out"] + [[] for _ in range(number_vertices)]
 
         extra_attrs = dict()
         for key, val in kwargs.items():

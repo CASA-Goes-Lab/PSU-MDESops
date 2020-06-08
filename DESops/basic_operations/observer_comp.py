@@ -225,7 +225,7 @@ def convert_to_graph(
             frozenset(tuple(part_obs.vs[v]["name"]) for v in x) for x in X_obs_dict
         ]
     else:
-        names = X_obs_dict.keys()
+        names = list(X_obs_dict.keys())
 
     if save_marked_states:
         marked = [any(part_obs.vs[v]["marked"] for v in x) for x in X_obs_dict]
