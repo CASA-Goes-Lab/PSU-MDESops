@@ -5,6 +5,7 @@ from DESops.opacity.opacity_verification import (
 from DESops.opacity.opacity_verification_alternative import (
     verify_joint_infinite_step_opacity_alternative,
     verify_joint_k_step_opacity_alternative,
+    verify_joint_k_step_opacity_state_based,
     verify_separate_k_step_opacity_alternative,
 )
 from tests.util import load_model
@@ -22,6 +23,9 @@ def test_joint_k_step_opacity_1():
     assert verify_joint_k_step_opacity(g, 2) is False
     assert verify_joint_k_step_opacity_alternative(g, 1) is True
     assert verify_joint_k_step_opacity_alternative(g, 2) is False
+    assert verify_joint_k_step_opacity_state_based(g, 1) is True
+    assert verify_joint_k_step_opacity_state_based(g, 2) is False
+
     assert verify_separate_k_step_opacity(g, 2) is True
     assert verify_separate_k_step_opacity_alternative(g, 2) is True
 
@@ -30,6 +34,8 @@ def test_joint_k_step_opacity_1():
 
     assert verify_joint_k_step_opacity(g, 0) is False
     assert verify_joint_k_step_opacity_alternative(g, 0) is False
+    assert verify_joint_k_step_opacity_state_based(g, 0) is False
+
     assert verify_separate_k_step_opacity(g, 2) is True
     assert verify_separate_k_step_opacity_alternative(g, 2) is True
 
@@ -46,6 +52,8 @@ def test_joint_k_step_opacity_2():
     assert verify_joint_k_step_opacity(g, 3) is False
     assert verify_joint_k_step_opacity_alternative(g, 2) is True
     assert verify_joint_k_step_opacity_alternative(g, 3) is False
+    assert verify_joint_k_step_opacity_state_based(g, 2) is True
+    assert verify_joint_k_step_opacity_state_based(g, 3) is False
 
     assert verify_separate_k_step_opacity(g, 2) is True
     assert verify_separate_k_step_opacity(g, 3) is False
@@ -65,6 +73,8 @@ def test_joint_k_step_opacity_3():
     assert verify_joint_k_step_opacity(g, 1) is False
     assert verify_joint_k_step_opacity_alternative(g, 0) is True
     assert verify_joint_k_step_opacity_alternative(g, 1) is False
+    assert verify_joint_k_step_opacity_state_based(g, 0) is True
+    assert verify_joint_k_step_opacity_state_based(g, 1) is False
 
     assert verify_separate_k_step_opacity(g, 1) is True
     assert verify_separate_k_step_opacity(g, 2) is False

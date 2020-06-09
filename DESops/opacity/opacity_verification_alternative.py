@@ -225,6 +225,64 @@ def construct_forward_unfolded_automaton(g_c, k):
     return h
 
 
+def verify_joint_k_step_opacity_state_based(g, k):
+    """
+    Returns whether the given automaton with unobservable events and secret states is joint k-step opaque
+
+    Parameters:
+    g: the automaton
+    k: the number of steps
+    """
+    Euo = g.Euo
+
+    h = NFA()
+    # initial states of g marked with >K if nonsecret, 0 if secret
+    S0 = [(v.index, k + 1) for v in g.vs if v["init"] and not v["secret"]]
+    S0 += [(v.index, 0) for v in g.vs if v["init"] and v["secret"]]
+    state_indices = dict()
+    for state in S0:
+        state_indices[state] = h.vcount()
+        h.add_vertex(state)
+    h.vs["init"] = True
+
+    need_to_check = S0
+    while need_to_check:
+        state = need_to_check.pop()
+        for t in g.vs[state[0]].out_edges():
+            step = state[1]
+            # transitions to secret events reset us to 0 steps since last secret event
+            if t.target_vertex["secret"]:
+                next_state = (t.target, 0)
+            # if >K steps since last secret event, stay at >K
+            elif step > k:
+                next_state = (t.target, k + 1)
+            # unobersevable events don't count as a step
+            elif t["label"] in Euo:
+                next_state = (t.target, step)
+            # observable events give one more step since last secret event
+            else:
+                next_state = (t.target, step + 1)
+
+            if next_state not in state_indices:
+                state_indices[next_state] = h.vcount()
+                h.add_vertex(next_state)
+                need_to_check.append(next_state)
+
+            h.add_edge(
+                state_indices[state],
+                state_indices[next_state],
+                t["label"],
+                fill_out=True,
+            )
+
+    # check current state opacity where secret states are those with a count < K
+    h_det = observer_comp(h, Euo=Euo, save_marked_states=True)
+    for estimate in h_det.vs:
+        if all([(h.vs[i]["name"][1] <= k) for i in estimate["name"]]):
+            return False
+    return True
+
+
 def language_inclusion(g, h, Eo):
     """
     Returns whether the language marked by g is a subset of the language marked by h
