@@ -41,7 +41,6 @@ def generate(
     g.add_vertices(num_vert)
 
     events = [Event(str(i)) for i in range(size_alphabet)]
-
     transitions = []
     labels = []
     split_out = output.stdout.split("\n")
@@ -58,7 +57,7 @@ def generate(
                 continue
             labels.append(event)
             transitions.append((src, int(trg)))
-            out_attr_row.append((trg, event))
+            out_attr_row.append((int(trg), event))
 
         out_attr.append(out_attr_row)
 

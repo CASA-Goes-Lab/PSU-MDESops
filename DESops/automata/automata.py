@@ -318,7 +318,7 @@ class _Automata:
             # if no names given, fill in with index names
             new_names = self.vs["name"]
             new_names.extend(
-                i for i in range(self.vcount(), self.vcount() + number_vertices)
+                str(i) for i in range(self.vcount(), self.vcount() + number_vertices)
             )
 
         if marked is not None:
