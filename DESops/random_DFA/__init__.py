@@ -51,7 +51,6 @@ def generate(
 
         split_row = row.split("  ")
         out_attr_row = []
-        split_row.pop()
 
         for event, trg in zip(events, split_row):
             if trg == "?":

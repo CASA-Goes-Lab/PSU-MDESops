@@ -286,18 +286,19 @@ namespace regal{
      @param a is the DFA we want to print
      @Return the modified stream 
   */
-  ostream& operator<<(ostream& o,const DFAAutomaton<int,long> & a){
-    int i,j;
-    for(i=0;i<a.stateNumber;i++){
-      for(j=0;j<a.languageSize;j++)
-	if(a.data[i][j]==a.undefinedTransition())
-	  o<<"?"<<"  ";
-	else
-	  o<<a.data[i][j]<<"  ";
-      o<<endl;
+    ostream& operator<<(ostream& o,const DFAAutomaton<int,long> & a){
+        int i,j;
+        for(i=0;i<a.stateNumber;i++){
+            for(j=0;j<a.languageSize;j++) {
+                if(a.data[i][j]==a.undefinedTransition())
+                    o << "?" << "  ";
+                else
+                    o << a.data[i][j] << "  ";
+            }
+            o << endl;
+        }
+        return o;
     }
-    return o;
-  }
   
   /**
      Print a DFA automaton
