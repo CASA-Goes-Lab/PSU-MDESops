@@ -109,7 +109,9 @@ copy_event_sets
 """
 
 from abc import ABC, abstractmethod
+from collections import deque
 from collections.abc import Iterable
+from typing import Set, TypeVar
 
 from DESops.automata.event.event import Event
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
@@ -119,6 +121,9 @@ from DESops.error import (
     IncongruencyError,
     MissingAttributeError,
 )
+
+State_or_StateSet = TypeVar("State_or_StateSet", int, Set[int])
+
 
 try:
     import igraph as ig
@@ -446,19 +451,34 @@ class _Automata:
         """
         return self._graph.ecount()
 
-    def ureach(self, x_set, state_s, e):
+    def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
         """
-        Finds x_set, the set of states in the unobservable reach from
-        an intial state/set of states (via unobservable events in e).
-        Depends on ureach_from_set and unobservable_reach, both implemented in
-        automata_operations/basic/ureach (might want to rename this to something more general).
-        The states reached from states in state_s via unobservable event traces (from events in e).
-        are added to the set x_set (x_set is modified).
+        Finds the set of states in the unobservable reach from the given state.
         """
-        if isinstance(state_s, Iterable):
-            ureach_from_set(x_set, state_s, self._graph, e)
-        else:
-            unobservable_reach(x_set, state_s, self._graph, e)
+        if isinstance(from_state, set):
+            states = set()
+            for x in from_state:
+                states |= self.unobservable_reach(x)
+
+            return states
+
+        visited = {from_state}
+        states_stack = deque(visited)
+        while len(states_stack) > 0:
+            state = states_stack[-1]
+            dests_by_unobs = [
+                out[0]
+                for out in self.vs[state]["out"]
+                if out[1] in self.Euo and out[0] not in visited
+            ]
+            if len(dests_by_unobs) > 0:
+                dest = dests_by_unobs[0]
+                visited.add(dest)
+                states_stack.append(dest)
+            else:
+                states_stack.pop()
+
+        return visited
 
 
 def str2(label):

@@ -1,9 +1,21 @@
 """
 Funcions relevant to the composition operations.
 """
+from collections import deque
+from typing import Optional, Set, TypeVar
+
+import pydash
+
 from DESops.automata.automata import _Automata
+from DESops.automata.automata_ctor import construct_automata
+from DESops.automata.DFA import DFA
+from DESops.automata.event.event import Event
+from DESops.automata.NFA import NFA
 from DESops.basic_operations.unary import find_inacc
 from DESops.error import MissingAttributeError
+
+EventSet = Set[Event]
+DFA_NFA = TypeVar("DFA_NFA", DFA, NFA)
 
 
 def product(*automata: _Automata) -> _Automata:
@@ -201,3 +213,50 @@ def parallel(*automata: _Automata) -> _Automata:
     del G_out.vs["indexes"]
 
     return G_out
+
+
+def observer(G: DFA_NFA) -> DFA:
+    G_obs = DFA()
+    X_m = {state.index for state in G.vs if state["marked"] is True}
+    E = set(G.es["label"])
+    Eo = E - G.Euo
+
+    x0_obs = G.unobservable_reach(0)
+    G_obs.add_vertex(
+        name=tuple(G.vs[x_e]["name"] for x_e in x0_obs), marked=False, indexes=x0_obs
+    )
+
+    B_queue = deque([x0_obs])
+
+    while len(B_queue) > 0:
+        B = B_queue.popleft()
+        src_vertex = pydash.arrays.find_index(G_obs.vs["indexes"], lambda i: i == B)
+        for e in Eo:
+            destinations = {
+                out[0] for x_e in B for out in G.vs[x_e]["out"] if out[1] == e
+            }
+            if len(destinations) == 0:
+                continue
+
+            u_reaches = G.unobservable_reach(destinations)
+            index = pydash.arrays.find_index(
+                G_obs.vs["indexes"], lambda i: i == u_reaches
+            )
+            if index != -1:
+                G_obs.add_edge(src_vertex, index, e, fill_out=True)
+            else:
+                dst_vertex = G_obs.add_vertex(
+                    name=tuple(G.vs[i]["name"] for i in u_reaches),
+                    marked=False,
+                    indexes=u_reaches,
+                )
+                G_obs.add_edge(src_vertex, dst_vertex.index, e, fill_out=True)
+                B_queue.append(u_reaches)
+
+    for state in G_obs.vs:
+        if len(state["indexes"] & X_m) > 0:
+            G_obs.vs[state.index].update_attributes({"marked": True})
+
+    del G_obs.vs["indexes"]
+
+    return G_obs
