@@ -145,13 +145,5 @@ static
 # Examples romulo
 Examples/
 
-<<<<<<< HEAD
-
-# regal random_DFA executable (OS specific)
-DESops/random_DFA/regal-1.08.0929/random_DFA
-DESops/random_DFA/regal-1.08.0929/src/desops.o
-DESops/random_DFA/regal-1.08.0929/src/Test.o
-=======
 #pycharm stuff
 .idea/
->>>>>>> 08f42569359a349672fd29059f6ad89068269197

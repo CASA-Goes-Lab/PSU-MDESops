@@ -1,10 +1,14 @@
 [tool.poetry]
 name = "DESops"
-version = "20.3.1"
+version = "20.6.1a1"
 description = ""
 authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>"]
 packages = [
     { include = "DESops" },
+]
+build = "build.py"
+include = [
+    "DESops/random_DFA/regal-1.08.0929/**/*"
 ]
 
 [tool.poetry.dependencies]
