@@ -64,6 +64,9 @@ def inplace_reverse(g):
 
     if g.ecount() == 0:
         return
+
+    g.vs["out"] = [[] for _ in range(g.vcount())]
+
     t = g.es[0]
     for _ in range(g.ecount()):
         g.add_edge(t.target, t.source, t["label"], fill_out=True)

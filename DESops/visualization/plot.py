@@ -31,10 +31,10 @@ def plot(
     P = automata._graph.copy()
     P.es["label"] = [str2(l) for l in P.es["label"]]
 
-    if "name" not in g.vs.attributes():
-        P.vs["name"] = [i for i in range(0, g.vcount())]
+    if "name" not in P.vs.attributes():
+        P.vs["name"] = [i for i in range(0, P.vcount())]
     elif flatten_state_name is True:
-        P.vs["name"] = [",".join(flatten_deep(v["name"])) for v in g.vs]
+        P.vs["name"] = [",".join(flatten_deep(v["name"])) for v in P.vs]
 
     P.vs["name"] = [str2(v) for v in P.vs["name"]]
 

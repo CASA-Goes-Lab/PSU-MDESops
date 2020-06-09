@@ -53,7 +53,6 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
     h.add_vertices(len(R), [(ind, 1) for ind in R])
     h.add_vertices(len(R), [(ind, 0) for ind in R])
 
-    h.vs["out"] = [[]]
     h.vs.select(range(len(R)))["orig_vert"] = Rlist
     h.vs.select(range(len(R)))["secret"] = True
     h.vs.select(range(len(R), 2 * len(R)))["orig_vert"] = Rlist

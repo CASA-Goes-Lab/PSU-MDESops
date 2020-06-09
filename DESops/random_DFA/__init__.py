@@ -37,7 +37,7 @@ def generate(
         g = DFA()
     else:
         g_not_defined = False
-        assert isinstance(g, d.DFA)
+        assert isinstance(g, DFA)
     g.add_vertices(num_vert)
 
     events = [Event(str(i)) for i in range(size_alphabet)]

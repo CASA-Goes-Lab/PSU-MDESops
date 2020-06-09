@@ -9,7 +9,7 @@ libdir=$(regaldir)/lib
 includedir=$(regaldir)/include
 bindir=bin
 
-regaldir-user=$(HOME)/regal
+regaldir-user=regal
 libdir-user=$(regaldir-user)/lib
 includedir-user=$(regaldir-user)/include
 
@@ -67,12 +67,12 @@ install-user:create-dir-user $(LIB_FILE_O)
 
 
 uninstall:
-	rm -f $(LIB_FILE_BIN) 
-	rm -rf $(regaldir) 
+	rm -f $(LIB_FILE_BIN)
+	rm -rf $(regaldir)
 
 uninstall-user:
-	rm -f $(LIB_FILE_BIN) 
-	rm -rf $(regaldir-user) 
+	rm -f $(LIB_FILE_BIN)
+	rm -rf $(regaldir-user)
 
 
 
@@ -92,6 +92,3 @@ CompletionSuit.o:
 
 
 #export LD_LIBRARY_PATH=/home/mif001/jdavid01/regal-1.0.0/lib/
-
-
-

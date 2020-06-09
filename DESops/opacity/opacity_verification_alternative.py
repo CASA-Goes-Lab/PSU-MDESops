@@ -145,6 +145,18 @@ def verify_separate_k_step_opacity_alternative(g, k):
 
     h = construct_forward_unfolded_automaton(g_c, k)
 
+    new_init = g_c.vs["marked"]
+    new_marked = g_c.vs["init"]
+    reverse(g_c, inplace=True)
+    g_c.vs["init"] = new_init
+    g_c.vs["marked"] = new_marked
+
+    new_init = h.vs["marked"]
+    new_marked = h.vs["init"]
+    reverse(h, inplace=True)
+    h.vs["init"] = new_init
+    h.vs["marked"] = new_marked
+
     return language_inclusion(g_c, h, Eo)
 
 
