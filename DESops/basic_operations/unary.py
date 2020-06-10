@@ -55,7 +55,7 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
     good_states = set()
 
     if len(marked_states) == 0:
-        raise IncongruencyError("No marked states")
+        return good_states
 
     for state in G.vs:
         if state in states_removed:

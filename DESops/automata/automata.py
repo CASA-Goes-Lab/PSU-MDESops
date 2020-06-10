@@ -465,18 +465,14 @@ class _Automata:
         visited = {from_state}
         states_stack = deque(visited)
         while len(states_stack) > 0:
-            state = states_stack[-1]
+            state = states_stack.pop()
             dests_by_unobs = [
-                out[0]
-                for out in self.vs[state]["out"]
-                if out[1] in self.Euo and out[0] not in visited
+                out[0] for out in self.vs[state]["out"] if out[1] in self.Euo
             ]
-            if len(dests_by_unobs) > 0:
-                dest = dests_by_unobs[0]
-                visited.add(dest)
-                states_stack.append(dest)
-            else:
-                states_stack.pop()
+            for dest in dests_by_unobs:
+                if dest not in visited:
+                    visited.add(dest)
+                    states_stack.append(dest)
 
         return visited
 

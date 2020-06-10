@@ -24,3 +24,10 @@ def test_parallel():
         (("mark1", "mark2"), "mark2"),
         (("mark1", "state2"), "state2"),
     }
+
+
+# def test_strict_subautomaton():
+#     G1 = util.load_model("models/textbook/fig_2-21_G1.fsm")
+#     G2 = util.load_model("models/textbook/fig_2-21_G2.fsm")
+
+#     H_tilde, G_tilde = d.composition.strict_subautomata(G1, G2)

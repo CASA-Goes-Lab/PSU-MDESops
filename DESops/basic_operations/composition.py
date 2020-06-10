@@ -266,7 +266,7 @@ def observer(G: DFA_NFA) -> DFA:
     return G_obs
 
 
-def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA]:
+def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
     """
     Constructs language-equivalent automata G_tilde and H_tilde from given G and H such that H_tilde is a strict subautomaton of G_tilde.
     """
