@@ -1,4 +1,3 @@
-import logging
 from collections import deque
 from enum import Enum, auto
 from typing import Optional, Set, Tuple
@@ -27,6 +26,9 @@ def supremal_sublanguage(
     Euo: Optional[EventSet] = None,
     mode: int = Mode.CONTROLLABLE_NORMAL,
 ) -> DFA:
+    """
+    Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
+    """
 
     if Euc is None:
         Euc = plant.Euc | spec.Euc

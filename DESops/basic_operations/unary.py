@@ -5,7 +5,6 @@ Functions relevant to unary operations
 import warnings
 
 from DESops.automata.automata import _Automata
-from DESops.error import IncongruencyError
 
 
 def trim(G: _Automata) -> set:
