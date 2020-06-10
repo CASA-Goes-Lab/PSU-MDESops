@@ -24,7 +24,7 @@ def supremal_sublanguage(
     spec: DFA,
     Euc: Optional[EventSet] = None,
     Euo: Optional[EventSet] = None,
-    mode: int = Mode.CONTROLLABLE_NORMAL,
+    mode: Mode = Mode.CONTROLLABLE_NORMAL,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
