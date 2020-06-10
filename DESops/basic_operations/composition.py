@@ -2,17 +2,16 @@
 Funcions relevant to the composition operations.
 """
 from collections import deque
-from typing import Optional, Set, TypeVar
+from typing import Set, Tuple, TypeVar
 
 import pydash
 
 from DESops.automata.automata import _Automata
-from DESops.automata.automata_ctor import construct_automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.automata.NFA import NFA
 from DESops.basic_operations.unary import find_inacc
-from DESops.error import MissingAttributeError
+from DESops.error import IncongruencyError, MissingAttributeError
 
 EventSet = Set[Event]
 DFA_NFA = TypeVar("DFA_NFA", DFA, NFA)
@@ -216,10 +215,15 @@ def parallel(*automata: _Automata) -> _Automata:
 
 
 def observer(G: DFA_NFA) -> DFA:
+    """
+    Constructs an observer of the given automata..
+    """
     G_obs = DFA()
     X_m = {state.index for state in G.vs if state["marked"] is True}
     E = set(G.es["label"])
     Eo = E - G.Euo
+    G_obs.Euc = G.Euc
+    G_obs.Euo = G.Euo
 
     x0_obs = G.unobservable_reach(0)
     G_obs.add_vertex(
@@ -260,3 +264,78 @@ def observer(G: DFA_NFA) -> DFA:
     del G_obs.vs["indexes"]
 
     return G_obs
+
+
+def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA]:
+    """
+    Constructs language-equivalent automata G_tilde and H_tilde from given G and H such that H_tilde is a strict subautomaton of G_tilde.
+    """
+    A = H.copy()
+
+    # Step 1:
+    #   Adding a new unmarked state "dead"
+    dead = A.add_vertex(name="dead", marked=False)
+
+    #   Completing the transition function of A
+    all_events = set(H.es["label"]) | set(G.es["label"])
+    for x in H.vs:
+        active_events = {out[1] for out in H.vs[x.index]["out"]}
+        non_active_events = all_events - active_events
+        edges_to_dead = [
+            {"pair": (x.index, dead.index), "label": event}
+            for event in non_active_events
+        ]
+        A.add_edges(
+            [edge["pair"] for edge in edges_to_dead],
+            [edge["label"] for edge in edges_to_dead],
+            fill_out=True,
+        )
+
+    dead_selfloops = [
+        {"pair": (dead.index, dead.index), "label": event} for event in all_events
+    ]
+    A.add_edges(
+        [edge["pair"] for edge in dead_selfloops],
+        [edge["label"] for edge in dead_selfloops],
+        fill_out=True,
+    )
+
+    # Step 2: Calculating the product automaton AG = A x G
+    AG = product(A, G)
+
+    # Step 3:
+    #   Step 3.1: Obtaining G_tilde
+    G_tilde = AG.copy()  # Taking AG
+    for state in G_tilde.vs:
+        name = state["name"][1]
+        state_in_G = G.vs.select(name_eq=name)
+        if len(state_in_G) > 1:
+            raise IncongruencyError(
+                'More than one state have the same name "{}" in G'.format(name)
+            )
+        state_in_G = state_in_G[0]
+        # A state of G_tilde is marked if and only if its second state component is marked in G
+        if state_in_G["marked"]:
+            G_tilde.vs[state.index].update_attributes({"marked": True})
+        else:
+            G_tilde.vs[state.index].update_attributes({"marked": False})
+
+    #   Step 3.2: Obtaining H_tilde by deleting all state of AG where the first state component is "dead".
+    H_tilde = AG.copy()
+    dead_states = [state for state in H_tilde.vs if state["name"][0] == "dead"]
+    H_tilde.delete_vertices(dead_states)
+    for state in H_tilde.vs:
+        name = state["name"][0]
+        state_in_H = H.vs.select(name_eq=name)
+        if len(state_in_H) > 1:
+            raise IncongruencyError(
+                'More than one state have the same name "{}" in H'.format(name)
+            )
+        state_in_H = state_in_H[0]
+        # A state of H_tilde is marked if and only if its first state component is marked in H
+        if state_in_H["marked"]:
+            H_tilde.vs[state.index].update_attributes({"marked": True})
+        else:
+            H_tilde.vs[state.index].update_attributes({"marked": False})
+
+    return H_tilde, G_tilde
