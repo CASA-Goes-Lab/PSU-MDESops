@@ -221,9 +221,6 @@ class _Automata:
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
 
-        # SHOULD label be optional?
-        # e.g. 'label=None' vs just 'label' in function arguments
-        # when would an edge need to be added without a label?
         self._graph.add_edge(source, target)
         if label:
             self.es[self.ecount() - 1].update_attributes({"label": label})

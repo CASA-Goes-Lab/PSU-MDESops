@@ -9,7 +9,7 @@ from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 
-def verify_joint_k_step_opacity_alternative(g, k):
+def verify_joint_k_step_opacity_language_based(g, k):
     """
     Returns whether the given automaton with unobservable events and secret states is joint k-step opaque
 
@@ -34,7 +34,7 @@ def verify_joint_k_step_opacity_alternative(g, k):
     return language_inclusion(g_c, h, Eo)
 
 
-def verify_joint_infinite_step_opacity_alternative(g):
+def verify_joint_infinite_step_opacity_language_based(g):
     """
     Returns whether the given automaton with unobservable events and secret states is joint infinite-step opaque
 
@@ -59,12 +59,12 @@ def min_k_for_joint_opacity_violation(g):
     """
     Returns the minimum value of K for which the automaton g is not joint K-step opaque
     """
-    if verify_joint_infinite_step_opacity_alternative(g):
+    if verify_joint_infinite_step_opacity_language_based(g):
         return float("inf")
 
     k = 0
     while True:
-        if not verify_joint_k_step_opacity_alternative(g, k):
+        if not verify_joint_k_step_opacity_language_based(g, k):
             return k
         k += 1
 
@@ -73,6 +73,11 @@ def construct_reverse_unfolded_automaton(g_r, g_vs, k):
     """
     Returns the "unfolded" automaton that follows the reverse automaton but
     avoids visiting any secret states within the first K steps
+
+    State name ((a, b), c):
+        a corresponds to the vertex index in the original g
+        b is 1 for secret observation periods, 0 for nonsecret periods
+        c is the number of steps from the end of the forward string (with K representing >=K)
 
     Used for verifying joint K-step opacity
 
@@ -124,7 +129,7 @@ def construct_reverse_unfolded_automaton(g_r, g_vs, k):
     return h
 
 
-def verify_separate_k_step_opacity_alternative(g, k):
+def verify_separate_k_step_opacity_language_based(g, k):
     """
     Returns whether the given automaton with unobservable events and secret states is joint k-step opaque
 
@@ -164,6 +169,11 @@ def construct_forward_unfolded_automaton(g_c, k):
     """
     Returns the "unfolded" automaton that follows the forward automaton but
     avoids visiting any secret states within the last K steps
+
+    State name ((a, b), c):
+        a corresponds to the vertex index in the original g
+        b is 1 for secret observation periods, 0 for nonsecret periods
+        c is the number of steps from the end of the forward string (with K representing >=K)
 
     Used for verifying separate K-step opacity
 

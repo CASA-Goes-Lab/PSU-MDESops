@@ -1,13 +1,24 @@
-from DESops.opacity.opacity_verification import (
-    verify_joint_k_step_opacity,
-    verify_separate_k_step_opacity,
-)
-from DESops.opacity.opacity_verification_alternative import (
-    verify_joint_infinite_step_opacity_alternative,
-    verify_joint_k_step_opacity_alternative,
-    verify_separate_k_step_opacity_alternative,
-)
+import DESops as d
 from tests.util import load_model
+
+joint_k_step_methods = ["mapping", "language", "state"]
+separate_k_step_methods = ["mapping", "language"]
+
+
+def test_current_state_opacity():
+    g = load_model("models/opacity1.fsm")
+
+    g.vs["init"] = False
+    g.vs[0]["init"] = True
+    g.vs["secret"] = False
+    g.vs[2, 4]["secret"] = True
+
+    assert d.opacity.verify_current_state_opacity(g) is True
+
+    g.vs["secret"] = False
+    g.vs[3]["secret"] = True
+
+    assert d.opacity.verify_current_state_opacity(g) is False
 
 
 def test_joint_k_step_opacity_1():
@@ -18,20 +29,21 @@ def test_joint_k_step_opacity_1():
     g.vs["secret"] = False
     g.vs[1, 5]["secret"] = True
 
-    assert verify_joint_k_step_opacity(g, 1) is True
-    assert verify_joint_k_step_opacity(g, 2) is False
-    assert verify_joint_k_step_opacity_alternative(g, 1) is True
-    assert verify_joint_k_step_opacity_alternative(g, 2) is False
-    assert verify_separate_k_step_opacity(g, 2) is True
-    assert verify_separate_k_step_opacity_alternative(g, 2) is True
+    for method in joint_k_step_methods:
+        assert d.opacity.verify_joint_k_step_opacity(g, 1, method) is True
+        assert d.opacity.verify_joint_k_step_opacity(g, 2, method) is False
+
+    for method in separate_k_step_methods:
+        assert d.opacity.verify_separate_k_step_opacity(g, 2, method) is True
 
     g.vs["secret"] = False
     g.vs[2, 4]["secret"] = True
 
-    assert verify_joint_k_step_opacity(g, 0) is False
-    assert verify_joint_k_step_opacity_alternative(g, 0) is False
-    assert verify_separate_k_step_opacity(g, 2) is True
-    assert verify_separate_k_step_opacity_alternative(g, 2) is True
+    for method in joint_k_step_methods:
+        assert d.opacity.verify_joint_k_step_opacity(g, 0, method) is False
+
+    for method in separate_k_step_methods:
+        assert d.opacity.verify_separate_k_step_opacity(g, 2, method) is True
 
 
 def test_joint_k_step_opacity_2():
@@ -42,15 +54,13 @@ def test_joint_k_step_opacity_2():
     g.vs["secret"] = False
     g.vs[3]["secret"] = True
 
-    assert verify_joint_k_step_opacity(g, 2) is True
-    assert verify_joint_k_step_opacity(g, 3) is False
-    assert verify_joint_k_step_opacity_alternative(g, 2) is True
-    assert verify_joint_k_step_opacity_alternative(g, 3) is False
+    for method in joint_k_step_methods:
+        assert d.opacity.verify_joint_k_step_opacity(g, 2, method) is True
+        assert d.opacity.verify_joint_k_step_opacity(g, 3, method) is False
 
-    assert verify_separate_k_step_opacity(g, 2) is True
-    assert verify_separate_k_step_opacity(g, 3) is False
-    assert verify_separate_k_step_opacity_alternative(g, 2) is True
-    assert verify_separate_k_step_opacity_alternative(g, 3) is False
+    for method in separate_k_step_methods:
+        assert d.opacity.verify_separate_k_step_opacity(g, 2, method) is True
+        assert d.opacity.verify_separate_k_step_opacity(g, 3, method) is False
 
 
 def test_joint_k_step_opacity_3():
@@ -61,15 +71,13 @@ def test_joint_k_step_opacity_3():
     g.vs["secret"] = False
     g.vs[0, 1, 4]["secret"] = True
 
-    assert verify_joint_k_step_opacity(g, 0) is True
-    assert verify_joint_k_step_opacity(g, 1) is False
-    assert verify_joint_k_step_opacity_alternative(g, 0) is True
-    assert verify_joint_k_step_opacity_alternative(g, 1) is False
+    for method in joint_k_step_methods:
+        assert d.opacity.verify_joint_k_step_opacity(g, 0, method) is True
+        assert d.opacity.verify_joint_k_step_opacity(g, 1, method) is False
 
-    assert verify_separate_k_step_opacity(g, 1) is True
-    assert verify_separate_k_step_opacity(g, 2) is False
-    assert verify_separate_k_step_opacity_alternative(g, 1) is True
-    assert verify_separate_k_step_opacity_alternative(g, 2) is False
+    for method in separate_k_step_methods:
+        assert d.opacity.verify_separate_k_step_opacity(g, 1, method) is True
+        assert d.opacity.verify_separate_k_step_opacity(g, 2, method) is False
 
 
 def test_joint_infinite_step_opacity():
@@ -79,9 +87,9 @@ def test_joint_infinite_step_opacity():
     g.vs["secret"] = False
     g.vs[2]["secret"] = True
 
-    assert verify_joint_infinite_step_opacity_alternative(g) is True
+    assert d.opacity.verify_joint_infinite_step_opacity(g) is True
 
     g.vs["secret"] = False
     g.vs[4]["secret"] = True
 
-    assert verify_joint_infinite_step_opacity_alternative(g) is False
+    assert d.opacity.verify_joint_infinite_step_opacity(g) is False

@@ -7,7 +7,7 @@ from DESops.automata.automata import _Automata
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 
-def verify_joint_k_step_opacity(g, k):
+def verify_joint_k_step_opacity_mapping_based(g, k):
     """
     Determine if the given automaton with unobservable events and secret states is joint k-step opaque
 
@@ -50,7 +50,7 @@ def verify_joint_k_step_opacity_from_NFA(g, k):
     return True
 
 
-def verify_separate_k_step_opacity(g, k):
+def verify_separate_k_step_opacity_mapping_based(g, k):
     """
     Determine if the given automaton with unobservable events and secret states is separate k-step opaque
 
