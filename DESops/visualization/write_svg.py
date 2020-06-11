@@ -5,6 +5,7 @@ from pydash import flatten_deep
 def write_svg(
     fname,
     automata,
+    to_inkscape=False,
     layout="auto",
     width=None,
     height=None,
@@ -25,6 +26,20 @@ def write_svg(
         import math
     except:
         raise DependencyNotInstalledError("Math library not found")
+
+    """
+    Note about to_inkscape parameter:
+    set to True if the svg will be opened in inkscape
+    set to False (default) to open in other SVG renderers, e.g. web browsers
+
+    When linking objects, inkscape expects the older standard:
+
+        <textPath xlink:href="#path{ID}" startOffset="50%">
+    
+    But the new standard is used by web browsers (tested & works with firefox and chrome):
+            
+        <textPath href="#path{ID}" startOffset="50%">
+    """
 
     """Saves the graph as an SVG (Scalable Vector Graphics) file
 
@@ -280,7 +295,11 @@ def write_svg(
         print('<text dy="-2%">', file=f)  # Move the labels off arrows slightly
         # textPath's for associateed paths made above,
         #  startOffset required to move labels off vertices (should be in the middle of vertices)
-        print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
+        # NOTE: uses xlink:href, outdated, to render with inkscape
+        if to_inkscape:
+            print('    <textPath xlink:href="#path{0}" startOffset="50%">'.format(eidx), file=f)
+        else:
+            print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
         # Text stored in elabels
         print("{0}".format(str(elabels[eidx])), file=f)
         print("    </textPath>", file=f)
