@@ -2,9 +2,11 @@
 Funcions relevant to the composition operations.
 """
 from collections import deque
-from typing import Set, Tuple, TypeVar
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import pydash
+from joblib import Parallel, delayed
+from tqdm import tqdm
 
 from DESops.automata.automata import _Automata
 from DESops.automata.DFA import DFA
@@ -14,10 +16,13 @@ from DESops.basic_operations.unary import find_inacc
 from DESops.error import IncongruencyError, MissingAttributeError
 
 EventSet = Set[Event]
-DFA_NFA = TypeVar("DFA_NFA", DFA, NFA)
+Automata_t = Union[DFA, NFA]
+PARALLEL_VERBOSE_LEVEL = 0
+PARALLEL_MODE = False
+PARALLEL_PREFER = None
 
 
-def product(*automata: _Automata) -> _Automata:
+def product(*automata: Automata_t) -> Automata_t:
     """
     Computes the product composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
     """
@@ -27,73 +32,125 @@ def product(*automata: _Automata) -> _Automata:
     G1 = automata[0]
     input_list = automata[1:]
 
-    for G2 in input_list:
+    for G2 in tqdm(input_list, desc="Product Composition"):
         G_out = _Automata()
-        Euc = G1.Euc | G2.Euc
-        Euo = G1.Euo | G2.Euo
 
-        vertices = [
+        num_G2_states = len(G2.vs)
+        G_out_vertices = [
             {
+                "index": i * num_G2_states + j,
                 "name": (x1["name"], x2["name"]),
                 "marked": x1["marked"] is True and x2["marked"] is True,
                 "indexes": (x1.index, x2.index),
             }
-            for x1 in G1.vs
-            for x2 in G2.vs
+            for i, x1 in enumerate(G1.vs)
+            for j, x2 in enumerate(G2.vs)
         ]
         G_out.add_vertices(
-            len(vertices),
-            names=[v["name"] for v in vertices],
-            marked=[v["marked"] for v in vertices],
-            indexes=[v["indexes"] for v in vertices],
+            len(G_out_vertices),
+            names=[v["name"] for v in G_out_vertices],
+            marked=[v["marked"] for v in G_out_vertices],
+            indexes=[v["indexes"] for v in G_out_vertices],
         )
-
-        for x in G_out.vs:
-            x1 = G1.vs[x["indexes"][0]]
-            x2 = G2.vs[x["indexes"][1]]
-            active_events = {out[1] for out in x1["out"]} & {
-                out[1] for out in x2["out"]
+        G1_vertices = [
+            {
+                "index": x.index,
+                "name": x["name"],
+                "marked": x["marked"],
+                "out": x["out"],
             }
-            if not active_events:
-                continue
+            for x in G1.vs
+        ]
+        G2_vertices = [
+            {
+                "index": x.index,
+                "name": x["name"],
+                "marked": x["marked"],
+                "out": x["out"],
+            }
+            for x in G2.vs
+        ]
+        indexes_dict = {
+            v: i for i, v in enumerate([v["indexes"] for v in G_out_vertices])
+        }
 
-            for e in active_events:
-                if e in Euc:
-                    G_out.Euc.add(e)
-                if e in Euo:
-                    G_out.Euo.add(e)
-
-                x1_outs = {G1.vs[out[0]] for out in x1["out"] if out[1] == e}
-                x2_outs = {G2.vs[out[0]] for out in x2["out"] if out[1] == e}
-                edges = [
-                    {
-                        "pair": (
-                            x.index,
-                            G_out.vs.select(indexes_eq=(x1_dst.index, x2_dst.index))[
-                                0
-                            ].index,
-                        ),
-                        "label": e,
-                    }
-                    for x1_dst in x1_outs
-                    for x2_dst in x2_outs
-                ]
-                G_out.add_edges(
-                    [edge["pair"] for edge in edges],
-                    [edge["label"] for edge in edges],
-                    fill_out=True,
+        edges = []
+        if PARALLEL_MODE:
+            results = Parallel(
+                n_jobs=-1, verbose=PARALLEL_VERBOSE_LEVEL, prefer=PARALLEL_PREFER
+            )(
+                delayed(__find_product_edges_at_state)(
+                    x, G1_vertices, G2_vertices, indexes_dict
                 )
+                for x in G_out_vertices
+            )
+            for result in results:
+                if result is not None:
+                    edges.extend(result)
+        else:
+            for x in tqdm(
+                G_out_vertices, desc="Processing states", unit="states", leave=False
+            ):
+                new_edges = __find_product_edges_at_state(
+                    x, G1_vertices, G2_vertices, indexes_dict
+                )
+                if new_edges is not None:
+                    edges.extend(new_edges)
+
+        G_out.add_edges(
+            [edge["pair"] for edge in edges],
+            [edge["label"] for edge in edges],
+            fill_out=True,
+        )
 
         bad_states = find_inacc(G_out)
         G_out.delete_vertices(list(bad_states))
         G1 = G_out
 
     del G_out.vs["indexes"]
+    G_out.Euc = pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set()) & set(
+        G_out.es["label"]
+    )
+    G_out.Euo = pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set()) & set(
+        G_out.es["label"]
+    )
 
     return G_out
 
 
-def parallel(*automata: _Automata) -> _Automata:
+def __find_product_edges_at_state(
+    x: dict,
+    G1_vertices: List[dict],
+    G2_vertices: List[dict],
+    G_out_index_dict: Dict[tuple, int],
+) -> Optional[List[dict]]:
+    x1 = G1_vertices[x["indexes"][0]]
+    x2 = G2_vertices[x["indexes"][1]]
+    active_events = {out[1] for out in x1["out"]} & {out[1] for out in x2["out"]}
+    if not active_events:
+        None
+
+    edges = []
+    for e in active_events:
+        x1_outs = [G1_vertices[out[0]] for out in x1["out"] if out[1] == e]
+        x2_outs = [G2_vertices[out[0]] for out in x2["out"] if out[1] == e]
+        new_edges = [
+            {
+                "pair": (
+                    x["index"],
+                    G_out_index_dict[(x1_dst["index"], x2_dst["index"])],
+                ),
+                "label": e,
+            }
+            for x1_dst in x1_outs
+            for x2_dst in x2_outs
+        ]
+        edges.extend(new_edges)
+
+    return edges
+
+
+def parallel(*automata: Automata_t) -> Automata_t:
     """
     Computes the parallel composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
     """
@@ -103,118 +160,155 @@ def parallel(*automata: _Automata) -> _Automata:
     G1 = automata[0]
     input_list = automata[1:]
 
-    for G2 in input_list:
+    for G2 in tqdm(input_list, desc="Parallel Composition"):
         G_out = _Automata()
-        Euc = G1.Euc | G2.Euc
-        Euo = G1.Euo | G2.Euo
         E1 = set(G1.es["label"])
         E2 = set(G2.es["label"])
 
-        vertices = [
+        num_G2_states = len(G2.vs)
+        G_out_vertices = [
             {
+                "index": i * num_G2_states + j,
                 "name": (x1["name"], x2["name"]),
                 "marked": x1["marked"] is True and x2["marked"] is True,
                 "indexes": (x1.index, x2.index),
             }
-            for x1 in G1.vs
-            for x2 in G2.vs
+            for i, x1 in enumerate(G1.vs)
+            for j, x2 in enumerate(G2.vs)
         ]
         G_out.add_vertices(
-            len(vertices),
-            names=[v["name"] for v in vertices],
-            marked=[v["marked"] for v in vertices],
-            indexes=[v["indexes"] for v in vertices],
+            len(G_out_vertices),
+            names=[v["name"] for v in G_out_vertices],
+            marked=[v["marked"] for v in G_out_vertices],
+            indexes=[v["indexes"] for v in G_out_vertices],
         )
+        G1_vertices = [
+            {
+                "index": x.index,
+                "name": x["name"],
+                "marked": x["marked"],
+                "out": x["out"],
+            }
+            for x in G1.vs
+        ]
+        G2_vertices = [
+            {
+                "index": x.index,
+                "name": x["name"],
+                "marked": x["marked"],
+                "out": x["out"],
+            }
+            for x in G2.vs
+        ]
+        indexes_dict = {
+            v: i for i, v in enumerate([v["indexes"] for v in G_out_vertices])
+        }
 
-        for x in G_out.vs:
-            x1 = G1.vs[x["indexes"][0]]
-            x2 = G2.vs[x["indexes"][1]]
-            active_x1 = {out[1] for out in x1["out"]}
-            active_x2 = {out[1] for out in x2["out"]}
-            active_both = active_x1 & active_x2
-            x1_ex = active_x1 - E2
-            x2_ex = active_x2 - E1
-            if not active_both and not x1_ex and not x2_ex:
-                continue
-
-            for e in active_x1 | active_x2:
-                if e in Euc:
-                    G_out.Euc.add(e)
-                if e in Euo:
-                    G_out.Euo.add(e)
-
-            for e in active_both:
-                x1_outs = {G1.vs[out[0]] for out in x1["out"] if out[1] == e}
-                x2_outs = {G2.vs[out[0]] for out in x2["out"] if out[1] == e}
-                edges = [
-                    {
-                        "pair": (
-                            x.index,
-                            G_out.vs.select(indexes_eq=(x1_dst.index, x2_dst.index))[
-                                0
-                            ].index,
-                        ),
-                        "label": e,
-                    }
-                    for x1_dst in x1_outs
-                    for x2_dst in x2_outs
-                ]
-                G_out.add_edges(
-                    [edge["pair"] for edge in edges],
-                    [edge["label"] for edge in edges],
-                    fill_out=True,
+        edges = []
+        if PARALLEL_MODE:
+            results = Parallel(
+                n_jobs=-1, verbose=PARALLEL_VERBOSE_LEVEL, prefer=PARALLEL_PREFER
+            )(
+                delayed(__find_parallel_edges_at_states)(
+                    x, G1_vertices, G2_vertices, E1, E2, indexes_dict
                 )
-
-            for e in x1_ex:
-                x1_outs = {G1.vs[out[0]] for out in x1["out"] if out[1] == e}
-                edges = [
-                    {
-                        "pair": (
-                            x.index,
-                            G_out.vs.select(indexes_eq=(x1_dst.index, x2.index))[
-                                0
-                            ].index,
-                        ),
-                        "label": e,
-                    }
-                    for x1_dst in x1_outs
-                ]
-                G_out.add_edges(
-                    [edge["pair"] for edge in edges],
-                    [edge["label"] for edge in edges],
-                    fill_out=True,
+                for x in G_out_vertices
+            )
+            for result in results:
+                if result is not None:
+                    edges.extend(result)
+        else:
+            for x in tqdm(
+                G_out_vertices, desc="Processing states", unit="states", leave=False
+            ):
+                new_edges = __find_parallel_edges_at_states(
+                    x, G1_vertices, G2_vertices, E1, E2, indexes_dict
                 )
+                if new_edges is not None:
+                    edges.extend(new_edges)
 
-            for e in x2_ex:
-                x2_outs = {G2.vs[out[0]] for out in x2["out"] if out[1] == e}
-                edges = [
-                    {
-                        "pair": (
-                            x.index,
-                            G_out.vs.select(indexes_eq=(x1.index, x2_dst.index))[
-                                0
-                            ].index,
-                        ),
-                        "label": e,
-                    }
-                    for x2_dst in x2_outs
-                ]
-                G_out.add_edges(
-                    [edge["pair"] for edge in edges],
-                    [edge["label"] for edge in edges],
-                    fill_out=True,
-                )
+        G_out.add_edges(
+            [edge["pair"] for edge in edges],
+            [edge["label"] for edge in edges],
+            fill_out=True,
+        )
 
         bad_states = find_inacc(G_out)
         G_out.delete_vertices(list(bad_states))
         G1 = G_out
 
     del G_out.vs["indexes"]
+    G_out.Euc = pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set()) & set(
+        G_out.es["label"]
+    )
+    G_out.Euo = pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set()) & set(
+        G_out.es["label"]
+    )
 
     return G_out
 
 
-def observer(G: DFA_NFA) -> DFA:
+def __find_parallel_edges_at_states(
+    x: dict,
+    G1_vertices: List[dict],
+    G2_vertices: List[dict],
+    E1: EventSet,
+    E2: EventSet,
+    G_out_index_dict: Dict[tuple, int],
+) -> Optional[List[dict]]:
+    x1 = G1_vertices[x["indexes"][0]]
+    x2 = G2_vertices[x["indexes"][1]]
+    active_x1 = {out[1] for out in x1["out"]}
+    active_x2 = {out[1] for out in x2["out"]}
+    active_both = active_x1 & active_x2
+    x1_ex = active_x1 - E2
+    x2_ex = active_x2 - E1
+    if not active_both and not x1_ex and not x2_ex:
+        None
+
+    edges = []
+    for e in active_both:
+        x1_outs = [G1_vertices[out[0]] for out in x1["out"] if out[1] == e]
+        x2_outs = [G2_vertices[out[0]] for out in x2["out"] if out[1] == e]
+        new_edges = [
+            {
+                "pair": (
+                    x["index"],
+                    G_out_index_dict[(x1_dst["index"], x2_dst["index"])],
+                ),
+                "label": e,
+            }
+            for x1_dst in x1_outs
+            for x2_dst in x2_outs
+        ]
+        edges.extend(new_edges)
+
+    for e in x1_ex:
+        x1_outs = [G1_vertices[out[0]] for out in x1["out"] if out[1] == e]
+        new_edges = [
+            {
+                "pair": (x["index"], G_out_index_dict[(x1_dst["index"], x2["index"])]),
+                "label": e,
+            }
+            for x1_dst in x1_outs
+        ]
+        edges.extend(new_edges)
+
+    for e in x2_ex:
+        x2_outs = [G2_vertices[out[0]] for out in x2["out"] if out[1] == e]
+        new_edges = [
+            {
+                "pair": (x["index"], G_out_index_dict[(x1["index"], x2_dst["index"])]),
+                "label": e,
+            }
+            for x2_dst in x2_outs
+        ]
+        edges.extend(new_edges)
+
+    return edges
+
+
+def observer(G: Automata_t) -> Automata_t:
     """
     Constructs an observer of the given automata..
     """
