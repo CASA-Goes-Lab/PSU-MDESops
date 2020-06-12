@@ -21,7 +21,7 @@ if not os.path.isfile(rand_DFA_dir):
 
 
 def generate(
-    num_vert, size_alphabet, g=None, timeout=None, Euc_p=0.5, Euo_p=0.5, overlap=True
+    num_vert, size_alphabet, num_Euc, num_Euo, g=None, timeout=None, overlap=True
 ):
     this_dir = os.path.dirname(__file__)
     rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
@@ -60,10 +60,6 @@ def generate(
             out_attr_row.append((int(trg), event))
 
         out_attr.append(out_attr_row)
-
-    # TODO: prevent overlap of Euo, Euc ?
-    num_Euc = round(size_alphabet * Euc_p)
-    num_Euo = round(size_alphabet * Euo_p)
 
     g.Euc = set(random.sample(events, num_Euc))
     g.Euo = set(random.sample(events, num_Euo))
