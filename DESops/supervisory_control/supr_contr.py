@@ -19,19 +19,15 @@ The other functions are used in supremal_controllable_supervisor()
 """
 
 import DESops.automata as a
+from DESops.automata.DFA import DFA
 
 from ..basic_operations.product_comp import product_comp
 from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
-def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
+def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
     """
-    Actual function to compute the SCS.
-    Assumes K is a sublanguage of M (where L(H) = K, L(G) = M)
-    (If this isn't the case, use supremal_controllable_supervisor_pp,
-    as the processing ensures this assumption holds).
-
     Parameters:
     G: igraph Graph representing the system as an automaton
     H: igraph Graph representing the specification as an automaton
@@ -50,9 +46,7 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
         H = H_pp
 
     # Compose G,H to find the supervisor H_o (which may have controllability-condition violations)
-    H_o = a.automata_ctor.construct_automata(H)
-    # THIS PRODUCT IS NOT NECESSARY IF THE PREPROCESSING IS DONE OR IF H IS A STRICT SUBAUTOMATON OF G
-    # product_comp([G, H], H_o, save_state_names=True)
+    Hc = DFA(H)
 
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
@@ -60,7 +54,7 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
     badstates = {1}
     while len(badstates) > 0:
         badstates = set()
-        for vH in H.vs:
+        for vH in Hc.vs:
             vG = G.vs.find(name=vH["name"])
 
             evG = {x[1] for x in vG["out"]}
@@ -69,10 +63,16 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
                 for e in evG - evH:
                     if e in G.Euc:
                         badstates.add(vH.index)
-                        print(vH["name"])
+                        # print(vH["name"])
 
-        H.delete_vertices(badstates)
-    return H
+        Hc.delete_vertices(badstates)
+
+    # # if G has states marked, set those states in H_o to also be marked
+    # if "marked" in G.vs.attributes() and mark_states:
+    #     if G.vs["marked"]:
+    #         set_marked_attr(G.vs(), H_o.vs())
+
+    return Hc
     # states_to_remove = [
     #     i for i in range(0, H_o.vcount()) if invalid_state(G, H_o, Euc, i)
     # ]
@@ -100,11 +100,6 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
     # if "obs" in G.es.attributes():
     #     if G.es["obs"]:
     #         set_obs_attr(G.es(), H_o.es())
-
-    # # if G has states marked, set those states in H_o to also be marked
-    # if "marked" in G.vs.attributes() and mark_states:
-    #     if G.vs["marked"]:
-    #         set_marked_attr(G.vs(), H_o.vs())
 
     # return H_o
 
