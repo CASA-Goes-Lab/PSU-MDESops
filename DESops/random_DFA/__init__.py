@@ -21,8 +21,18 @@ if not os.path.isfile(rand_DFA_dir):
 
 
 def generate(
-    num_vert, size_alphabet, num_Euc, num_Euo, g=None, timeout=None, overlap=True
+    num_vert, size_alphabet, num_Euc, num_Euo, g=None, timeout=None, overlap=True, max_parallel_edges=1
 ):
+    """
+    Uses regal software to generate random DFA:
+
+    num_vert: |V| of graph
+    size_alphabet: |E| of graph
+
+
+    """
+    
+
     this_dir = os.path.dirname(__file__)
     rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
     output = subprocess.run(
@@ -38,6 +48,17 @@ def generate(
     else:
         g_not_defined = False
         assert isinstance(g, DFA)
+
+    if size_alphabet <= 0:
+        raise ValueError("Requires alphabet size greater than 0, got {0}".format(size_alphabet))
+    if num_Euc > size_alphabet:
+        raise ValueError("Requires num_Euc no greater than size alphabet, got {0}, max {1}".format(num_Euc, size_alphabet))
+
+    if num_Euo > size_alphabet:
+        raise ValueError("Requires num_Euo no greater than size alphabet, got {0}, max {1}".format(num_Euo, size_alphabet))
+
+    if max_parallel_edges < 1:
+        raise ValueError("Requires max_parallel_edge to be greater than 0, got {0}".format(max_parallel_edges))
     g.add_vertices(num_vert)
 
     events = [Event(str(i)) for i in range(size_alphabet)]
@@ -52,12 +73,29 @@ def generate(
         split_row = row.split("  ")
         out_attr_row = []
 
+        # targets_seen maps: trg -> [events]
+        targets_seen = {}
+
         for event, trg in zip(events, split_row):
             if trg == "?":
                 continue
-            labels.append(event)
-            transitions.append((src, int(trg)))
-            out_attr_row.append((int(trg), event))
+
+            if trg in targets_seen:
+                targets_seen[trg].append(event)
+
+            else:
+                targets_seen[trg] = []
+                targets_seen[trg].append(event)
+
+        # reduce targets_seen to no more than max_parallel_edge
+        for trg, e in targets_seen.items():
+            if len(e) >= max_parallel_edges:
+                e = random.sample(e, max_parallel_edges)
+
+            # convert info to graph-ready lists:
+            labels.extend(e)
+            transitions.extend((src, int(trg)) for _ in e)
+            out_attr_row.extend((int(trg), event) for event in e)
 
         out_attr.append(out_attr_row)
 
