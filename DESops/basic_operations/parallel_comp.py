@@ -20,7 +20,7 @@ def parallel_comp(
     save_state_names=True,
     save_marked_states=False,
     common_events_i=None,
-    save_names_as="str"
+    save_names_as="str",
 ):
     """
     Computes the parallel composition of 2 (or more) automata (igraph Graphs),
@@ -57,7 +57,7 @@ def parallel_comp(
         but no active transitions, including 'c' in common_events_i forces 'c' not
         to be a private event.
 
-    save_names_as (default "str"):   
+    save_names_as (default "str"):
         If storing names, store as either pairs of old names or pairs of old vertices
         e.g.    save_names_as=="str" --> ("state1","state2")
                 save_names_as==any_other_str --> (1, 1)
@@ -89,16 +89,16 @@ def parallel_comp(
             output = automata.DFA()
 
     all_common_events = set()
-    if common_events_i:
-        all_common_events = set(common_events_i)
-    for i in range(0, len(input_list) - 1):
-        all_common_events = all_common_events.union(
-            set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
-        )
+
+    # if common_events_i:
+    #     all_common_events = set(common_events_i)
+    # for i in range(0, len(input_list) - 1):
+    #     all_common_events = all_common_events.union(
+    #         set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
+    #     )
 
     # types are objects. This doesn't show up in VSCODE but it works
-    ref_type = str if save_names_as=="str" else int
-
+    ref_type = str if save_names_as == "str" else int
 
     for i in range(1, len(input_list)):
 
@@ -121,7 +121,7 @@ def parallel_comp(
 
         g2 = input_list[i]
 
-        if save_state_names and save_names_as=="str":
+        if save_state_names and save_names_as == "str":
             g1_names = g1.vs["name"]
             g2_names = g2.vs["name"]
         elif save_state_names and i > 1:
@@ -132,7 +132,7 @@ def parallel_comp(
         else:
             g1_names = [i for i in range(g1.vcount())]
             g2_names = [i for i in range(g2.vcount())]
-        
+
         if g1.vcount() == 0 or g2.vcount() == 0:
             continue
         # If saving state names, need to keep track of vertices from each automata
@@ -167,6 +167,7 @@ def parallel_comp(
             g1_labels = {e[1]: e[0] for e in g1_es}
             g2_labels = {e[1]: e[0] for e in g2_es}
             l_set = set(g1_labels.keys()).union(g2_labels.keys())
+            # print(l_set)
             # pcomp_det checks for set membership in g1_, g2_labels
             # Maybe faster to store membership when computing set unions?
             # (Significant time is spent in pcomp_det)
@@ -182,6 +183,8 @@ def parallel_comp(
                     new_edge_labels,
                     adj_vert,
                 )
+                # print(adj_vert)
+
             # new : (new vert pair, new edge pair, new edge label)
             adj[vert_pair] = adj_vert
             output_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
@@ -194,7 +197,9 @@ def parallel_comp(
                 if v not in output_vert:
                     index += 1
                     new_name = list()
-                    new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type)
+                    new_state_name(
+                        g1_names, g2_names, v, new_name, save_state_names, ref_type
+                    )
                     output_vert[v] = [index, new_name, v]
 
                     queue.append(v)
@@ -213,6 +218,7 @@ def parallel_comp(
             save_marked_states,
             adj,
         )
+
         # to iterate through list of inputs
         # input_list[i] = output
 
@@ -220,6 +226,7 @@ def parallel_comp(
     output.events = set(all_common_events)
     if not output_defined:
         return output
+
 
 def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
     v1 = v[0]
@@ -237,10 +244,11 @@ def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
         elif isinstance(g1_names[v1], ref_type):
             new_name.append(g1_names[v1])
             new_name.extend(g2_names[v2])
-        
+
         else:
             new_name.extend(g1_names[v1])
             new_name.extend(g2_names[v2])
+
 
 def assemble_graph(
     output,
@@ -265,7 +273,7 @@ def assemble_graph(
 
     # add items to new graph
     output._graph.delete_vertices(i for i in range(0, output.vcount()))
-    
+
     if not save_marked_states:
         output_vert_mark = None
 
@@ -311,6 +319,7 @@ def pcomp_det(
     Separated like this to test speed in computation times.
     """
     # Case 0: x is a common event (synchronous treatment)
+    # print(x)
     if x in g1_labels and x in g2_labels:
         # a = g1_es.select(label_eq = x)[0]
         # b = g2_es.select(label_eq = x)[0]
@@ -331,6 +340,7 @@ def pcomp_det(
     # Case 2: x is private to g2, add self loop at v1
     elif x not in g1_labels and x in g2_labels and x not in all_common_events:
         # b = g2_es.select(label_eq = x)[0]
+
         b = g2_labels[x]
         new_vert_pairs.append((vert_pair[0], b))
         new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (vert_pair[0], b)))
