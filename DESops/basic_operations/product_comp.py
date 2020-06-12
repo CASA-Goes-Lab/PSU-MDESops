@@ -22,7 +22,7 @@ def product_comp(
     input_list,
     output=None,
     save_state_names=True,
-    save_marked_states=False,
+    save_marked_states=True,
     save_names_as="str",
 ):
     """

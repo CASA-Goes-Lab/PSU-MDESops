@@ -21,7 +21,14 @@ if not os.path.isfile(rand_DFA_dir):
 
 
 def generate(
-    num_vert, size_alphabet, num_Euc, num_Euo, g=None, timeout=None, overlap=True, max_parallel_edges=1
+    num_vert,
+    size_alphabet,
+    num_Euc,
+    num_Euo,
+    g=None,
+    timeout=None,
+    overlap=True,
+    max_parallel_edges=1,
 ):
     """
     Uses regal software to generate random DFA:
@@ -31,7 +38,6 @@ def generate(
 
 
     """
-    
 
     this_dir = os.path.dirname(__file__)
     rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
@@ -50,15 +56,29 @@ def generate(
         assert isinstance(g, DFA)
 
     if size_alphabet <= 0:
-        raise ValueError("Requires alphabet size greater than 0, got {0}".format(size_alphabet))
+        raise ValueError(
+            "Requires alphabet size greater than 0, got {0}".format(size_alphabet)
+        )
     if num_Euc > size_alphabet:
-        raise ValueError("Requires num_Euc no greater than size alphabet, got {0}, max {1}".format(num_Euc, size_alphabet))
+        raise ValueError(
+            "Requires num_Euc no greater than size alphabet, got {0}, max {1}".format(
+                num_Euc, size_alphabet
+            )
+        )
 
     if num_Euo > size_alphabet:
-        raise ValueError("Requires num_Euo no greater than size alphabet, got {0}, max {1}".format(num_Euo, size_alphabet))
+        raise ValueError(
+            "Requires num_Euo no greater than size alphabet, got {0}, max {1}".format(
+                num_Euo, size_alphabet
+            )
+        )
 
     if max_parallel_edges < 1:
-        raise ValueError("Requires max_parallel_edge to be greater than 0, got {0}".format(max_parallel_edges))
+        raise ValueError(
+            "Requires max_parallel_edge to be greater than 0, got {0}".format(
+                max_parallel_edges
+            )
+        )
     g.add_vertices(num_vert)
 
     events = [Event(str(i)) for i in range(size_alphabet)]
