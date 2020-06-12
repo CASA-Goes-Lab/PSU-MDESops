@@ -23,4 +23,4 @@ from DESops.supervisory_control.supr_contr_norm import supr_contr_norm
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
-__version__ = "20.3.1"
+__version__ = "20.6.1a2"
