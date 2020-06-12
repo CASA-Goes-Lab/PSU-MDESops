@@ -51,44 +51,62 @@ def supr_contr(G, H, Euc=None, mark_states=False, preprocess=False):
 
     # Compose G,H to find the supervisor H_o (which may have controllability-condition violations)
     H_o = a.automata_ctor.construct_automata(H)
-    product_comp([G, H], H_o, save_state_names=True)
+    # THIS PRODUCT IS NOT NECESSARY IF THE PREPROCESSING IS DONE OR IF H IS A STRICT SUBAUTOMATON OF G
+    # product_comp([G, H], H_o, save_state_names=True)
 
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
-    states_to_remove = [
-        i for i in range(0, H_o.vcount()) if invalid_state(G, H_o, Euc, i)
-    ]
-    states_removed = set()
-    # All other states that transition to the ones just removed via an uncontrollable event
-    # must also be removed (i.e. the control decision at those states would require disabling
-    # and uncontrollable event).
-    while states_to_remove:
-        # Iterative search; completes when there are no new states to check (exhausted the
-        # uncontrollable traces).
-        # trim() to remove inaccessible states; potentially saves some computation.
-        inacc_states = find_inacc(H_o, states_removed)
-        states_removed.update(states_to_remove)
-        states_removed.update(inacc_states)
-        states_to_check = {
-            e.source
-            for e in H_o.es(_target_in=states_to_remove)
-            if e["label"] in Euc and e.source not in states_removed
-        }
-        states_to_remove = states_to_check
+    # print(G.Euc)
+    badstates = {1}
+    while len(badstates) > 0:
+        badstates = set()
+        for vH in H.vs:
+            vG = G.vs.find(name=vH["name"])
 
-    H_o.delete_vertices(states_removed)
+            evG = {x[1] for x in vG["out"]}
+            evH = {x[1] for x in vH["out"]}
+            if evG != evH:
+                for e in evG - evH:
+                    if e in G.Euc:
+                        badstates.add(vH.index)
+                        print(vH["name"])
 
-    # if G has observable transitions noted, set those edges in H_o to also be un/observable
-    if "obs" in G.es.attributes():
-        if G.es["obs"]:
-            set_obs_attr(G.es(), H_o.es())
+        H.delete_vertices(badstates)
+    return H
+    # states_to_remove = [
+    #     i for i in range(0, H_o.vcount()) if invalid_state(G, H_o, Euc, i)
+    # ]
+    # states_removed = set()
+    # # All other states that transition to the ones just removed via an uncontrollable event
+    # # must also be removed (i.e. the control decision at those states would require disabling
+    # # and uncontrollable event).
+    # while states_to_remove:
+    #     # Iterative search; completes when there are no new states to check (exhausted the
+    #     # uncontrollable traces).
+    #     # trim() to remove inaccessible states; potentially saves some computation.
+    #     inacc_states = find_inacc(H_o, states_removed)
+    #     states_removed.update(states_to_remove)
+    #     states_removed.update(inacc_states)
+    #     states_to_check = {
+    #         e.source
+    #         for e in H_o.es(_target_in=states_to_remove)
+    #         if e["label"] in Euc and e.source not in states_removed
+    #     }
+    #     states_to_remove = states_to_check
 
-    # if G has states marked, set those states in H_o to also be marked
-    if "marked" in G.vs.attributes():
-        if G.vs["marked"]:
-            set_marked_attr(G.vs(), H_o.vs())
+    # H_o.delete_vertices(states_removed)
 
-    return H_o
+    # # if G has observable transitions noted, set those edges in H_o to also be un/observable
+    # if "obs" in G.es.attributes():
+    #     if G.es["obs"]:
+    #         set_obs_attr(G.es(), H_o.es())
+
+    # # if G has states marked, set those states in H_o to also be marked
+    # if "marked" in G.vs.attributes() and mark_states:
+    #     if G.vs["marked"]:
+    #         set_marked_attr(G.vs(), H_o.vs())
+
+    # return H_o
 
 
 def set_obs_attr(G_es, H_o_es):
