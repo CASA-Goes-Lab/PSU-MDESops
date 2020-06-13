@@ -38,39 +38,7 @@ def parallel_comp(
         this should be ordered, as it determines the order that vertex indices
         are stored in the composition's vertex names. MUST have at least two
         graphs (length > 1).
-
-    save_state_names (default True): whether vertex names should be saved
-        in the igraph Graph "name" attribute. If set to false, the attribute
-        will not be set (less memory usage). Vertex names are a list of indicies
-        from each input, in the order used by 'inputs'. For example, in the operation
-        A || B || C, a vertex name '(0,3,1)' in the output O means that state is
-        composed of vertex 0 in A, 3 in B, and 1 in C (by index, NOT vertex name).
-
-    save_marked_states (default False): whether states in the composition
-        should be 'marked' or not (marked if the composed states are both marked).
-        An error will be raised if this parameter is True and not all Automata
-        in the composition have the "marked" parameter on their vertices.
-
-    common_events_i (default None): if there are events in the event set that are not
-        on any transitions of the input graphs, they can be provided through this
-        parameter. For example, if in the operation A || B, A has 'c' in its event set,
-        but no active transitions, including 'c' in common_events_i forces 'c' not
-        to be a private event.
-
-    save_names_as (default "str"):
-        If storing names, store as either pairs of old names or pairs of old vertices
-        e.g.    save_names_as=="str" --> ("state1","state2")
-                save_names_as==any_other_str --> (1, 1)
-
-    Doesn't return anything to avoid potentially making redundant copies.
-
     """
-
-    # OUTPUT MUST BE DEFINED BASED ON INPUT AUTOMATA
-    # IF INPUT ARE ALL DFA -> OUTPUT DFA
-    # IF ONE NFA IN THE INPUTE -> OUTPUT IS NFA
-    # PFA PARALLEL COMPOSITION IS DIFFERENT
-    # FOR NOW TREAT PFA AS NFA AND DO THE PARALLEL COMP -> OUTPUT NFA
     if not input_list:
         return
     output_defined = True
@@ -88,144 +56,223 @@ def parallel_comp(
         else:
             output = automata.DFA()
 
-    all_common_events = set()
-
-    # if common_events_i:
-    #     all_common_events = set(common_events_i)
-    # for i in range(0, len(input_list) - 1):
-    #     all_common_events = all_common_events.union(
-    #         set(input_list[i].es["label"]).intersection(input_list[i + 1].es["label"])
-    #     )
-
     # types are objects. This doesn't show up in VSCODE but it works
     ref_type = str if save_names_as == "str" else int
 
     for i in range(1, len(input_list)):
 
-        # Storage for vertice product_pairs
-        output_vert = OrderedDict()
-
-        # Always have (0,0) state
-        # unless there are no shared events, then it's really an empty set of states?
-        index = 0
-
-        output_vert_mark = []
-
-        output_edges = []
-        output_edge_labels = []
-
         if i > 1:
             g1 = output
+            output = automata.DFA()
         else:
             g1 = input_list[0]
 
         g2 = input_list[i]
 
-        if save_state_names and save_names_as == "str":
-            g1_names = g1.vs["name"]
-            g2_names = g2.vs["name"]
-        elif save_state_names and i > 1:
-            # Carry over names from last iter: since names were saved as indices,
-            # g1_names now has the running collection of indices
-            g1_names = g1.vs["name"]
-            g2_names = [i for i in range(g2.vcount())]
-        else:
-            g1_names = [i for i in range(g1.vcount())]
-            g2_names = [i for i in range(g2.vcount())]
+        vertice_names = list()  # list of vertex names for igraph construction
+        vertice_number = dict()  # dictionary vertex_names -> vertex_id
+        outgoing_list = list()  # list of outgoing lists for each vertex
+        marked_list = list()  # list with vertices marking
+        transition_list = list()  # list of transitions for igraph construction
+        transition_label = list()  # list os transitions label for igraph construction
 
-        if g1.vcount() == 0 or g2.vcount() == 0:
-            continue
-        # If saving state names, need to keep track of vertices from each automata
-        # that 'contributed' to this composite state
-        new_name = list()
-        new_state_name(g1_names, g2_names, (0, 0), new_name, save_state_names, ref_type)
-        output_vert[(0, 0)] = [index, new_name, (0, 0)]
-
-        if save_marked_states:
-            output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
-
-        adj = dict()
-
+        # BFS queue that holds states that must be visited
         queue = list()
-        queue.append((0, 0))
 
+        # index tracks the current number of vertices in the graph
+        index = 0
+
+        # inseting initial state to the graph
+        vertice_names.insert(index, (g1.vs["name"][0], g2.vs["name"][0]))
+        vertice_number[(g1.vs["name"][0], g2.vs["name"][0])] = index
+        marked_list.insert(index, g1.vs["marked"][0] and g2.vs["marked"][0])
+        index = index + 1
+        queue.append((g1.vs[0], g2.vs[0]))
+
+        common_events = g1.events.intersection(g2.events)
+        private_g1 = g1.events.difference(g2.events)
+        private_g2 = g2.events.difference(g1.events)
         while queue:
-            vert_pair = queue.pop()
+            (v1, v2) = queue.pop(0)
 
-            # select edges with source at current vertex
-            new_vert_pairs = list()
-            new_edge_pairs = list()
-            new_edge_labels = list()
-            adj_vert = list()
+            active_v1 = {e[1]: e[0] for e in v1["out"]}
+            active_v2 = {e[1]: e[0] for e in v2["out"]}
+            active_events = set(active_v1.keys()).union(active_v2.keys())
 
-            g1_es = g1.vs["out"][vert_pair[0]]
-            g2_es = g2.vs["out"][vert_pair[1]]
+            outgoing_v1v2 = list()
+            for e in active_events:
+                if (
+                    e in common_events
+                    and e in active_v1.keys()
+                    and e in active_v2.keys()
+                ):
+                    nx_v1 = g1.vs[active_v1[e]]
+                    nx_v2 = g2.vs[active_v2[e]]
+                    (n, t, index, m, q) = composition(
+                        v1, v2, nx_v1, nx_v2, index, vertice_number
+                    )
+                elif e in private_g1:
+                    nx_v1 = g1.vs[active_v1[e]]
+                    nx_v2 = v2
+                    (n, t, index, m, q) = composition(
+                        v1, v2, nx_v1, nx_v2, index, vertice_number
+                    )
+                elif e in private_g2:
+                    nx_v1 = v1
+                    nx_v2 = g2.vs[active_v2[e]]
+                    (n, t, index, m, q) = composition(
+                        v1, v2, nx_v1, nx_v2, index, vertice_number
+                    )
+                else:
+                    continue
 
-            # THIS ONLY WORKS WITH DFAS
-            # SHOULD NOT USE DICT IF WANT TO EXTEND TO NFAs
-            # FOR NFAs should be different: returning to DFAs case only
-            g1_labels = {e[1]: e[0] for e in g1_es}
-            g2_labels = {e[1]: e[0] for e in g2_es}
-            l_set = set(g1_labels.keys()).union(g2_labels.keys())
-            # print(l_set)
-            # pcomp_det checks for set membership in g1_, g2_labels
-            # Maybe faster to store membership when computing set unions?
-            # (Significant time is spent in pcomp_det)
-            for x in l_set:
-                pcomp_det(
-                    x,
-                    vert_pair,
-                    g1_labels,
-                    g2_labels,
-                    all_common_events,
-                    new_vert_pairs,
-                    new_edge_pairs,
-                    new_edge_labels,
-                    adj_vert,
-                )
-                # print(adj_vert)
+                # print(v1["name"],v2["name"],n,e)
+                transition_list.append(t)
+                transition_label.append(e)
+                outgoing_v1v2.append((vertice_number[n], e))
+                # print(index)
+                if q:
+                    vertice_names.insert(vertice_number[n], n)
+                    marked_list.insert(vertice_number[n], m)
+                    queue.append((nx_v1, nx_v2))
 
-            # new : (new vert pair, new edge pair, new edge label)
-            adj[vert_pair] = adj_vert
-            output_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
-            output_edge_labels.extend(
-                [new_edge_label for new_edge_label in new_edge_labels]
+            outgoing_list.insert(
+                vertice_number[(v1["name"], v2["name"])], outgoing_v1v2
             )
 
-            # see if this is a new vertex pair
-            for v in new_vert_pairs:
-                if v not in output_vert:
-                    index += 1
-                    new_name = list()
-                    new_state_name(
-                        g1_names, g2_names, v, new_name, save_state_names, ref_type
-                    )
-                    output_vert[v] = [index, new_name, v]
+        # print(index,len(vertice_names))
+        output.add_vertices(index, vertice_names)
+        output.events = g1.events.union(g2.events)
+        output.Euc = g1.Euc.union(g2.Euc)
+        output.Euo = g1.Euo.union(g2.Euo)
+        output.vs["out"] = outgoing_list
+        output.vs["marked"] = marked_list
+        output.add_edges(transition_list, transition_label)
 
-                    queue.append(v)
+    return output
+    # print(vertice_names)
 
-        if save_marked_states:
-            output_vert_mark = [marked_bool(g1, g2, v[2]) for v in output_vert.values()]
 
-        assemble_graph(
-            output,
-            output_edges,
-            index,
-            output_vert_mark,
-            output_edge_labels,
-            output_vert,
-            save_state_names,
-            save_marked_states,
-            adj,
-        )
+def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
+    name = (nx_v1["name"], nx_v2["name"])
+    if name in vertice_number.keys():
+        transition = (vertice_number[(v1["name"], v2["name"])], vertice_number[name])
+        new = False
+    else:
+        transition = (vertice_number[(v1["name"], v2["name"])], index)
+        vertice_number[name] = index
+        new = True
+        index = index + 1
+    marking = nx_v1["marked"] and nx_v2["marked"]
+    return name, transition, index, marking, new
 
-        # to iterate through list of inputs
-        # input_list[i] = output
 
-    # update events attribute
-    output.events = set(all_common_events)
-    if not output_defined:
-        return output
+# OLD CODE BY JACK
+#     if save_state_names and save_names_as == "str":
+#         g1_names = g1.vs["name"]
+#         g2_names = g2.vs["name"]
+#     elif save_state_names and i > 1:
+#         # Carry over names from last iter: since names were saved as indices,
+#         # g1_names now has the running collection of indices
+#         g1_names = g1.vs["name"]
+#         g2_names = [i for i in range(g2.vcount())]
+#     else:
+#         g1_names = [i for i in range(g1.vcount())]
+#         g2_names = [i for i in range(g2.vcount())]
+
+#     if g1.vcount() == 0 or g2.vcount() == 0:
+#         continue
+#     # If saving state names, need to keep track of vertices from each automata
+#     # that 'contributed' to this composite state
+#     new_name = list()
+#     new_state_name(g1_names, g2_names, (0, 0), new_name, save_state_names, ref_type)
+#     output_vert[(0, 0)] = [index, new_name, (0, 0)]
+
+#     if save_marked_states:
+#         output_vert_mark.append(marked_bool(g1, g2, (0, 0)))
+
+#     adj = dict()
+
+#     queue = list()
+#     queue.append((0, 0))
+
+#     while queue:
+#         vert_pair = queue.pop()
+
+#         # select edges with source at current vertex
+#         new_vert_pairs = list()
+#         new_edge_pairs = list()
+#         new_edge_labels = list()
+#         adj_vert = list()
+
+#         g1_es = g1.vs["out"][vert_pair[0]]
+#         g2_es = g2.vs["out"][vert_pair[1]]
+
+#         # THIS ONLY WORKS WITH DFAS
+#         # SHOULD NOT USE DICT IF WANT TO EXTEND TO NFAs
+#         # FOR NFAs should be different: returning to DFAs case only
+#         g1_labels = {e[1]: e[0] for e in g1_es}
+#         g2_labels = {e[1]: e[0] for e in g2_es}
+#         l_set = set(g1_labels.keys()).union(g2_labels.keys())
+#         # print(l_set)
+#         # pcomp_det checks for set membership in g1_, g2_labels
+#         # Maybe faster to store membership when computing set unions?
+#         # (Significant time is spent in pcomp_det)
+#         for x in l_set:
+#             pcomp_det(
+#                 x,
+#                 vert_pair,
+#                 g1_labels,
+#                 g2_labels,
+#                 all_common_events,
+#                 new_vert_pairs,
+#                 new_edge_pairs,
+#                 new_edge_labels,
+#                 adj_vert,
+#             )
+#             # print(adj_vert)
+
+#         # new : (new vert pair, new edge pair, new edge label)
+#         adj[vert_pair] = adj_vert
+#         output_edges.extend([new_edge_pair for new_edge_pair in new_edge_pairs])
+#         output_edge_labels.extend(
+#             [new_edge_label for new_edge_label in new_edge_labels]
+#         )
+
+#         # see if this is a new vertex pair
+#         for v in new_vert_pairs:
+#             if v not in output_vert:
+#                 index += 1
+#                 new_name = list()
+#                 new_state_name(
+#                     g1_names, g2_names, v, new_name, save_state_names, ref_type
+#                 )
+#                 output_vert[v] = [index, new_name, v]
+
+#                 queue.append(v)
+
+#     if save_marked_states:
+#         output_vert_mark = [marked_bool(g1, g2, v[2]) for v in output_vert.values()]
+
+#     assemble_graph(
+#         output,
+#         output_edges,
+#         index,
+#         output_vert_mark,
+#         output_edge_labels,
+#         output_vert,
+#         save_state_names,
+#         save_marked_states,
+#         adj,
+#     )
+
+#     # to iterate through list of inputs
+#     # input_list[i] = output
+
+# # update events attribute
+# output.events = set(all_common_events)
+# if not output_defined:
+#     return output
 
 
 def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
