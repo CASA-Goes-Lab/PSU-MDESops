@@ -245,26 +245,26 @@ def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
 #     return output
 
 
-def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
-    v1 = v[0]
-    v2 = v[1]
+# def new_state_name(g1_names, g2_names, v, new_name, save_state_names, ref_type):
+#     v1 = v[0]
+#     v2 = v[1]
 
-    if save_state_names:
-        if isinstance(g1_names[v1], ref_type) and isinstance(g2_names[v2], ref_type):
-            new_name.append(g1_names[v1])
-            new_name.append(g2_names[v2])
+#     if save_state_names:
+#         if isinstance(g1_names[v1], ref_type) and isinstance(g2_names[v2], ref_type):
+#             new_name.append(g1_names[v1])
+#             new_name.append(g2_names[v2])
 
-        elif isinstance(g2_names[v2], ref_type):
-            new_name.extend(g1_names[v1])
-            new_name.append(g2_names[v2])
+#         elif isinstance(g2_names[v2], ref_type):
+#             new_name.extend(g1_names[v1])
+#             new_name.append(g2_names[v2])
 
-        elif isinstance(g1_names[v1], ref_type):
-            new_name.append(g1_names[v1])
-            new_name.extend(g2_names[v2])
+#         elif isinstance(g1_names[v1], ref_type):
+#             new_name.append(g1_names[v1])
+#             new_name.extend(g2_names[v2])
 
-        else:
-            new_name.extend(g1_names[v1])
-            new_name.extend(g2_names[v2])
+#         else:
+#             new_name.extend(g1_names[v1])
+#             new_name.extend(g2_names[v2])
 
 
 def assemble_graph(
@@ -320,47 +320,47 @@ def marked_bool(g1, g2, vert_pair):
     return False
 
 
-def pcomp_det(
-    x,
-    vert_pair,
-    g1_labels,
-    g2_labels,
-    all_common_events,
-    new_vert_pairs,
-    new_edge_pairs,
-    new_edge_labels,
-    adj_vert,
-):
-    """
-    Logic for determining type of transition (e.g. private vs. shared events).
-    Separated like this to test speed in computation times.
-    """
-    # Case 0: x is a common event (synchronous treatment)
-    # print(x)
-    if x in g1_labels and x in g2_labels:
-        # a = g1_es.select(label_eq = x)[0]
-        # b = g2_es.select(label_eq = x)[0]
-        a = g1_labels[x]
-        b = g2_labels[x]
-        new_vert_pairs.append((a, b))
-        new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (a, b)))
-        new_edge_labels.append(x)
-        adj_vert.append(((a, b), x))
-    # Case 1: x is private to g1, add self loop at v2
-    elif x in g1_labels and x not in g2_labels and x not in all_common_events:
-        # a = g1_es.select(label_eq = x)[0]
-        a = g1_labels[x]
-        new_vert_pairs.append((a, vert_pair[1]))
-        new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (a, vert_pair[1])))
-        new_edge_labels.append(x)
-        adj_vert.append(((a, vert_pair[1]), x))
-    # Case 2: x is private to g2, add self loop at v1
-    elif x not in g1_labels and x in g2_labels and x not in all_common_events:
-        # b = g2_es.select(label_eq = x)[0]
+# def pcomp_det(
+#     x,
+#     vert_pair,
+#     g1_labels,
+#     g2_labels,
+#     all_common_events,
+#     new_vert_pairs,
+#     new_edge_pairs,
+#     new_edge_labels,
+#     adj_vert,
+# ):
+#     """
+#     Logic for determining type of transition (e.g. private vs. shared events).
+#     Separated like this to test speed in computation times.
+#     """
+#     # Case 0: x is a common event (synchronous treatment)
+#     # print(x)
+#     if x in g1_labels and x in g2_labels:
+#         # a = g1_es.select(label_eq = x)[0]
+#         # b = g2_es.select(label_eq = x)[0]
+#         a = g1_labels[x]
+#         b = g2_labels[x]
+#         new_vert_pairs.append((a, b))
+#         new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (a, b)))
+#         new_edge_labels.append(x)
+#         adj_vert.append(((a, b), x))
+#     # Case 1: x is private to g1, add self loop at v2
+#     elif x in g1_labels and x not in g2_labels and x not in all_common_events:
+#         # a = g1_es.select(label_eq = x)[0]
+#         a = g1_labels[x]
+#         new_vert_pairs.append((a, vert_pair[1]))
+#         new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (a, vert_pair[1])))
+#         new_edge_labels.append(x)
+#         adj_vert.append(((a, vert_pair[1]), x))
+#     # Case 2: x is private to g2, add self loop at v1
+#     elif x not in g1_labels and x in g2_labels and x not in all_common_events:
+#         # b = g2_es.select(label_eq = x)[0]
 
-        b = g2_labels[x]
-        new_vert_pairs.append((vert_pair[0], b))
-        new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (vert_pair[0], b)))
-        new_edge_labels.append(x)
-        adj_vert.append(((vert_pair[0], b), x))
-    # Case 3: if x is a common event not present on any edges sourced at this vertex
+#         b = g2_labels[x]
+#         new_vert_pairs.append((vert_pair[0], b))
+#         new_edge_pairs.append(((vert_pair[0], vert_pair[1]), (vert_pair[0], b)))
+#         new_edge_labels.append(x)
+#         adj_vert.append(((vert_pair[0], b), x))
+#     # Case 3: if x is a common event not present on any edges sourced at this vertex

@@ -8,17 +8,128 @@ product_comp uses assemble_graph and marked_bool from parallel_comp,
 previously those functions were implemented in both product_comp and
 parallel_comp but were essentially redundant.
 """
+import sys
 from collections import OrderedDict
 
-from DESops.automata.automata import _Automata
-from DESops.basic_operations.parallel_comp import (
-    assemble_graph,
-    marked_bool,
-    new_state_name,
-)
+import DESops.automata as automata
+
+# from DESops.automata.automata import DFA
+# from DESops.basic_operations.parallel_comp import (
+#     assemble_graph,
+#     marked_bool,
+#     new_state_name,
+# )
 
 
-def product_comp(
+def product_comp(input_list):
+    """
+    G1xG2xG3x...xGN -> P - product composition of N automata -> returns automaton P
+    Parameters
+        input_list: an iterable collection with length > 1 of DFA.
+    """
+    if len(input_list) <= 1:
+        sys.exit("ERROR PRODUCT COMPOSITION NEEDS AT LEAST 2 AUTOMATA TO COMPOSE")
+        return
+    output = automata.DFA()
+    for i in range(1, len(input_list)):
+        if i > 1:
+            g1 = output
+            output = automata.DFA()
+        else:
+            g1 = input_list[0]
+
+        g2 = input_list[i]
+
+        if len(g1.vs) == 0 or len(g2.vs) == 0:
+            warnings.warn(
+                "Product composition with an empty automaton-return an empty automaton"
+            )
+            return output
+
+        vertice_names = list()  # list of vertex names for igraph construction
+        vertice_number = dict()  # dictionary vertex_names -> vertex_id
+        outgoing_list = list()  # list of outgoing lists for each vertex
+        marked_list = list()  # list with vertices marking
+        transition_list = list()  # list of transitions for igraph construction
+        transition_label = list()  # list os transitions label for igraph construction
+
+        # BFS queue that holds states that must be visited
+        queue = list()
+
+        # index tracks the current number of vertices in the graph
+        index = 0
+
+        # inseting initial state to the graph
+        vertice_names.insert(index, (g1.vs["name"][0], g2.vs["name"][0]))
+        vertice_number[(g1.vs["name"][0], g2.vs["name"][0])] = index
+        marked_list.insert(index, g1.vs["marked"][0] and g2.vs["marked"][0])
+        index = index + 1
+        queue.append((g1.vs[0], g2.vs[0]))
+
+        common_events = g1.events.intersection(g2.events)
+        while queue:
+            (v1, v2) = queue.pop(0)
+
+            active_v1 = {e[1]: e[0] for e in v1["out"]}
+            active_v2 = {e[1]: e[0] for e in v2["out"]}
+            active_events = set(active_v1.keys()).union(active_v2.keys())
+
+            outgoing_v1v2 = list()
+            for e in active_events:
+                if (
+                    e in common_events
+                    and e in active_v1.keys()
+                    and e in active_v2.keys()
+                ):
+                    nx_v1 = g1.vs[active_v1[e]]
+                    nx_v2 = g2.vs[active_v2[e]]
+                    (n, t, index, m, q) = composition(
+                        v1, v2, nx_v1, nx_v2, index, vertice_number
+                    )
+                else:
+                    continue
+
+                transition_list.append(t)
+                transition_label.append(e)
+                outgoing_v1v2.append((vertice_number[n], e))
+                # print(index)
+                if q:
+                    vertice_names.insert(vertice_number[n], n)
+                    marked_list.insert(vertice_number[n], m)
+                    queue.append((nx_v1, nx_v2))
+
+            outgoing_list.insert(
+                vertice_number[(v1["name"], v2["name"])], outgoing_v1v2
+            )
+
+        # print(index,len(vertice_names))
+        output.add_vertices(index, vertice_names)
+        output.events = g1.events.union(g2.events)
+        output.Euc = g1.Euc.union(g2.Euc)
+        output.Euo = g1.Euo.union(g2.Euo)
+        output.vs["out"] = outgoing_list
+        output.vs["marked"] = marked_list
+        output.add_edges(transition_list, transition_label)
+
+    return output
+    # print(vertice_names)
+
+
+def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
+    name = (nx_v1["name"], nx_v2["name"])
+    if name in vertice_number.keys():
+        transition = (vertice_number[(v1["name"], v2["name"])], vertice_number[name])
+        new = False
+    else:
+        transition = (vertice_number[(v1["name"], v2["name"])], index)
+        vertice_number[name] = index
+        new = True
+        index = index + 1
+    marking = nx_v1["marked"] and nx_v2["marked"]
+    return name, transition, index, marking, new
+
+
+def product_comp_old(
     input_list,
     output=None,
     save_state_names=True,
