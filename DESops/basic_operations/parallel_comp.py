@@ -14,53 +14,17 @@ from collections.abc import Iterable
 import DESops.automata as automata
 
 
-def parallel_comp(
-    input_list,
-    output=None,
-    save_state_names=True,
-    save_marked_states=False,
-    common_events_i=None,
-    save_names_as="str",
-):
+def parallel_comp(input_list):
     """
-    Computes the parallel composition of 2 (or more) automata (igraph Graphs),
-    stores the resulting graph in output
-
+    G1||G2||G3||...||GN -> P - parallel composition of N automata -> returns automaton P
     Parameters
-
-    output: directed igraph Graph, assumed to be empty. Used to store the output
-        instead of returning a copy. This is different from the interface in the
-        Automata class file, which returns a copy of the result of the
-        composition.
-
-    input_list: an iterable collection of Automata (class object) for which
-        the parallel composition will be computed. If saving state names,
-        this should be ordered, as it determines the order that vertex indices
-        are stored in the composition's vertex names. MUST have at least two
-        graphs (length > 1).
+        input_list: an iterable collection with length > 1 of DFA.
     """
-    if not input_list:
+    if len(input_list) <= 1:
+        sys.exit("ERROR PARALLEL COMPOSITION NEEDS AT LEAST 2 AUTOMATA TO COMPOSE")
         return
-    output_defined = True
-    if not output:
-        output_defined = False
-        if any(isinstance(g, automata.PFA) for g in input_list):
-            output = automata.NFA()  # warn
-            import warnings
-
-            warnings.warn(
-                "P-comp returning a DFA. Probabilistic information will be lost if type PFA."
-            )
-        elif any(isinstance(g, automata.NFA) for g in input_list):
-            output = automata.NFA()
-        else:
-            output = automata.DFA()
-
-    # types are objects. This doesn't show up in VSCODE but it works
-    ref_type = str if save_names_as == "str" else int
-
+    output = automata.DFA()
     for i in range(1, len(input_list)):
-
         if i > 1:
             g1 = output
             output = automata.DFA()
@@ -68,6 +32,12 @@ def parallel_comp(
             g1 = input_list[0]
 
         g2 = input_list[i]
+
+        if len(g1.vs) == 0 or len(g2.vs) == 0:
+            warnings.warn(
+                "Parallel composition with an empty automaton-return an empty automaton"
+            )
+            return output
 
         vertice_names = list()  # list of vertex names for igraph construction
         vertice_number = dict()  # dictionary vertex_names -> vertex_id
