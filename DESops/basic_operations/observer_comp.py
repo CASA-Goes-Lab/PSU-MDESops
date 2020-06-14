@@ -55,7 +55,6 @@ def observer_comp(G):
         v = queue.pop(0)
 
         # IS THERE A WAY TO MAKE THIS MORE CONCISE? FINDING THE NEXT STATES
-        # MAKE STANDARD USE OF FROZENSET TO ELIMINATE CONVERSIONS
         nx_states_pair_list = [
             p for i in v for p in G.vs["out"][i] if p[1] not in G.Euo
         ]
@@ -64,16 +63,13 @@ def observer_comp(G):
         for ev in active_events:
             next_state = frozenset({p[0] for p in nx_states_pair_list if p[1] == ev})
             nx_states_pair_list = [p for p in nx_states_pair_list if p[1] != ev]
-            # next_state = [states_ureach[nx] for nx in next_state]
-            # next_state = frozenset.union(*next_state)
             if next_state in states_ureach:
                 next_state = states_ureach[next_state]
             else:
                 key = next_state
                 next_state = frozenset(ureach_from_set_adj(key, G, G.Euo))
                 states_ureach[key] = next_state
-            # next_state = nextstate(next_state,states_ureach,G)
-            # print(type(next_state))
+
             if next_state in vertice_number.keys():
                 transition_list.append((vertice_number[v], vertice_number[next_state]))
                 transition_label.append(ev)
@@ -91,6 +87,7 @@ def observer_comp(G):
                 index = index + 1
             outgoing_v1v2.append((vertice_number[next_state], ev))
         outgoing_list.insert(vertice_number[v], outgoing_v1v2)
+
     # constructing DFA: igraph and events sets
     observer.add_vertices(index, vertice_names)
     observer.events = G.events - G.Euo
@@ -100,26 +97,6 @@ def observer_comp(G):
     observer.vs["marked"] = marked_list
     observer.add_edges(transition_list, transition_label)
     return observer
-
-
-def nextstate(state_set, states_ureach, G):
-    nextstate = set()
-    for v in state_set:
-        if v in states_ureach:
-            nextstate = nextstate.union(states_ureach[v])
-        else:
-            ureach = ureach_from_set_adj({v}, G, G.Euo)
-            nextstate = nextstate.union(ureach)
-            states_ureach[v] = ureach
-    return frozenset(nextstate)
-
-
-def preprocessing_ureach(G):
-    states_ureach = dict()
-    for v in G.vs:
-        ureach = ureach_from_set_adj({v.index}, G, G.Euo)
-        states_ureach[v.index] = frozenset(ureach)
-    return states_ureach
 
 
 def observer_comp_old(
