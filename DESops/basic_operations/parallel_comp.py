@@ -52,19 +52,21 @@ def parallel_comp(input_list):
         # index tracks the current number of vertices in the graph
         index = 0
 
-        # inseting initial state to the graph
+        # inserting initial state to the graph
         vertice_names.insert(index, (g1.vs["name"][0], g2.vs["name"][0]))
         vertice_number[(g1.vs["name"][0], g2.vs["name"][0])] = index
         marked_list.insert(index, g1.vs["marked"][0] and g2.vs["marked"][0])
         index = index + 1
         queue.append((g1.vs[0], g2.vs[0]))
 
+        # finding common and private events
         common_events = g1.events.intersection(g2.events)
         private_g1 = g1.events.difference(g2.events)
         private_g2 = g2.events.difference(g1.events)
         while queue:
             (v1, v2) = queue.pop(0)
 
+            # active events in each state
             active_v1 = {e[1]: e[0] for e in v1["out"]}
             active_v2 = {e[1]: e[0] for e in v2["out"]}
             active_events = set(active_v1.keys()).union(active_v2.keys())
@@ -96,11 +98,11 @@ def parallel_comp(input_list):
                 else:
                     continue
 
-                # print(v1["name"],v2["name"],n,e)
+                # updating all the lists
                 transition_list.append(t)
                 transition_label.append(e)
                 outgoing_v1v2.append((vertice_number[n], e))
-                # print(index)
+                # if it is a new state update vertices list
                 if q:
                     vertice_names.insert(vertice_number[n], n)
                     marked_list.insert(vertice_number[n], m)
@@ -109,8 +111,7 @@ def parallel_comp(input_list):
             outgoing_list.insert(
                 vertice_number[(v1["name"], v2["name"])], outgoing_v1v2
             )
-
-        # print(index,len(vertice_names))
+        # constructing DFA: igraph and events sets
         output.add_vertices(index, vertice_names)
         output.events = g1.events.union(g2.events)
         output.Euc = g1.Euc.union(g2.Euc)
@@ -120,7 +121,6 @@ def parallel_comp(input_list):
         output.add_edges(transition_list, transition_label)
 
     return output
-    # print(vertice_names)
 
 
 def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
