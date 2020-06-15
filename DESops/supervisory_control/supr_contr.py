@@ -28,6 +28,11 @@ from ..basic_operations.unary import find_inacc
 
 
 def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
+
+    import DESops as d
+
+    d.write_svg("g.svg", G)
+    d.write_svg("h.svg", H)
     """
     Parameters:
     G: igraph Graph representing the system as an automaton
@@ -62,13 +67,16 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
 
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
-    # print(preG.Euc)
+
+    # map alternative to vs.find()
+    preG_name_dict = {v["name"]: v for v in preG.vs()}
 
     badstates = {1}
     while len(badstates) > 0:
         badstates = set()
         for vH in preH.vs:
-            vG = preG.vs.find(name=vH["name"])
+            vG = preG_name_dict[vH["name"]]
+            # vG = preG.vs.find(name_eq=vH["name"])
 
             evG = {x[1] for x in vG["out"]}
             evH = {x[1] for x in vH["out"]}
@@ -76,9 +84,14 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
                 for e in evG - evH:
                     if e in preG.Euc:
                         badstates.add(vH.index)
+                        continue
                         # print(vH["name"])
 
         preH.delete_vertices(badstates)
+
+    # remove inaccessible states:
+    inacc_states = find_inacc(preH)
+    preH.delete_vertices(inacc_states)
 
     # # if G has states marked, set those states in H_o to also be marked
     # if "marked" in G.vs.attributes() and mark_states:
