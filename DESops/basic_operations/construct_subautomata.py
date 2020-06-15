@@ -46,7 +46,7 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
     )
 
     # Step 2: Calculating the product automaton AG = A x G
-    AG = product_comp([A, G], save_state_names=True)
+    AG = product_comp([A, G])
 
     # Step 3:
     #   Step 3.1: Obtaining G_tilde

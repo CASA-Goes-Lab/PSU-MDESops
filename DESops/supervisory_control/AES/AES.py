@@ -1,6 +1,7 @@
 import itertools
 import os
 import subprocess
+import time
 
 import igraph as ig
 
@@ -44,9 +45,11 @@ def construct_AES(G, X_crit, compact=False):
     queue.append({0})
 
     # constructs the BTS in a BFS manner based on Gamma
+    start_time = time.process_time()
     A = construct_T(
         G, Qname, Qcrit, Q1, Q2, h1, h2, labelh1, labelh2, queue, X_crit_vs, Gamma
     )
+    print(time.process_time() - start_time)
     # Pruning the BTS: (1) find states that violate X_crit (2) supremal controllable
 
     # Find states that violate X_crit
@@ -57,10 +60,11 @@ def construct_AES(G, X_crit, compact=False):
     Atrim.delete_vertices(M)
 
     # Finding supcon based on A and Atrim
-
+    start_time = time.process_time()
     AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
+    print(time.process_time() - start_time)
 
-    return AES
+    return A
 
 
 def construct_T(
@@ -152,8 +156,9 @@ def construct_T(
     Ev = generate_ev_uc(Gamma, G.Euc)
     # print(Ev[0], Ev[1])
 
-    A.events = G.events.union(Ev[0])
-    A.Euc = G.events
+    A.events = G.events.copy()
+    A.events = A.events.union(Ev[0])
+    A.Euc = G.events.copy()
     A.Euc.add(Ev[1])
     A.generate_out()
 
@@ -235,9 +240,10 @@ def Q2_state(q):
 
 # Finds all possible compact control decisions
 def find_compact_control_decisions_sets(E, Euc, Euo):
-    Ec = set(E - Euc)
+    Ec = E.difference(Euc)
     Ecuo = list(Ec.intersection(Euo))
     Eco = list(Ec.intersection(E - Euo))
+    # print(Ec,Ecuo,Eco)
     GammaEcuo = list()
     for l in range(len(Ec) + 1):
         GammaEcuo.extend([Euc.union(comb) for comb in itertools.combinations(Ecuo, l)])

@@ -54,8 +54,7 @@ def observer_comp(G):
     while queue:
         v = queue.pop(0)
 
-        # IS THERE A WAY TO MAKE THIS MORE CONCISE? FINDING THE NEXT STATES
-
+        # finding observable adjacent from v
         adj_states = dict()
         for vert in v:
             for target, event in G.vs["out"][vert]:
