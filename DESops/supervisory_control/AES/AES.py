@@ -89,6 +89,15 @@ def construct_T(
 
     # queue holds states that must be visited
     while queue:
+        if len(Qnames) == 10000:
+            print("large state space")
+            # releasing memory of lists and pushing to igraph: just leave the dict
+            # A = DFA()
+            # A.add_vertices(len(Qname), Qname)
+            # Qname = list()
+            # A.vs["crit"] = Qcrit
+            # A.add_edges(h1, labelh1)
+            # A.add_edges(h2, labelh2)
         q = queue.pop(0)
         if Q1_state(q):
             qvs = q
