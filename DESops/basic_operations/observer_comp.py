@@ -55,14 +55,22 @@ def observer_comp(G):
         v = queue.pop(0)
 
         # IS THERE A WAY TO MAKE THIS MORE CONCISE? FINDING THE NEXT STATES
-        nx_states_pair_list = [
-            p for i in v for p in G.vs["out"][i] if p[1] not in G.Euo
-        ]
-        active_events = {p[1] for p in nx_states_pair_list}
+
+        adj_states = dict()
+        for vert in v:
+            for target, event in G.vs["out"][vert]:
+                if event in adj_states and event not in G.Euo:
+                    adj_states[event].add(target)
+                elif event not in adj_states and event not in G.Euo:
+                    s = set()
+                    s.add(target)
+                    adj_states[event] = s
+
+        # print(adj_states)
         outgoing_v1v2 = list()
-        for ev in active_events:
-            next_state = frozenset({p[0] for p in nx_states_pair_list if p[1] == ev})
-            nx_states_pair_list = [p for p in nx_states_pair_list if p[1] != ev]
+        for ev in adj_states.keys():
+            next_state = frozenset(adj_states[ev])
+            # auxiliary ureach dictionary
             if next_state in states_ureach:
                 next_state = states_ureach[next_state]
             else:
@@ -70,6 +78,7 @@ def observer_comp(G):
                 next_state = frozenset(ureach_from_set_adj(key, G, G.Euo))
                 states_ureach[key] = next_state
 
+            # updating lists for igraph construction
             if next_state in vertice_number.keys():
                 transition_list.append((vertice_number[v], vertice_number[next_state]))
                 transition_label.append(ev)
