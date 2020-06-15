@@ -9,7 +9,7 @@ from DESops.automata.PFA import PFA
 from DESops.basic_operations import composition, unary
 from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp
+from DESops.basic_operations.observer_comp import observer_comp, observer_comp_old
 from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.product_comp import product_comp
 from DESops.file.fsm_to_igraph import read_fsm

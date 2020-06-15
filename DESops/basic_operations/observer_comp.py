@@ -14,7 +14,101 @@ from DESops.basic_operations.generic_functions import find_Euo
 from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
-def observer_comp(
+def observer_comp(G):
+
+    observer = DFA()
+    if not G.vcount():
+        warnings.warn(
+            "Observer operation with an empty automaton-return an empty automaton"
+        )
+        return observer
+
+    vertice_names = list()  # list of vertex names for igraph construction
+    vertice_number = dict()  # dictionary vertex_names -> vertex_id
+    outgoing_list = list()  # list of outgoing lists for each vertex
+    marked_list = list()  # list with vertices marking
+    transition_list = list()  # list of transitions for igraph construction
+    transition_label = list()  # list os transitions label for igraph construction
+
+    # BFS queue that holds states that must be visited
+    queue = list()
+
+    # index tracks the current number of vertices in the graph
+    index = 0
+
+    # computing ureach for every singleton states
+    # states_ureach = preprocessing_ureach(G)
+
+    # v0 = states_ureach[0]
+    states_ureach = dict()
+    v0 = frozenset(ureach_from_set_adj({0}, G, G.Euo))
+    states_ureach[frozenset({0})] = v0
+    name_v0 = "{" + ",".join([G.vs["name"][v] for v in v0]) + "}"
+    marking = any([G.vs["marked"][v] for v in v0])
+    vertice_names.insert(index, name_v0)
+    vertice_number[v0] = index
+    marked_list.insert(index, marking)
+
+    index = index + 1
+    queue.append(v0)
+    while queue:
+        v = queue.pop(0)
+
+        # IS THERE A WAY TO MAKE THIS MORE CONCISE? FINDING THE NEXT STATES
+
+        adj_states = dict()
+        for vert in v:
+            for target, event in G.vs["out"][vert]:
+                if event in adj_states and event not in G.Euo:
+                    adj_states[event].add(target)
+                elif event not in adj_states and event not in G.Euo:
+                    s = set()
+                    s.add(target)
+                    adj_states[event] = s
+
+        # print(adj_states)
+        outgoing_v1v2 = list()
+        for ev in adj_states.keys():
+            next_state = frozenset(adj_states[ev])
+            # auxiliary ureach dictionary
+            if next_state in states_ureach:
+                next_state = states_ureach[next_state]
+            else:
+                key = next_state
+                next_state = frozenset(ureach_from_set_adj(key, G, G.Euo))
+                states_ureach[key] = next_state
+
+            # updating lists for igraph construction
+            if next_state in vertice_number.keys():
+                transition_list.append((vertice_number[v], vertice_number[next_state]))
+                transition_label.append(ev)
+            else:
+                name_next_state = (
+                    "{" + ",".join([G.vs["name"][v] for v in next_state]) + "}"
+                )
+                transition_list.append((vertice_number[v], index))
+                transition_label.append(ev)
+                vertice_number[next_state] = index
+                marking = any([G.vs["marked"][v] for v in next_state])
+                marked_list.insert(index, marking)
+                vertice_names.insert(index, name_next_state)
+                queue.append(next_state)
+                index = index + 1
+            outgoing_v1v2.append((vertice_number[next_state], ev))
+        outgoing_list.insert(vertice_number[v], outgoing_v1v2)
+
+    # constructing DFA: igraph and events sets
+    observer.add_vertices(index, vertice_names)
+    observer.events = G.events - G.Euo
+    observer.Euc = G.Euc - G.Euo
+    observer.Euo = set()
+    observer.vs["out"] = outgoing_list
+    observer.vs["marked"] = marked_list
+    observer.add_edges(transition_list, transition_label)
+    return observer
+
+
+def observer_comp_old(
     part_obs,
     observer=None,
     Euo=set(),
@@ -30,28 +124,7 @@ def observer_comp(
 
     Returns the observer as an Automata
 
-    Requires the unobersvable events in the system be notated in some way.
-    If Euo is not empty, those events will be used as the unobservable event set.
-    Otherwise, the observer_comp function will check the igraph Graph edges
-    for an "Euo" attribute, {G.es()["Euo"]} and from that construct the unobservable
-    event set (legacy, shouldn't happen anymore; any initialization method from igraph Graphs
-    should find the Euo set already).
 
-    Parameters:
-    save_state_names (default True): currently does nothing (!!!!)
-        Note: the thinking for this was that currently, state names ("name" vertex attribute)
-        are sets of states from the original Automata. This parameter could avoid
-        allowing unnecessarily saving this information. Change to be similar to parallel_comp,
-        where the names just don't get assigned to the result?
-
-    save_marked_states (default False):
-
-    Usage:
-    >>> O = observer(G)
-
-    part_obs: part_obs partially observed automata
-    observer: Obs(part_obs)
-    Euo: optionally provide set of unobservable events; if not provided, will attempt to find in part_obs edge attributes
     """
 
     observer_defined = True

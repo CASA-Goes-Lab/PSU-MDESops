@@ -7,6 +7,7 @@ import igraph as ig
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.basic_operations.ureach import ureach_from_set_adj
+from DESops.supervisory_control import supr_contr
 
 
 def construct_AES(G, X_crit, compact=False):
@@ -57,7 +58,9 @@ def construct_AES(G, X_crit, compact=False):
 
     # Finding supcon based on A and Atrim
 
-    return A
+    AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
+
+    return AES
 
 
 def construct_T(
@@ -147,9 +150,10 @@ def construct_T(
     A.add_edges(h2, labelh2)
 
     Ev = generate_ev_uc(Gamma, G.Euc)
-    print(Ev[0], Ev[1])
-    A.events = Ev[0].union(G.events)
-    A.Euc = G.Euc
+    # print(Ev[0], Ev[1])
+
+    A.events = G.events.union(Ev[0])
+    A.Euc = G.events
     A.Euc.add(Ev[1])
     A.generate_out()
 
