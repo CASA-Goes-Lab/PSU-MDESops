@@ -5,7 +5,7 @@ import sys
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
-from DESops.random_DFA. helpers import *
+from DESops.random_DFA.helpers import *
 
 # On import, ensure random_DFA file exists:
 this_dir = os.path.dirname(__file__)
@@ -29,7 +29,8 @@ def generate(
     g=None,
     timeout=None,
     overlap=True,
-    max_parallel_edges=1,
+    max_parallel_edges=None,
+    remove_self_loop_prob=0,
 ):
     """
     Uses regal software to generate random DFA:
@@ -37,6 +38,26 @@ def generate(
     num_vert: |V| of graph
     size_alphabet: |E| of graph
 
+    num_Euc: # of uncontrollable events to randomly select, must be [0, size_alphabet]
+    num_Euo: # of unobservable events to randomly select, must be [0, size_alphabet]
+
+    g: optionally pass DFA to build. If none, will return DFA
+        Default None
+
+    timeout: time in seconds after start of generation to stop process (taking too long).
+        Default None, so won't stop.
+
+    overlap: whether Euc and Euo should have intersection (True) or be disjoint (False)
+        Default true
+        NOT YET IMPLEMENTED
+
+    max_parallel_edges: optionally limit the number of parallel transitions from any one state to another
+        i.e. f(x1, e) = x2 is only defined for (x1, x2) for max_parallel_edges different events e
+        Default None, which is set to size_alphabet (no restrictions)
+
+    remove_self_loop_prob: remove generated self loops with probability, [0,1]
+        (Experimental) from tests, it seems that on average size_alphabet self_loops generate with large number vertices.
+        Default 0
 
     """
 
@@ -100,6 +121,12 @@ def generate(
         for event, trg in zip(events, split_row):
             if trg == "?":
                 continue
+            trg = int(trg)
+            if remove_self_loop_prob > 0 and trg == src:
+                if random.uniform(0, 1) > remove_self_loop_prob:
+                    # don't add this self loop with p = remove_self_loop_prob
+                    continue
+                # else add this self loop w p = 1-(remove_self_loop_prob)
 
             if trg in targets_seen:
                 targets_seen[trg].append(event)
@@ -115,8 +142,8 @@ def generate(
 
             # convert info to graph-ready lists:
             labels.extend(e)
-            transitions.extend((src, int(trg)) for _ in e)
-            out_attr_row.extend((int(trg), event) for event in e)
+            transitions.extend((src, trg) for _ in e)
+            out_attr_row.extend((trg, event) for event in e)
 
         out_attr.append(out_attr_row)
 
@@ -129,5 +156,3 @@ def generate(
 
     if g_not_defined:
         return g
-
-
