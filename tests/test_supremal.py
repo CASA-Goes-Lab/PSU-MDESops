@@ -3,6 +3,7 @@ from DESops.supervisory_control.cn_pp import cn_preprocessing
 from tests.util import load_cn_models, same_size
 
 
+"""
 def test_preprocessing_mark():
     H_given, G_given, _ = load_cn_models()
 
@@ -12,9 +13,10 @@ def test_preprocessing_mark():
     H, G, deleted = cn_preprocessing(H_given, G_given, Euc, Euo)
     assert len(G.vs.select(marked_eq=True)) == 3
     assert len(H.vs.select(marked_eq=True)) == 2
+"""
 
 
-def scn_test_all():
+def test_scn_all():
     g1 = d.read_fsm("tests/models/scn_tests/cn_test1_g.fsm")
     g1_pp = d.read_fsm("tests/models/scn_tests/cn_test1_g_pp.fsm")
 
@@ -37,9 +39,18 @@ def scn_test_all():
     assert same_size(h_n, h1_n_test)
 
 
-def sc_test_all():
+def test_supr_contr_1():
     g1 = d.read_fsm("tests/models/sc_tests/book_ex_3_11_G.fsm")
     h1 = d.read_fsm("tests/models/sc_tests/book_ex_3_11_H.fsm")
 
     C_test = d.supr_contr(g1, h1, preprocess=True)
     assert C_test.vcount() == 0
+
+
+def test_supr_contr_2():
+    g1 = d.read_fsm("tests/models/sc_tests/G2.fsm")
+    h1 = d.read_fsm("tests/models/sc_tests/H2.fsm")
+
+    C_test = d.supr_contr(g1, h1, preprocess=True)
+    assert C_test.vcount() == 4
+    assert C_test.ecount() == 5
