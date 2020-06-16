@@ -31,8 +31,8 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
 
     import DESops as d
 
-    d.write_svg("g.svg", G)
-    d.write_svg("h.svg", H)
+    # d.write_svg("g.svg", G)
+    # d.write_svg("h.svg", H)
     """
     Parameters:
     G: igraph Graph representing the system as an automaton
