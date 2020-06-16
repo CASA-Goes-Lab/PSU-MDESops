@@ -9,6 +9,7 @@ only used by observer_comp.
 
 import warnings
 from collections import OrderedDict
+from pydash import flatten_deep
 
 from DESops.automata.DFA import DFA
 from DESops.basic_operations.ureach import ureach_from_set_adj
@@ -42,7 +43,7 @@ def observer_comp(G) -> DFA:
     states_ureach = dict()
     v0 = frozenset(ureach_from_set_adj({0}, G, G.Euo))
     states_ureach[frozenset({0})] = v0
-    name_v0 = "{" + ",".join([G.vs["name"][v] for v in v0]) + "}"
+    name_v0 = "{" + ",".join(flatten_deep([G.vs["name"][v] for v in v0])) + "}"
     marking = any([G.vs["marked"][v] for v in v0])
     vertice_names.insert(index, name_v0)
     vertice_number[v0] = index
@@ -82,7 +83,7 @@ def observer_comp(G) -> DFA:
                 transition_label.append(ev)
             else:
                 name_next_state = (
-                    "{" + ",".join([G.vs["name"][v] for v in next_state]) + "}"
+                    "{" + ",".join(flatten_deep([G.vs["name"][v] for v in next_state])) + "}"
                 )
                 transition_list.append((vertice_number[v], index))
                 transition_label.append(ev)

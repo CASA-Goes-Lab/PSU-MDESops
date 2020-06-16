@@ -42,3 +42,20 @@ def test_supremal_controllable_normal_sublanguage():
     h1_n_test = sup.supremal_sublanguage(g1, h1, mode=sup.Mode.CONTROLLABLE_NORMAL)
 
     assert util.same_size(h_n, h1_n_test)
+
+
+def test_preprocess():
+    G = util.load_model("models/textbook/fig_3-21_G.fsm")
+    H = util.load_model("models/textbook/fig_3-21_H.fsm")
+
+    Gpp, Hpp = sup.preprocessing(G, H)
+    pass
+
+
+def test_supcn_paper():
+    G = util.load_model("models/cho-marcus-1989/fig_1-G.fsm")
+    H = util.load_model("models/cho-marcus-1989/fig_1-H.fsm")
+
+    S = sup.supremal_sublanguage(G, H, G.Euc, G.Euo)
+
+    assert S is not None

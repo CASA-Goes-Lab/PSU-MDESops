@@ -1,0 +1,24 @@
+7
+
+q0	1	2
+a2	q1	uc	uo
+a1	q2	c	o
+
+q1	1	1
+b1	q3	c	o
+
+q2	1	1
+b1	q2	c	o
+
+q3	1	1
+b1	q4	c	o
+
+q4	1	3
+b1	q4	c	o
+a2	q5	uc	uo
+b2	q6	uc	uo
+
+q5	1	0
+
+q6	1	0
+
