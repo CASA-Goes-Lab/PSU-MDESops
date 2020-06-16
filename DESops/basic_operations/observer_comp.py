@@ -7,15 +7,14 @@ only used by observer_comp.
 """
 
 
+import warnings
 from collections import OrderedDict
 
 from DESops.automata.DFA import DFA
-from DESops.basic_operations.generic_functions import find_Euo
 from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
-def observer_comp(G):
-
+def observer_comp(G) -> DFA:
     observer = DFA()
     if not G.vcount():
         warnings.warn(

@@ -432,4 +432,12 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
         else:
             H_tilde.vs[state.index].update_attributes({"marked": False})
 
+    G_tilde.Euc = G.Euc
+    G_tilde.Euo = G.Euo
+    G_tilde.events = G.events
+
+    H_tilde.Euc = H.Euc
+    H_tilde.Euo = H.Euo
+    H_tilde.events = H.events
+
     return H_tilde, G_tilde

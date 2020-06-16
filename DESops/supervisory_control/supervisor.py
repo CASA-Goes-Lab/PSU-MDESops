@@ -6,7 +6,7 @@ import pydash
 
 from DESops.automata import DFA
 from DESops.automata.event.event import Event
-from DESops.basic_operations import composition, unary
+from DESops.basic_operations import composition, observer_comp, parallel_comp, unary
 
 
 class Mode(Enum):
@@ -40,7 +40,7 @@ def supremal_sublanguage(
     G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
     G, H = preprocessing(G_given, H_given)
-    G_obs = composition.observer(G)
+    G_obs = observer_comp(G)
 
     while True:
         deleted_states = set()
@@ -142,8 +142,8 @@ def preprocessing(G_given: DFA, H_given: DFA) -> Tuple[DFA, DFA]:
     H_tilde, G_tilde = composition.strict_subautomata(H_given, G_given)
 
     # 2. Construct G which is an SPA.
-    G_obs = composition.observer(G_tilde)
-    G = composition.parallel(G_tilde, G_obs)
+    G_obs = observer_comp(G_tilde)
+    G = parallel_comp([G_tilde, G_obs])
 
     # 3. Extract H from G by deleteing all states ((x, y), z) of G where x = "dead".
     H = G.copy()
