@@ -87,8 +87,6 @@ def construct_T(
     n = 0
     # queue holds states that must be visited
     while queue:
-        # print("Dictionary lenght %i",len(Q1)+len(Q2))
-        start_time = time.process_time()
         # if len(Qname) > 50000:
         #     # print("large state space")
         #     # releasing memory of lists and pushing to igraph: just leave the dict
@@ -168,9 +166,7 @@ def construct_T(
                         X_crit,
                         n,
                     )
-        print(time.process_time() - start_time)
 
-    print("Dictionary lenght %i", len(Q1) + len(Q2))
     # Creating BTS as DFA
     if Qname:
         A.add_vertices(len(Qname), Qname)
