@@ -2,17 +2,19 @@
 Functions related to the state-based method of verifying K-step opacity
 """
 from DESops.automata.NFA import NFA
+from DESops.basic_operations.observer_comp import observer_comp_old
 
 
-def verify_joint_k_step_opacity_state_based(g, k):
+def verify_joint_k_step_opacity_state_based(g, k, return_num_states=False):
     """
     Returns whether the given automaton with unobservable events and secret states is joint k-step opaque
 
     Parameters:
     g: the automaton
     k: the number of steps
+    return_num_states: used for testing space usage: causes the return value to be the number of states in the observer of the constructed automaton
     """
-    # imported here to avoid when two files import from each other
+    # imported here to avoid error when two files import from each other
     from DESops.opacity.opacity import verify_current_state_opacity
 
     Euo = g.Euo
@@ -60,7 +62,10 @@ def verify_joint_k_step_opacity_state_based(g, k):
                 t["label"],
                 fill_out=True,
             )
+    if return_num_states:
+        h_det = observer_comp_old(h)
+        return h_det.vcount()
 
-    # check current state opacity where secret states are that visited a secret state <=K steps ago
+    # check current state opacity where secret states are those that visited a secret state <=K steps ago
     h.vs["secret"] = [(state[1] <= k) for state in h.vs["name"]]
     return verify_current_state_opacity(h)
