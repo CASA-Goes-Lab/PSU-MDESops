@@ -25,6 +25,7 @@ def supremal_sublanguage(
     Euc: Optional[EventSet] = None,
     Euo: Optional[EventSet] = None,
     mode: Mode = Mode.CONTROLLABLE_NORMAL,
+    preprocess: bool = True,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
@@ -39,7 +40,7 @@ def supremal_sublanguage(
     H_given = spec.copy()
     G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
-    G, H = preprocessing(G_given, H_given)
+    (G, H) = preprocessing(G_given, H_given) if preprocess else (G_given, H_given)
     G_obs = composition.observer(G)
 
     while True:
