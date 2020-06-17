@@ -95,6 +95,9 @@ def generate(
             )
         )
 
+    if not max_parallel_edges:
+        max_parallel_edges = size_alphabet
+
     if max_parallel_edges < 1:
         raise ValueError(
             "Requires max_parallel_edge to be greater than 0, got {0}".format(
