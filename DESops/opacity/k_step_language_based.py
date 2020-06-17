@@ -4,21 +4,24 @@ Functions related to the alternative method for k-step and infinite-step opacity
 from DESops.automata.NFA import NFA
 from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp
+from DESops.basic_operations.observer_comp import observer_comp_old
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 
-def verify_joint_k_step_opacity_language_based(g, k):
+def verify_joint_k_step_opacity_language_based(g, k, return_num_states=False):
     """
     Returns whether the given automaton with unobservable events and secret states is joint k-step opaque
 
     Parameters:
     g: the automaton
     k: the number of steps
+    return_num_states: used for testing space usage: causes the return value to be the number of states in the language inclusion product
     """
     # edge case: all initial states are secret
     if all([v["secret"] for v in g.vs if v["init"]]):
+        if return_num_states:
+            return 0
         return False
 
     Euo = g.Euo
@@ -31,7 +34,7 @@ def verify_joint_k_step_opacity_language_based(g, k):
 
     h = construct_reverse_unfolded_automaton(g_c, g.vs, k)
 
-    return language_inclusion(g_c, h, Eo)
+    return language_inclusion(g_c, h, Eo, return_num_states)
 
 
 def verify_joint_infinite_step_opacity_language_based(g):
@@ -235,7 +238,7 @@ def construct_forward_unfolded_automaton(g_c, k):
     return h
 
 
-def language_inclusion(g, h, Eo):
+def language_inclusion(g, h, Eo, return_num_states=False):
     """
     Returns whether the language marked by g is a subset of the language marked by h
 
@@ -244,10 +247,13 @@ def language_inclusion(g, h, Eo):
     g, h: the two automata
     Eo: the set of observable events
     """
-    h_det = observer_comp(h, save_marked_states=True)
+    h_det = observer_comp_old(h, save_marked_states=True)
     complement(h_det, inplace=True, events=Eo)
 
     prod = product_NFA([g, h_det], save_marked_states=True)
+
+    if return_num_states:
+        return prod.vcount()
 
     for v in prod.vs:
         if v["marked"]:

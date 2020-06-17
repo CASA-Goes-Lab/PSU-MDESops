@@ -8,7 +8,7 @@ from DESops.automata.automata import _Automata
 from DESops.error import IncongruencyError
 
 
-def trim(G: _Automata) -> set():
+def trim(G: _Automata) -> set:
     """
     Returns a list of vertex indices of G that are inaccessible and/or incoaccessible.
     """
