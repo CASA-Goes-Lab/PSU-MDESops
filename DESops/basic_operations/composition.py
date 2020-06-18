@@ -20,6 +20,7 @@ Automata_t = Union[DFA, NFA]
 PARALLEL_VERBOSE_LEVEL = 0
 PARALLEL_MODE = False
 PARALLEL_PREFER = None
+SHOW_PROGRESS = False
 
 
 def product(*automata: Automata_t) -> Automata_t:
@@ -32,7 +33,9 @@ def product(*automata: Automata_t) -> Automata_t:
     G1 = automata[0]
     input_list = automata[1:]
 
-    for G2 in tqdm(input_list, desc="Product Composition"):
+    for G2 in tqdm(
+        input_list, desc="Product Composition", disable=SHOW_PROGRESS is False
+    ):
         G_out = _Automata()
 
         num_G2_states = len(G2.vs)
@@ -89,7 +92,11 @@ def product(*automata: Automata_t) -> Automata_t:
                     edges.extend(result)
         else:
             for x in tqdm(
-                G_out_vertices, desc="Processing states", unit="states", leave=False
+                G_out_vertices,
+                desc="Processing states",
+                unit="states",
+                leave=False,
+                disable=SHOW_PROGRESS is False,
             ):
                 new_edges = __find_product_edges_at_state(
                     x, G1_vertices, G2_vertices, indexes_dict
@@ -160,7 +167,9 @@ def parallel(*automata: Automata_t) -> Automata_t:
     G1 = automata[0]
     input_list = automata[1:]
 
-    for G2 in tqdm(input_list, desc="Parallel Composition"):
+    for G2 in tqdm(
+        input_list, desc="Parallel Composition", disable=SHOW_PROGRESS is False
+    ):
         G_out = _Automata()
         E1 = set(G1.es["label"])
         E2 = set(G2.es["label"])
@@ -219,7 +228,11 @@ def parallel(*automata: Automata_t) -> Automata_t:
                     edges.extend(result)
         else:
             for x in tqdm(
-                G_out_vertices, desc="Processing states", unit="states", leave=False
+                G_out_vertices,
+                desc="Processing states",
+                unit="states",
+                leave=False,
+                disable=SHOW_PROGRESS is False,
             ):
                 new_edges = __find_parallel_edges_at_states(
                     x, G1_vertices, G2_vertices, E1, E2, indexes_dict
