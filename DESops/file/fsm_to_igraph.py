@@ -41,10 +41,6 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         > 0   2   c   uo   0.5
         > ...
     """
-
-    # IF WE USE READ_FSM WITHOUT CALLING FROM INIT OF DFA, PFA, OR NFA, THEN IT MUST CREATE ONE BASED ON THE FILE.
-    # E.G. IF FSM HAS PROBABILITIES THEN A PFA IS CREATED. WE SHOULD NOT CREATE _Automata() ITS ABSTRACT
-    # THE READ_FSM IS NOT CREATING STATE OBJECTS NEITHER EVENT OBJECTS
     g_defined = True
     if not g:
         g = ig.Graph(directed=True)

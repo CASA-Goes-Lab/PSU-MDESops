@@ -14,18 +14,40 @@ from DESops.error import IncongruencyError
 class DFA(_Automata):
     """docstring for """
 
-    def __init__(self, init=None, Euc=set(), Euo=set(), E=set(), check_DFA=True):
+    def __init__(
+        self, init=None, Euc=set(), Euo=set(), E=set(), check_DFA=True, **args
+    ):
         super(DFA, self).__init__(init, Euc, Euo, E)
         if isinstance(init, ig.Graph) and check_DFA:
             all_out = self.check_DFA()
             if not all(all_out):
-                # TODO: THIS NEEDS TO BE TESTED
                 sys.exit(
                     "ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA\n State %s is nondeterministic"
                     % self._graph.vs["name"][all_out.index(False)]
                 )
             elif "prob" in self._graph.es.attributes():
                 sys.exit("ERROR:\nTRIED TO CREATE A DFA BUT IT IS A PFA")
+        # if symbolic arguments
+        self.symbolic = dict()
+        if args:
+            for key, value in args.items():
+                if key == "bdd":
+                    self.symbolic[key] = value
+                elif key == "transitions":
+                    self.symbolic[key] = value
+                elif key == "uctr":
+                    self.symbolic[key] = value
+                elif key == "uobs":
+                    self.symbolic[key] = value
+                elif key == "states":
+                    self.symbolic[key] = value
+                elif key == "events":
+                    self.symbolic[key] = value
+                else:
+                    sys.exit(
+                        "ERROR:\nTRIED TO CREATE SYMBOLIC DFA ARG ERROR\nARG KEYS ARE:bdd,transitions,uctr,uobs,states,events"
+                    )
+
         pass
 
         # ADD SOME CONSTRAINTS ON CREATING THE OBJECT
