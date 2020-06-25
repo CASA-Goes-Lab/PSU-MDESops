@@ -33,12 +33,12 @@ def ISDA(A, Ea):
             evG = {x[1] for x in vG["out"]}
             evH = {x[1] for x in vH["out"]}
             evAH = {x[1] for x in vG["out"] if x[1] in Ea or "del" in x[1].name()}
+
             if evG != evH:
                 for e in evG - evH:
                     if e in preG.Euc:
                         badstates.add(vH.index)
                         continue
-
                     if (
                         e in Ea
                         and e not in evAH
