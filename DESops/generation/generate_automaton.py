@@ -129,6 +129,7 @@ def generate_automaton(
     while not success:
         success = generator.generate_automaton()
 
+    generator.g.generate_out()
     generator.write_files()
     return generator.g
 
@@ -455,7 +456,9 @@ class FSM_Generator:
                 else:
                     avail_events.remove(event)
 
-            self.g.add_edge(state, next_state, self.event_names[event], fill_out=True)
+            self.g.add_edge(
+                state, next_state, Event(self.event_names[event]), fill_out=True
+            )
 
         # Now, add the (parent) state to the list of processed states
         self.processed_states.add(state)

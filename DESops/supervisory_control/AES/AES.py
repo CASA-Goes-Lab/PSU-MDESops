@@ -23,7 +23,6 @@ def construct_AES(G, X_crit, compact=False):
         Gamma = find_compact_control_decisions_sets(G.events, G.Euc, G.Euo)
     else:
         Gamma = find_control_decisions_sets(G.events, G.Euc)
-
     # getting vertices of X_crit
     X_crit_vs = G.vs.select(name_in=X_crit)
     X_crit_vs = [v.index for v in X_crit_vs]
@@ -150,6 +149,7 @@ def construct_T(
             for e in Eo.intersection(gamma):
 
                 nxstates = {v[0] for i in states for v in G.vs["out"][i] if v[1] == e}
+                print(nxstates)
                 if nxstates:
                     vertex_counter = Q1_add_state(
                         nxstates,
