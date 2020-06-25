@@ -16,19 +16,20 @@ if not os.path.isfile(rand_DFA_dir):
         "Could not find random_DFA executable. See instructions to install in DESops/random_DFA/regal_readme.txt"
     )
 
-# output = subprocess.run(["./random_DFA", str(num_vert), str(size_alphabet), str(num_automata)], capture_output=True, text=True)
+# output = subprocess.run(["./random_DFA", str(num_vert), str(num_events), str(num_automata)], capture_output=True, text=True)
 
 # print(output.stdout)
 
 
 def generate(
     num_vert,
-    size_alphabet,
+    num_events,
     num_Euc,
     num_Euo,
     g=None,
     timeout=None,
     overlap=True,
+    max_out_degree=None,
     max_parallel_edges=None,
     remove_self_loop_prob=0,
 ):
@@ -36,10 +37,10 @@ def generate(
     Uses regal software to generate random DFA:
 
     num_vert: |V| of graph
-    size_alphabet: |E| of graph
+    num_events: |E| of graph
 
-    num_Euc: # of uncontrollable events to randomly select, must be [0, size_alphabet]
-    num_Euo: # of unobservable events to randomly select, must be [0, size_alphabet]
+    num_Euc: # of uncontrollable events to randomly select, must be [0, num_events]
+    num_Euo: # of unobservable events to randomly select, must be [0, num_events]
 
     g: optionally pass DFA to build. If none, will return DFA
         Default None
@@ -51,20 +52,33 @@ def generate(
         Default true
         NOT YET IMPLEMENTED
 
+    max_out_degree: limit number of transitions defined from a single state.
+        Default None is no limit (i.e. num_events)
+
     max_parallel_edges: optionally limit the number of parallel transitions from any one state to another
         i.e. f(x1, e) = x2 is only defined for (x1, x2) for max_parallel_edges different events e
-        Default None, which is set to size_alphabet (no restrictions)
+        Default None, which is set to num_events (no restrictions)
 
     remove_self_loop_prob: remove generated self loops with probability, [0,1]
-        (Experimental) from tests, it seems that on average size_alphabet self_loops generate with large number vertices.
+        (Experimental) from tests, it seems that on average num_events self_loops generate with large number vertices.
         Default 0
 
     """
 
+    if not max_parallel_edges:
+        max_parallel_edges = num_events
+
+    # can limit completeness by generating with a smaller event set
+    # and then randomly replacing events
+    if not max_out_degree:
+        max_out_degree = num_events
+
+    check_valid_params(num_events, num_Euc, num_Euo, max_out_degree, max_parallel_edges)
+
     this_dir = os.path.dirname(__file__)
     rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
     output = subprocess.run(
-        [rand_DFA_dir, str(num_vert), str(size_alphabet), "1"],
+        [rand_DFA_dir, str(num_vert), str(max_out_degree), "1"],
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -77,41 +91,16 @@ def generate(
         g_not_defined = False
         assert isinstance(g, DFA)
 
-    if size_alphabet <= 0:
-        raise ValueError(
-            "Requires alphabet size greater than 0, got {0}".format(size_alphabet)
-        )
-    if num_Euc > size_alphabet:
-        raise ValueError(
-            "Requires num_Euc no greater than size alphabet, got {0}, max {1}".format(
-                num_Euc, size_alphabet
-            )
-        )
-
-    if num_Euo > size_alphabet:
-        raise ValueError(
-            "Requires num_Euo no greater than size alphabet, got {0}, max {1}".format(
-                num_Euo, size_alphabet
-            )
-        )
-
-    if not max_parallel_edges:
-        max_parallel_edges = size_alphabet
-
-    if max_parallel_edges < 1:
-        raise ValueError(
-            "Requires max_parallel_edge to be greater than 0, got {0}".format(
-                max_parallel_edges
-            )
-        )
     g.add_vertices(num_vert)
 
-    events = [Event(str(i)) for i in range(size_alphabet)]
+    events = [Event(str(i)) for i in range(num_events)]
     transitions = []
     labels = []
     split_out = output.stdout.split("\n")
     out_attr = []
+
     for src, row in enumerate(split_out):
+        # each row of output are transitions from a src state (src labeled by line number)
         if not row:
             continue
 
@@ -121,8 +110,9 @@ def generate(
         # targets_seen maps: trg -> [events]
         targets_seen = {}
 
-        for event, trg in zip(events, split_row):
-            if trg == "?":
+        rand_events = random.sample(events, max_out_degree)
+        for event, trg in zip(rand_events, split_row):
+            if trg == "?" or trg == "":
                 continue
             trg = int(trg)
             if remove_self_loop_prob > 0 and trg == src:
@@ -159,3 +149,40 @@ def generate(
 
     if g_not_defined:
         return g
+
+
+def check_valid_params(
+    num_events, num_Euc, num_Euo, max_out_degree, max_parallel_edges
+):
+
+    if num_events <= 0:
+        raise ValueError(
+            "Requires alphabet size greater than 0, got {0}".format(num_events)
+        )
+    if num_Euc > num_events:
+        raise ValueError(
+            "Requires num_Euc no greater than size alphabet, got {0}, max {1}".format(
+                num_Euc, num_events
+            )
+        )
+
+    if num_Euo > num_events:
+        raise ValueError(
+            "Requires num_Euo no greater than size alphabet, got {0}, max {1}".format(
+                num_Euo, num_events
+            )
+        )
+
+    if max_out_degree < 1:
+        raise ValueError(
+            "Requires max_out_degree to be greater than 0, got {0}".format(
+                max_parallel_edges
+            )
+        )
+
+    if max_parallel_edges < 1:
+        raise ValueError(
+            "Requires max_parallel_edge to be greater than 0, got {0}".format(
+                max_parallel_edges
+            )
+        )
