@@ -5,6 +5,9 @@ Contains helpful functions used in various operations.
 """
 from collections.abc import Iterable
 
+from dd.autoref import BDD
+
+
 def find_obs_contr(S, Euc=set(), Euo=set(), E=set()):
     """
     For set of graphs S, find Euc and Euo if not provided.
@@ -104,3 +107,16 @@ def write_transition_attributes(G, Euc=set(), Euo=set()):
     if Euo:
         G.es["obs"] = obs_list
 
+
+def next_state_symbolic(state, event, G):
+    # computes next state given set of state and set of event and DFA G
+    # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables) and event is a formula over variables e0,...,em (event variables)
+    # returns a formula over source variables again
+
+    next_state = G.symbolic["transitions"] & state & event
+    bvar = {"s0", "s1", "e0"}
+    next_state = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
+    G.symbolic["bdd"].collect_garbage()
+    print(next_state.to_expr())
+    print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    return next_state

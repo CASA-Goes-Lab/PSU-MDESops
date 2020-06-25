@@ -27,12 +27,10 @@ from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
+# THIS IS A QUADRATIC ALGORITHM WITH RESPECT TO THE NUMBER OF STATES IN GXH
+# POSSIBLE TO MAKE IT FASTER BASED ON (KUMAR et al. 1991)(Hadj-Aloune et al., 1994)
+# THIS COULD BE PROBABLY ACHIEVED BY MODIFYING THE LOOP
 def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
-
-    import DESops as d
-
-    # d.write_svg("g.svg", G)
-    # d.write_svg("h.svg", H)
     """
     Parameters:
     G: igraph Graph representing the system as an automaton
