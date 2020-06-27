@@ -121,10 +121,8 @@ def write_svg(
         # Changed instances of labels here to vlabels (changed)
         try:
             vlabels = g._graph.vs.get_attribute_values(vlabels)
-            print(vlabels)
             # Added below to write nothing ("") instead of "None"
             vlabels = ["" if vl is None else str2(vl) for vl in vlabels]
-            print(vlabels)
         except KeyError:
             vlabels = [x + 1 for x in range(g.vcount())]
     elif vlabels is None:
