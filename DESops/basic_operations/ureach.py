@@ -63,7 +63,6 @@ def ureach_from_set(x_set, S, g, e):
 def ureach_from_set_adj(S, g, e):
     """
     Find the collected unobservable reach for all states in S
-    x_set: where resultant UR set is stored
     S: set of states to search from (graph indicies)
     g: graph to search
     e: set of unobservable events to consider
@@ -148,12 +147,15 @@ def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
     e: events to consider
     Euo: set of unobservable events in g
     """
-    ureach_from_set(x_set, set_of_states, g, e & Euo)
-    new_set = {
-        t.target
-        for t in g.es(_source_in=x_set)
-        if t["label"] in e and t["label"] not in Euo
-    }
+    ureach_from_set(x_set, set_of_states, g, e.intersection(Euo))
+    new_set = set()
+
+    for state in x_set:
+        new_states = set(
+            t[0] for t in g.vs[state]["out"] if t[1] in e and t[1] not in Euo
+        )
+        new_set.update(new_states)
+
     x_set.update(new_set)
     return
 
