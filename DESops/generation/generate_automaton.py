@@ -134,7 +134,7 @@ def generate_automaton(
     return generator.g
 
 
-class FSM_Generator:
+class randomAutomata:
     def __init__(
         self,
         num_states,

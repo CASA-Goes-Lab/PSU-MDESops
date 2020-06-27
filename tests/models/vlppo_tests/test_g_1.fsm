@@ -1,0 +1,34 @@
+10
+
+0	0	1
+a	1	c	o
+
+1	0	2
+a	2	c	o
+b	2	c	uo
+
+2	0	2
+b	3	c	uo
+c	6	uc	o
+
+3	0	2
+b	4	c	uo
+c	2	uc	o
+
+4	0	2
+b	5	c	uo
+c	7	uc	o
+
+5	0	1
+d	7	uc	uo
+
+6	0	1
+b	8	c	uo
+
+7	0	1
+d	6	uc	uo
+
+8	0	1
+b	9	c	uo
+
+9	0	0
