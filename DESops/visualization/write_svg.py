@@ -35,9 +35,9 @@ def write_svg(
     When linking objects, inkscape expects the older standard:
 
         <textPath xlink:href="#path{ID}" startOffset="50%">
-    
+
     But the new standard is used by web browsers (tested & works with firefox and chrome):
-            
+
         <textPath href="#path{ID}" startOffset="50%">
     """
 
@@ -121,8 +121,10 @@ def write_svg(
         # Changed instances of labels here to vlabels (changed)
         try:
             vlabels = g._graph.vs.get_attribute_values(vlabels)
+            print(vlabels)
             # Added below to write nothing ("") instead of "None"
-            vlabels = ["" if not vl else str2(vl) for vl in vlabels]
+            vlabels = ["" if vl is None else str2(vl) for vl in vlabels]
+            print(vlabels)
         except KeyError:
             vlabels = [x + 1 for x in range(g.vcount())]
     elif vlabels is None:
@@ -297,9 +299,14 @@ def write_svg(
         #  startOffset required to move labels off vertices (should be in the middle of vertices)
         # NOTE: uses xlink:href, outdated, to render with inkscape
         if to_inkscape:
-            print('    <textPath xlink:href="#path{0}" startOffset="50%">'.format(eidx), file=f)
+            print(
+                '    <textPath xlink:href="#path{0}" startOffset="50%">'.format(eidx),
+                file=f,
+            )
         else:
-            print('    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f)
+            print(
+                '    <textPath href="#path{0}" startOffset="50%">'.format(eidx), file=f
+            )
         # Text stored in elabels
         print("{0}".format(str(elabels[eidx])), file=f)
         print("    </textPath>", file=f)
