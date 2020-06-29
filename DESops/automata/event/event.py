@@ -2,12 +2,17 @@ import sys
 
 
 class Event:
-    def __init__(self, label):
+    def __init__(self, label, kwargs=None):
         self.attr = set()
-        if isinstance(label, str):
-            self.label = label
-        else:
+        if not isinstance(label, str):
             sys.exit("ERROR:\nEvent label must be str")
+
+        if not kwargs:
+            self.__dict__ = dict()
+            self.__dict__["label"] = label
+        else:
+            self.__dict__ = kwargs
+            self.__dict__["label"] = label
 
     def name(self):
         return self.label
@@ -17,7 +22,7 @@ class Event:
 
     def __eq__(self, other):
         if isinstance(other, Event):
-            return self.label == other.label
+            return self.label == other.label and self.__dict__ == other.__dict__
         else:
             return False
 
@@ -25,4 +30,4 @@ class Event:
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(self.__repr__())
+        return hash(frozenset(self.__dict__.items()))
