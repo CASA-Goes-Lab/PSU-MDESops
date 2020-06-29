@@ -1,4 +1,3 @@
-from collections import deque
 from enum import Enum, auto
 from typing import Optional, Set, Tuple
 
