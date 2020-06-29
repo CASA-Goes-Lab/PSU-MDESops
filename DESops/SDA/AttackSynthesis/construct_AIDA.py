@@ -8,6 +8,7 @@ import igraph as ig
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.basic_operations.ureach import ureach_from_set_adj
+from DESops.SDA.event_extensions import deleted_event, inserted_event
 from DESops.supervisory_control import supr_contr
 
 
@@ -24,7 +25,7 @@ def construct_AIDA(G, R, Ea, X_crit):
     X_crit_vs = G.vs.select(name_in=X_crit)
 
     dead_vs = len(R.vs) - 1
-    print(dead_vs)
+    # print(dead_vs)
     X_crit_vs = [v.index for v in X_crit_vs]
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
     Q1, Q2 = dict(), dict()
@@ -128,7 +129,8 @@ def construct_AIDA(G, R, Ea, X_crit):
                                 queue.append(q1d)
                                 Qcrit.append(0)
                         h2.append((Q2[(Gvs, Rvs, p)], Q1[q1d]))
-                        labelh2.append(Event("".join([e.name(), "_del"])))
+                        # labelh2.append(Event("".join([e.name(), "_del"])))
+                        labelh2.append(deleted_event(e.name()))
                     q1i = (Gvs, next_Rvs, 1)
                     q1name = (setvs2statename(G, Gvs), R.vs["name"][next_Rvs], "1")
                     if q1i not in Q1:
@@ -149,7 +151,8 @@ def construct_AIDA(G, R, Ea, X_crit):
                             Qcrit.append(0)
                             Qdead.append(0)
                     h2.append((Q2[(Gvs, Rvs, p)], Q1[q1i]))
-                    labelh2.append(Event("".join([e.name(), "_ins"])))
+                    # labelh2.append(Event("".join([e.name(), "_ins"])))
+                    labelh2.append(inserted_event(e.name()))
                 else:
                     next_Gvs = frozenset(
                         {
@@ -196,8 +199,12 @@ def construct_AIDA(G, R, Ea, X_crit):
 
     A.events = G.events.copy()
     A.events = A.events.union(Gamma)
-    ins = {Event("".join([e.name(), "_ins"])) for e in Ea}
-    dele = {Event("".join([e.name(), "_del"])) for e in Ea}
+    # ins = {Event("".join([e.name(), "_ins"])) for e in Ea}
+    ins = {inserted_event(e.name()) for e in Ea}
+
+    # dele = {Event("".join([e.name(), "_del"])) for e in Ea}
+    dele = {deleted_event(e.name()) for e in Ea}
+
     A.events = A.events.union(ins)
     A.events = A.events.union(dele)
     A.Euc = G.events.copy() - Ea
