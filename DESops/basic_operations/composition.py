@@ -370,6 +370,7 @@ def observer(G: Automata_t) -> Automata_t:
             G_obs.vs[state.index].update_attributes({"marked": True})
 
     del G_obs.vs["indexes"]
+    G_obs.events = set(G_obs.es["label"])
 
     return G_obs
 
