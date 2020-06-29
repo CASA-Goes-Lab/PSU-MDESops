@@ -80,14 +80,18 @@ class DFA(_Automata):
         # IF THE CALLER IS PARALLEL COMP, OBSERVER, ETC, THEN NOT WARNING SHOULD BE PRINTED
         # THIS CAN BE DONE BY CHECKING THE FUNCTION CALLER
 
-        if labels:
-            if len(pair_list) != len(labels):
-                raise IncongruencyError("Length of pairs != length of labels")
-            new_labels = list(self._graph.es["label"])
-            new_labels.extend(labels)
+        if len(pair_list) != len(labels):
+            raise IncongruencyError("Length of pairs != length of labels")
+        new_labels = list(self._graph.es["label"])
+        new_labels.extend(labels)
+        self.events.update(labels)
+
         self._graph.add_edges(pair_list)
-        if labels:
-            self._graph.es["label"] = new_labels
+
+        self._graph.es["label"] = new_labels
+
+        self.generate_out()
+
         if check_DFA:
             dict_out = dict()
             for (i, p) in enumerate(pair_list):
