@@ -18,7 +18,9 @@ class Event:
         return self.label
 
     def __repr__(self):
-        return self.label
+        return "Event({})".format(
+            ", ".join("{} : {}".format(k, v) for k, v in self.__dict__.items())
+        )
 
     def __eq__(self, other):
         if isinstance(other, Event):
