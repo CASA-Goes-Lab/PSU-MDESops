@@ -86,48 +86,20 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
     Check the controllability condition of states in H and returns states violating the condition.
     """
 
-    dfs_root_states = set()
-    H_all_states = set(H.vs["name"])
-    G_all_states = set(G.vs["name"])
-    out_of_range = G_all_states - H_all_states
-
-    for x in out_of_range:
-        state = G.vs.select(name_eq=x)[0]
-        pre_with_Euc = {
-            pre["name"]
-            for pre in state.predecessors()
-            if pre["name"] in H_all_states
-            and pydash.find(
-                pre.out_edges(),
-                lambda e: e.target == state.index and e["label"] in G.Euc,
-            )
-            is not None
-        }
-        dfs_root_states |= pre_with_Euc  # predecessors in H of out-of-range states
-
+    G_name_index = {v["name"]: v for v in G.vs}
     bad_states = set()
 
-    for root in dfs_root_states:
-        visited = {root}
-        states_stack = deque(visited)
-        while len(states_stack) > 0:
-            name = states_stack.pop()
-            state = H.vs.select(name_eq=name)[0]
-            pre_by_Euc = {
-                pre["name"]
-                for pre in state.predecessors()
-                if pydash.find(
-                    pre.out_edges(),
-                    lambda e: e.target == state.index and e["label"] in H.Euc,
-                )
-                is not None
-            }
-            for pre in pre_by_Euc:
-                if pre not in visited and pre not in bad_states:
-                    visited.add(pre)
-                    states_stack.append(pre)
+    # States at which the supervisor improperly disables uncontrollable events must be removed.
+    for xH in H.vs:
+        xG = G_name_index[xH["name"]]
+        xG_out_events = {x[1] for x in xG["out"]}
+        xH_out_events = {x[1] for x in xH["out"]}
 
-        bad_states |= visited
+        if xG_out_events != xH_out_events:
+            for e in xG_out_events - xH_out_events:
+                if e in G.Euc:
+                    bad_states.add(xH.index)
+                    break
 
     return bad_states
 
