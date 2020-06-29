@@ -12,6 +12,7 @@ from DESops.automata.automata import _Automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.automata.NFA import NFA
+from DESops.basic_operations.product_comp import product_comp
 from DESops.basic_operations.unary import find_inacc
 from DESops.error import IncongruencyError, MissingAttributeError
 
@@ -408,7 +409,7 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
     )
 
     # Step 2: Calculating the product automaton AG = A x G
-    AG = product(A, G)
+    AG = product_comp([A, G])
 
     # Step 3:
     #   Step 3.1: Obtaining G_tilde

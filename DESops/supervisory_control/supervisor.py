@@ -6,6 +6,7 @@ import pydash
 from DESops.automata import DFA
 from DESops.automata.event.event import Event
 from DESops.basic_operations import composition, unary
+from DESops.basic_operations.parallel_comp import parallel_comp
 
 
 class Mode(Enum):
@@ -115,7 +116,7 @@ def preprocessing(G_given: DFA, H_given: DFA) -> Tuple[DFA, DFA]:
 
     # 2. Construct G which is an SPA.
     G_obs = composition.observer(G_tilde)
-    G = composition.parallel(G_tilde, G_obs)
+    G = parallel_comp([G_tilde, G_obs])
 
     # 3. Extract H from G by deleteing all states ((x, y), z) of G where x = "dead".
     H = G.copy()
