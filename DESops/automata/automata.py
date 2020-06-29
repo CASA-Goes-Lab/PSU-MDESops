@@ -407,6 +407,22 @@ class _Automata:
             for row in adj_list
         ]
 
+    def summary(self, use_state_names=False):
+        """
+        Convenience method: prints a cleaned up adjacency list
+        Requires out attribute.
+        Would there be other useful things to print here?
+        """
+        print("Source | (Target, Event), ...)")
+        for v in range(self.vcount()):
+            if use_state_names:
+                vname = self.vs["name"][v]
+
+                out_list = [(self.vs[t[0]]["name"], t[1]) for t in self.vs["out"][v]]
+                print("{}  :  {}".format(vname, out_list))
+            else:
+                print("{}  :  {}".format(v, self.vs["out"][v]))
+
     # Methods to interface w/ functions from automata_operations/basic/generic_functions
     # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
     # Results are stored within the the Euc & Euo objects in the current automata.
