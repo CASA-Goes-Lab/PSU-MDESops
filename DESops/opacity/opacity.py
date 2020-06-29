@@ -1,7 +1,7 @@
 """
 Methods for opacity verification for automata
 """
-from DESops.basic_operations.observer_comp import observer_comp
+from DESops.basic_operations.observer_comp import observer_comp_old
 from DESops.opacity.k_step_language_based import (
     verify_joint_infinite_step_opacity_language_based,
     verify_joint_k_step_opacity_language_based,
@@ -21,7 +21,7 @@ def verify_current_state_opacity(g):
     Parameters:
     g: the automaton
     """
-    g_det = observer_comp(g, Euo=g.Euo)
+    g_det = observer_comp_old(g, Euo=g.Euo)
     for estimate in g_det.vs:
         if all([g.vs[i]["secret"] for i in estimate["name"]]):
             return False

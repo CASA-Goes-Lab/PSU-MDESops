@@ -34,9 +34,6 @@ def parallel_comp(input_list):
         g2 = input_list[i]
 
         if len(g1.vs) == 0 or len(g2.vs) == 0:
-            warnings.warn(
-                "Parallel composition with an empty automaton-return an empty automaton"
-            )
             return output
 
         vertice_names = list()  # list of vertex names for igraph construction

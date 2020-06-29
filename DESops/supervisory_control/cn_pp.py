@@ -9,14 +9,12 @@ import copy
 import igraph as ig
 from pydash import flatten_deep
 
-from DESops.basic_operations.construct_spa import construct_spa as construct_spa
-from DESops.basic_operations.construct_subautomata import (
-    construct_subautomata as construct_subautomata,
-)
-from DESops.basic_operations.generic_functions import write_transition_attributes
-
 # Need to figure out what types for this still:
 from DESops.automata.automata_ctor import construct_automata
+from DESops.basic_operations.construct_spa import construct_spa as construct_spa
+from DESops.basic_operations.construct_subautomata import construct_subautomata
+from DESops.basic_operations.generic_functions import write_transition_attributes
+
 
 def cn_preprocessing(H_given, G_given, Euc, Euo):
     """

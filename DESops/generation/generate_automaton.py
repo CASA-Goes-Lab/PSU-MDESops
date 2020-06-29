@@ -6,6 +6,7 @@ The implementation is modified from the FsmGenerator in the VEiP GitLab reposito
 from random import choice, randint, randrange, sample, shuffle
 
 from DESops.automata.automata import _Automata
+from DESops.automata.event.event import Event
 from DESops.file.igraph_to_fsm import write_fsm
 
 
@@ -107,7 +108,7 @@ def generate_automaton(
         Ensures that the max_trans_per_state specification is satisfied at all vertices
         True by default
     """
-    generator = FSM_Generator(
+    generator = randomAutomata(
         num_states,
         num_events,
         min_trans_per_state,
@@ -128,11 +129,12 @@ def generate_automaton(
     while not success:
         success = generator.generate_automaton()
 
+    generator.g.generate_out()
     generator.write_files()
     return generator.g
 
 
-class FSM_Generator:
+class randomAutomata:
     def __init__(
         self,
         num_states,
@@ -177,7 +179,8 @@ class FSM_Generator:
         self.validate_parameters()
 
         self.g = _Automata()
-        self.g.add_vertices(self.num_states, list(range(self.num_states)))
+        # names are str changing for that
+        self.g.add_vertices(self.num_states, [str(i) for i in range(self.num_states)])
 
         self.event_names = list()
         self.generate_event_names()
@@ -235,7 +238,7 @@ class FSM_Generator:
                     i = overflow - 1
                 else:
                     break
-            self.event_names.append(name)
+            self.event_names.append(Event(name))
 
     def initialize_automaton(self):
         """
@@ -264,11 +267,16 @@ class FSM_Generator:
         ids = sample(range(self.num_states), self.num_secret)
         self.g.vs["secret"] = [(i in ids) for i in range(self.num_states)]
 
+        # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uo)
-        self.g.Euo = [self.event_names[i] for i in ids]
+        self.g.Euo = {self.event_names[i] for i in ids}
 
+        # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uc)
-        self.g.Euc = [self.event_names[i] for i in ids]
+        self.g.Euc = {self.event_names[i] for i in ids}
+
+        # Events are of type Event and are stored as sets
+        self.g.events = set(self.event_names)
 
     def generate_automaton(self):
         """

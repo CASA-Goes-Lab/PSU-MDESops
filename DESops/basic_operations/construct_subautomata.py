@@ -117,7 +117,7 @@ def construct_subautomata(
 
     # Find G := H_given_with_dead x G
     # (This G does not have proper markings yet)
-    product_comp([H_given, G_given], G, save_state_names=True, save_names_as="int")
+    product_comp([H_given, G_given])
     dead_state_index = H_given.vcount() - 1
 
     if find_H:
