@@ -108,7 +108,7 @@ def generate_automaton(
         Ensures that the max_trans_per_state specification is satisfied at all vertices
         True by default
     """
-    generator = FSM_Generator(
+    generator = randomAutomata(
         num_states,
         num_events,
         min_trans_per_state,
@@ -238,7 +238,7 @@ class randomAutomata:
                     i = overflow - 1
                 else:
                     break
-            self.event_names.append(name)
+            self.event_names.append(Event(name))
 
     def initialize_automaton(self):
         """
@@ -269,14 +269,14 @@ class randomAutomata:
 
         # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uo)
-        self.g.Euo = {Event(self.event_names[i]) for i in ids}
+        self.g.Euo = {self.event_names[i] for i in ids}
 
         # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uc)
-        self.g.Euc = {Event(self.event_names[i]) for i in ids}
+        self.g.Euc = {self.event_names[i] for i in ids}
 
         # Events are of type Event and are stored as sets
-        self.g.events = {Event(ev) for ev in self.event_names}
+        self.g.events = set(self.event_names)
 
     def generate_automaton(self):
         """
@@ -456,9 +456,7 @@ class randomAutomata:
                 else:
                     avail_events.remove(event)
 
-            self.g.add_edge(
-                state, next_state, Event(self.event_names[event]), fill_out=True
-            )
+            self.g.add_edge(state, next_state, self.event_names[event], fill_out=True)
 
         # Now, add the (parent) state to the list of processed states
         self.processed_states.add(state)
