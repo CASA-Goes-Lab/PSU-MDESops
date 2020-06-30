@@ -2,6 +2,7 @@ from enum import Enum, auto
 from typing import Optional, Set, Tuple
 
 import pydash
+from tqdm import tqdm
 
 from DESops.automata import DFA
 from DESops.automata.event.event import Event
@@ -17,6 +18,8 @@ class Mode(Enum):
 
 EventSet = Set[Event]
 StateSet = Set[int]
+
+SHOW_PROGRESS = False
 
 
 def supremal_sublanguage(
@@ -72,7 +75,7 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
     """
     bad_states = set()
     all_states = set(H.vs["name"])
-    for y in H.vs:
+    for y in tqdm(H.vs, desc="Nomarlity", disable=SHOW_PROGRESS is False):
         for q in G_obs.vs["name"]:
             if y["name"] in q and not set(q) <= all_states:
                 bad_states.add(y.index)
@@ -90,7 +93,7 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
     bad_states = set()
 
     # States at which the supervisor improperly disables uncontrollable events must be removed.
-    for xH in H.vs:
+    for xH in tqdm(H.vs, desc="Controllability", disable=SHOW_PROGRESS is False):
         xG = G_name_index[xH["name"]]
         xG_out_events = {x[1] for x in xG["out"]}
         xH_out_events = {x[1] for x in xH["out"]}
@@ -126,7 +129,7 @@ def preprocessing(G_given: DFA, H_given: DFA) -> Tuple[DFA, DFA]:
     H_names = {str(v.index): v["name"] for v in H.vs}
     H.vs["name"] = list(H_names.keys())
     G_name_index = H.vcount()
-    for v in G.vs:
+    for v in tqdm(G.vs, desc="Renaming G states", disable=SHOW_PROGRESS is False):
         name = pydash.find(H_names.keys(), lambda k: H_names[k] == v["name"])
         if name is not None:
             new_name = name

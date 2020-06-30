@@ -68,13 +68,16 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
                 continue
 
             if state in marked_states:
-                good_states.add(state.index)
+                good_states.add(state)
                 continue
 
             for mstate in marked_states:
                 shortest_paths = G._graph.get_shortest_paths(state, mstate)
-                for path in shortest_paths:
-                    good_states |= set(path)
+                if len(shortest_paths[0]) > 0:
+                    for path in shortest_paths:
+                        good_states |= set(path)
+
+                    break
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
