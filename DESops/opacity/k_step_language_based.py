@@ -28,9 +28,9 @@ def verify_joint_k_step_opacity_language_based(g, k, return_num_states=False):
     Eo = set(g.es["label"]).difference(Euo)
 
     g_c = contract_secret_traces(g)
+    g_c.vs["marked"] = True
 
     reverse(g_c, inplace=True)
-    g_c.vs["marked"] = [g.vs[state[0]]["init"] for state in g_c.vs["name"]]
 
     h = construct_reverse_unfolded_automaton(g_c, g.vs, k)
 
@@ -153,17 +153,9 @@ def verify_separate_k_step_opacity_language_based(g, k):
 
     h = construct_forward_unfolded_automaton(g_c, k)
 
-    new_init = g_c.vs["marked"]
-    new_marked = g_c.vs["init"]
+    # more efficient to compare reverse languages
     reverse(g_c, inplace=True)
-    g_c.vs["init"] = new_init
-    g_c.vs["marked"] = new_marked
-
-    new_init = h.vs["marked"]
-    new_marked = h.vs["init"]
     reverse(h, inplace=True)
-    h.vs["init"] = new_init
-    h.vs["marked"] = new_marked
 
     return language_inclusion(g_c, h, Eo)
 
