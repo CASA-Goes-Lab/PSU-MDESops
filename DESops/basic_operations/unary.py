@@ -4,7 +4,11 @@ Functions relevant to unary operations
 
 import warnings
 
+from tqdm import tqdm
+
 from DESops.automata.automata import _Automata
+
+SHOW_PROGRESS = False
 
 
 def trim(G: _Automata) -> set:
@@ -56,21 +60,21 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
     if len(marked_states) == 0:
         return good_states
 
-    for state in G.vs:
-        if state in states_removed:
-            continue
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        for x in tqdm(G.vs, desc="CoAccessible", disable=SHOW_PROGRESS is False):
+            state = x.index
+            if state in states_removed or state in good_states:
+                continue
 
-        if state in marked_states:
-            good_states.add(state.index)
-            continue
+            if state in marked_states:
+                good_states.add(state.index)
+                continue
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
             for mstate in marked_states:
-                shortest_path = G._graph.get_shortest_paths(state, mstate)[0]
-                if len(shortest_path) > 0:
-                    good_states.add(state.index)
-                    break
+                shortest_paths = G._graph.get_shortest_paths(state, mstate)
+                for path in shortest_paths:
+                    good_states |= set(path)
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
