@@ -5,8 +5,9 @@ The implementation is modified from the FsmGenerator in the VEiP GitLab reposito
 
 from random import choice, randint, randrange, sample, shuffle
 
-from DESops.automata.automata import _Automata
+from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
+from DESops.automata.NFA import NFA
 from DESops.file.igraph_to_fsm import write_fsm
 
 
@@ -178,7 +179,11 @@ class randomAutomata:
         # initialization
         self.validate_parameters()
 
-        self.g = _Automata()
+        if self.det:
+            self.g = DFA()
+        else:
+            self.g = NFA()
+
         # names are str changing for that
         self.g.add_vertices(self.num_states, [str(i) for i in range(self.num_states)])
 
@@ -483,9 +488,9 @@ class randomAutomata:
                 f.write(" ".join([str(v["name"]) for v in self.g.vs if v["secret"]]))
 
                 f.write("\n\nUnobservable Events:\n")
-                f.write(" ".join(self.g.Euo))
+                f.write(" ".join([e.label for e in self.g.Euo]))
 
                 f.write("\n\nUncontrollable Events:\n")
-                f.write(" ".join(self.g.Euc))
+                f.write(" ".join([e.label for e in self.g.Euc]))
 
                 f.write("\n")
