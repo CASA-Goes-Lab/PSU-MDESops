@@ -1,37 +1,28 @@
 from DESops.automata.NFA import NFA
 
 
-def reverse(
-    g, inplace=False, g_r=None, save_state_names=False, save_marked_states=False
-):
+def reverse(g, inplace=False):
     """
     Constructs the reverse of the given automaton
+
+    Initial and marked states are swapped so that a run is marked in g if and only if its reversal is marked in g_r
 
     Parameters:
     g: the automaton
     inplace: if True, the automaton will overwrite the original g with its reverse automaton
-    g_r: where the reverse is constructed (if not inplace); if not specified, a new automaton will be constructed and returned
-    save_state_names: whether state names are saved (if not inplace)
-    save_marked_states: whether marked states are saved (if not inplace)
     """
     if inplace:
         inplace_reverse(g)
         return
 
-    g_r_defined = True
-    if g_r is None:
-        g_r = NFA()
-        g_r_defined = False
-
-    construct_reverse(g, g_r, save_state_names, save_marked_states)
-
-    if not g_r_defined:
-        return g_r
+    return construct_reverse(g, save_state_names=True)
 
 
-def construct_reverse(g, g_r=None, save_state_names=False, save_marked_states=False):
+def construct_reverse(g, g_r=None, save_state_names=False):
     """
     Constructs the reverse of the given automaton
+
+    Initial and marked states are swapped so that a run is marked in g if and only if its reversal is marked in g_r
 
     g: input automaton
     g_r: where the reverse automaton will be stored
@@ -42,12 +33,17 @@ def construct_reverse(g, g_r=None, save_state_names=False, save_marked_states=Fa
         g_r_defined = False
 
     g_r.add_vertices(g.vcount())
-    g_r.vs["init"] = True
+
+    # swap marked/initial states
+    g_r.vs["init"] = g.vs["marked"]
+    if "init" in g.vs.attributes():
+        g_r.vs["marked"] = g_r.vs["init"]
+    else:
+        g_r.vs["marked"] = False
+        g_r.vs[0]["marked"] = True
 
     if save_state_names:
         g_r.vs["name"] = g.vs["name"]
-    if save_marked_states:
-        g_r.vs["marked"] = g.vs["marked"]
 
     for t in g.es:
         g_r.add_edge(t.target, t.source, t["label"], fill_out=True)
@@ -59,8 +55,16 @@ def construct_reverse(g, g_r=None, save_state_names=False, save_marked_states=Fa
 def inplace_reverse(g):
     """
     Constructs the reverse of the given automaton in-place
+
+    Initial and marked states are swapped so that a run is marked in g if and only if its reversal is marked in g_r
     """
-    g.vs["init"] = True
+    # swap marked/initial states
+    if "init" not in g.vs.attributes():
+        g.vs["init"] = False
+        g.vs[0]["init"] = True
+    old_init = g.vs["init"]
+    g.vs["init"] = g.vs["marked"]
+    g.vs["marked"] = old_init
 
     if g.ecount() == 0:
         return

@@ -2,7 +2,6 @@
 Functions related to the state-based method of verifying K-step opacity
 """
 from DESops.automata.NFA import NFA
-from DESops.basic_operations.observer_comp import observer_comp_old
 
 
 def verify_joint_k_step_opacity_state_based(g, k, return_num_states=False):
@@ -12,7 +11,9 @@ def verify_joint_k_step_opacity_state_based(g, k, return_num_states=False):
     Parameters:
     g: the automaton
     k: the number of steps
-    return_num_states: used for testing space usage: causes the return value to be the number of states in the observer of the constructed automaton
+    return_num_states: if true, the function will return a (bool, int) tuple where:
+        first return value tells whether g is k-step opaque
+        second return value is the number of states in the observer constructed when checking current state opacity
     """
     # imported here to avoid error when two files import from each other
     from DESops.opacity.opacity import verify_current_state_opacity
@@ -38,17 +39,21 @@ def verify_joint_k_step_opacity_state_based(g, k, return_num_states=False):
         state = need_to_check.pop()
         for t in g.vs[state[0]].out_edges():
             step = state[1]
-            # transitions to secret events reset us to 0 steps since last secret event
+
             if t.target_vertex["secret"]:
+                # transitions to secret events reset us to 0 steps since last secret event
                 next_state = (t.target, 0)
-            # if >K steps since last secret event, stay at >K
+
             elif step > k:
+                # if >K steps since last secret event, stay at >K
                 next_state = (t.target, k + 1)
-            # unobersevable events don't count as a step
+
             elif t["label"] in Euo:
+                # unobersevable events don't count as a step
                 next_state = (t.target, step)
-            # observable events give one more step since last secret event
+
             else:
+                # observable events give one more step since last secret event
                 next_state = (t.target, step + 1)
 
             if next_state not in state_indices:
@@ -57,15 +62,12 @@ def verify_joint_k_step_opacity_state_based(g, k, return_num_states=False):
                 need_to_check.append(next_state)
 
             h.add_edge(
-                state_indices[state],
-                state_indices[next_state],
-                t["label"],
-                fill_out=True,
+                state_indices[state], state_indices[next_state], t["label"],
             )
-    if return_num_states:
-        h_det = observer_comp_old(h)
-        return h_det.vcount()
+
+    h.generate_out()
 
     # check current state opacity where secret states are those that visited a secret state <=K steps ago
     h.vs["secret"] = [(state[1] <= k) for state in h.vs["name"]]
-    return verify_current_state_opacity(h)
+
+    return verify_current_state_opacity(h, return_num_states)

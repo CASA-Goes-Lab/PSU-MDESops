@@ -93,11 +93,13 @@ def test_reverse():
 
     g_r = d.reverse(g)
     assert {(t.source, t.target, t["label"]) for t in g_r.es} == transitions
-    assert all([v["init"] for v in g_r.vs])
+    assert g_r.vs["init"] == [False, True]
+    assert g_r.vs["marked"] == [True, False]
 
     d.reverse(g, inplace=True)
     assert {(t.source, t.target, t["label"]) for t in g.es} == transitions
-    assert all([v["init"] for v in g.vs])
+    assert g.vs["init"] == [False, True]
+    assert g.vs["marked"] == [True, False]
 
 
 def test_complement():
