@@ -1,35 +1,59 @@
 # pylint: disable=C0103
 """
-Methods for opacity verification for automata
+Functions related to the mapping-based method of verifying K-step opacity
 """
-import DESops.opacity.state_estimation as state_estimation
-from DESops.automata.automata import _Automata
+from DESops.automata.DFA import DFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 
-def verify_joint_k_step_opacity_mapping_based(g, k, return_num_states=False):
+def verify_k_step_opacity_mapping_based(
+    g, k, joint=True, secret_type=None, return_num_states=False
+):
     """
-    Determine if the given automaton with unobservable events and secret states is joint k-step opaque
+    Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
     Parameters:
     g: the automaton
     k: the number of steps
-    return_num_states: used for testing space usage: causes the return value to be the number of states in the constructed automaton
+
+    return_num_states: if true, the function will return a (bool, int) tuple where:
+        first return value tells whether g is k-step opaque
+        second return value is the number of states in the K-delay estimator
     """
-    h = _Automata()
-    contract_secret_traces(g, h, g.Euo, False)
-    return verify_joint_k_step_opacity_from_NFA(h, k, return_num_states)
+    if secret_type is None:
+        if joint:
+            secret_type = 1
+        else:
+            secret_type = 2
+
+    g_c = contract_secret_traces(g, secret_type)
+    secret_states = g_c.vs.select(secret=True).indices
+
+    traj_auto, induced_trajectories = construct_k_delay_estimator(g_c, k)
+
+    opaque = verify_k_step_opacity_from_estimator(
+        induced_trajectories, secret_states, k, joint
+    )
+
+    if return_num_states:
+        return opaque, traj_auto.vcount()
+
+    return opaque
 
 
-def verify_joint_k_step_opacity_from_NFA(g, k, return_num_states=False):
+def construct_k_delay_estimator(g, k):
     """
-    Determine if the given NFA with secret states is joint k-step opaque
+    Construct the k-delay estimator for automaton g with the specified secret type
 
-    Parameters:
-    g: the automaton
+    g: the contracted automaton
     k: the number of steps
+
+    secret_type: what behavior marks an observation period as secret
+        1: an observation period is secret if it contains ANY secret state
+        2: an observation period is secret if it contains ONLY secret states
+    default is type 1 for joint opacity and type 2 for separate opacity
     """
-    traj_auto = _Automata()
+    traj_auto = DFA()
     induced_trajectories = []
     num_steps = k
     events = set(g.es["label"])
@@ -39,19 +63,39 @@ def verify_joint_k_step_opacity_from_NFA(g, k, return_num_states=False):
         traj_auto, induced_trajectories, num_steps, state_mappings, initial_states
     )
 
-    if return_num_states:
-        return traj_auto.vcount()
+    return traj_auto, induced_trajectories
 
-    secret_states = g.vs.select(secret=True).indices
-    for traj in induced_trajectories:
-        nonsecret_found = False
-        for path in traj:
-            if all([(i not in secret_states) for i in path]):
-                nonsecret_found = True
-                break
-        if not nonsecret_found:
-            return False
-    return True
+
+def verify_k_step_opacity_from_estimator(
+    induced_trajectories, secret_states, k, joint=True
+):
+    """
+    Returns whether the automaton that produced the induced trajectories is k-step opaque with respect to the given secret states
+
+    Parameters:
+    induced_trajectories: the list of estimator trajectories returned by the construct_k_delay_estimator function
+    secret_states: the list of indices that were secret in the contracted automaton
+    """
+    if joint:
+        # opacity requires that every trajectory contains a path that does not visit any secret state
+        for traj in induced_trajectories:
+            nonsecret_found = False
+            for path in traj:
+                if all([(i not in secret_states) for i in path]):
+                    nonsecret_found = True
+                    # if we find any path containing no secret states, then this trajectory is good
+                    break
+            if not nonsecret_found:
+                return False
+        return True
+
+    else:
+        # opacity requires that for every step in every trajectory, some path visits a nonsecret state at that step
+        for traj in induced_trajectories:
+            for step in range(k + 1):
+                if not any([(path[step] not in secret_states) for path in traj]):
+                    return False
+        return True
 
 
 def construct_induced_state_mappings(g, events):
@@ -61,7 +105,7 @@ def construct_induced_state_mappings(g, events):
     Returns a dictionary of state mappings indexed by events.
 
     Parameters:
-    g: the original automata to compute the induced state mappings for
+    g: the contracted automata to compute the induced state mappings for
     events: the events of the automata to compute induced state mappings for
     """
     sm = dict()
@@ -133,94 +177,3 @@ def compose_state_trajectory_and_mapping(st, sm, num_steps):
             for target in sm[path[num_steps]]:
                 new_traj.add(path[1:] + (target,))
     return new_traj
-
-
-def verify_joint_k_step_opacity_mapping_based_old(g, k, return_num_states=False):
-    """
-    Determine if the given automaton with unobservable events and secret states is joint k-step opaque
-
-    Parameters:
-    g: the automaton
-    k: the number of steps
-    return_num_states: used for testing space usage: causes the return value to be the number of states in traj_auto
-    """
-    h = _Automata()
-    contract_secret_traces(g, h, g.Euo, False)
-    return verify_joint_k_step_opacity_from_NFA_old(h, k, return_num_states)
-
-
-def verify_joint_k_step_opacity_from_NFA_old(g, k, return_num_states=False):
-    """
-    Determine if the given NFA with secret states is joint k-step opaque
-
-    Parameters:
-    g: the automaton
-    k: the number of steps
-    """
-    traj_auto = _Automata()
-    induced_trajectories = []
-    num_states = g.vcount()
-    num_steps = k
-    events = set(g.es["label"])
-    state_mappings = state_estimation.construct_induced_state_mappings(g, events)
-    initial_states = g.vs.select(init=True).indices
-    state_estimation.construct_induced_state_trajectory_automata(
-        traj_auto,
-        induced_trajectories,
-        num_states,
-        num_steps,
-        state_mappings,
-        initial_states,
-    )
-
-    if return_num_states:
-        return traj_auto.vcount()
-
-    secret_states = g.vs.select(secret=True).indices
-    for traj in induced_trajectories:
-        if not traj.exists_avoiding_trajectory(secret_states):
-            return False
-    return True
-
-
-def verify_separate_k_step_opacity_mapping_based(g, k):
-    """
-    Determine if the given automaton with unobservable events and secret states is separate k-step opaque
-
-    Parameters:
-    g: the automaton
-    k: the number of steps
-    """
-    h = _Automata()
-    contract_secret_traces(g, h, g.Euo, True)
-    return verify_separate_k_step_opacity_from_NFA(h, k)
-
-
-def verify_separate_k_step_opacity_from_NFA(g, k):
-    """
-    Determine if the given NFA with secret states is separate k-step opaque
-
-    Parameters:
-    g: the automaton
-    k: the number of steps
-    """
-    traj_auto = _Automata()
-    induced_trajectories = []
-    num_states = g.vcount()
-    num_steps = k
-    events = set(g.es["label"])
-    state_mappings = state_estimation.construct_induced_state_mappings(g, events)
-    initial_states = g.vs.select(init=True).indices
-    state_estimation.construct_induced_state_trajectory_automata(
-        traj_auto,
-        induced_trajectories,
-        num_states,
-        num_steps,
-        state_mappings,
-        initial_states,
-    )
-    nonsecret_states = g.vs.select(secret=False).indices
-    for traj in induced_trajectories:
-        if not all([traj.can_visit(nonsecret_states, step) for step in range(k + 1)]):
-            return False
-    return True

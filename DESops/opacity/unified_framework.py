@@ -15,17 +15,9 @@ def verify_k_step_opacity_unified(
     g: the automaton
     k: the number of steps
 
-    joint: whether joint or separate opacity will be determined:
-        joint opacity is violated if an observer can determine that secret behavior occurred
-        separate opacity is violated if an observer can determine WHEN the secret behavior occurred
-    default is joint
-
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is type 1 for joint opacity and type 2 for separate opacity
-
-    return_num_states: used for testing space usage; causes the return value to be the number of states in the language inclusion product
+    return_num_states: if true, the function will return a (bool, int) tuple where:
+        first return value tells whether g is k-step opaque
+        second return value is the number of states in the product automaton constructed when checking language inclusion
     """
     if secret_type is None:
         if joint:
@@ -41,6 +33,8 @@ def verify_k_step_opacity_unified(
     g = g.copy()
     if not joint:
         # separate opacity uses self-loops to make all runs of g extendable
+        if "e_ext" in set(g.es["label"]):
+            raise ValueError("e_ext is a reserved event label")
         for i in range(g.vcount()):
             g.add_edge(i, i, "e_ext", fill_out=True)
     g = moore_to_standard(g)
@@ -191,9 +185,6 @@ def H_epoch_NS(secret_type, events, Euo):
     """
     Returns an automaton that marks any single epoch in which nonsecret behavior occurs
 
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
     """
@@ -241,9 +232,6 @@ def H_epoch_S(secret_type, events, Euo):
     """
     Returns an automaton that marks any single epoch in which secret behavior occurs
 
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
     """
