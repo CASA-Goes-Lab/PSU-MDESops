@@ -27,9 +27,6 @@ from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
-# THIS IS A QUADRATIC ALGORITHM WITH RESPECT TO THE NUMBER OF STATES IN GXH
-# POSSIBLE TO MAKE IT FASTER BASED ON (KUMAR et al. 1991)(Hadj-Aloune et al., 1994)
-# THIS COULD BE PROBABLY ACHIEVED BY MODIFYING THE LOOP
 def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
     """
     Parameters:
@@ -66,66 +63,50 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
     # Check each state to see if the supervisor improperly disables uncontrollable events;
     # those states must be removed.
 
+    # generate "in" attribute
+    if "in" not in preH.vs.attributes():
+        incoming_adj = [[] for _ in range(preH.vcount())]
+        for e in preH.es():
+            incoming_adj[e.target].append((e.source, e["label"]))
+        preH.vs["in"] = incoming_adj
+
     # map alternative to vs.find()
     preG_name_dict = {v["name"]: v for v in preG.vs()}
 
-    badstates = {1}
-    while len(badstates) > 0:
-        badstates = set()
-        for vH in preH.vs:
-            vG = preG_name_dict[vH["name"]]
-            # vG = preG.vs.find(name_eq=vH["name"])
+    badstates = set()
+    for vH in preH.vs:
+        # state was removed from spec:
+        if vH["name"] not in preG_name_dict:
+            badstates.add(vH.index)
+            continue
+        vG = preG_name_dict[vH["name"]]
 
-            evG = {x[1] for x in vG["out"]}
-            evH = {x[1] for x in vH["out"]}
-            if evG != evH:
-                for e in evG - evH:
-                    if e in preG.Euc:
-                        badstates.add(vH.index)
-                        continue
-                        # print(vH["name"])
+        # state violates controllability:
+        evG = {x[1] for x in vG["out"]}
+        evH = {x[1] for x in vH["out"]}
+        if len(evG) != len(evH):
+            for e in evG - evH:
+                if e in preG.Euc:
+                    badstates.add(vH.index)
+                    break
 
-        preH.delete_vertices(badstates)
+    states_to_remove = set()
+    while badstates:
+        next_badstates = set()
+        for x in badstates:
+            for prev_state in preH.vs["in"][x]:
+                if prev_state[1] in Euc and prev_state[0] not in states_to_remove:
+                    next_badstates.add(prev_state[0])
+
+        states_to_remove.update(badstates)
+        badstates = next_badstates
 
     # remove inaccessible states:
+    preH.delete_vertices(states_to_remove)
     inacc_states = find_inacc(preH)
     preH.delete_vertices(inacc_states)
 
-    # # if G has states marked, set those states in H_o to also be marked
-    # if "marked" in G.vs.attributes() and mark_states:
-    #     if G.vs["marked"]:
-    #         set_marked_attr(G.vs(), H_o.vs())
-
     return preH
-    # states_to_remove = [
-    #     i for i in range(0, H_o.vcount()) if invalid_state(G, H_o, Euc, i)
-    # ]
-    # states_removed = set()
-    # # All other states that transition to the ones just removed via an uncontrollable event
-    # # must also be removed (i.e. the control decision at those states would require disabling
-    # # and uncontrollable event).
-    # while states_to_remove:
-    #     # Iterative search; completes when there are no new states to check (exhausted the
-    #     # uncontrollable traces).
-    #     # trim() to remove inaccessible states; potentially saves some computation.
-    #     inacc_states = find_inacc(H_o, states_removed)
-    #     states_removed.update(states_to_remove)
-    #     states_removed.update(inacc_states)
-    #     states_to_check = {
-    #         e.source
-    #         for e in H_o.es(_target_in=states_to_remove)
-    #         if e["label"] in Euc and e.source not in states_removed
-    #     }
-    #     states_to_remove = states_to_check
-
-    # H_o.delete_vertices(states_removed)
-
-    # # if G has observable transitions noted, set those edges in H_o to also be un/observable
-    # if "obs" in G.es.attributes():
-    #     if G.es["obs"]:
-    #         set_obs_attr(G.es(), H_o.es())
-
-    # return H_o
 
 
 def set_obs_attr(G_es, H_o_es):
