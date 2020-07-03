@@ -149,7 +149,7 @@ def construct_T(
             for e in Eo.intersection(gamma):
 
                 nxstates = {v[0] for i in states for v in G.vs["out"][i] if v[1] == e}
-                print(nxstates)
+                # print(nxstates)
                 if nxstates:
                     vertex_counter = Q1_add_state(
                         nxstates,
