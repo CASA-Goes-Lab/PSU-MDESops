@@ -16,7 +16,7 @@ def inserted_event(event):
     return Event(label, d)
 
 
-def deleted_event(label):
+def deleted_event(event):
     """
     Creates a new event matching the given label with the
         insered=False
