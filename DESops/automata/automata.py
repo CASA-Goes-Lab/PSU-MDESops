@@ -483,12 +483,12 @@ class _Automata:
         while len(states_stack) > 0:
             state = states_stack.pop()
             dests_by_unobs = [
-                out[0] for out in self.vs[state]["out"] if out[1] in self.Euo
+                out[0]
+                for out in self.vs[state]["out"]
+                if out[1] in self.Euo and out[0] not in visited
             ]
-            for dest in dests_by_unobs:
-                if dest not in visited:
-                    visited.add(dest)
-                    states_stack.append(dest)
+            visited |= dests_by_unobs
+            states_stack.extend(dests_by_unobs)
 
         return visited
 
