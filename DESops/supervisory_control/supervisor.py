@@ -85,7 +85,7 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
         ):
             futures.append(
                 executor.submit(
-                    __find_bad_states_nomal, H_indecies, all_Gobs_names, all_H_names, i
+                    __find_bad_states_normal, H_indecies, all_Gobs_names, all_H_names, i
                 )
             )
 
@@ -95,13 +95,13 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
     return bad_states
 
 
-def __find_bad_states_nomal(
+def __find_bad_states_normal(
     H_indecies: List[int], Gobs_names: List[str], H_names: List[str], barpos: int
 ) -> StateSet:
     bad_states = set()
     for index in tqdm(
         H_indecies,
-        desc="Nomarlity",
+        desc="Normality",
         disable=SHOW_PROGRESS is False,
         leave=False,
         position=barpos,
