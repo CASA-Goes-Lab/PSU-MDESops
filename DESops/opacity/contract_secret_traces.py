@@ -11,7 +11,7 @@ from DESops.basic_operations.ureach import (
 )
 
 
-def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
+def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
     """
     Function contracting unobservable events while preserving secrecy properties.
 
@@ -31,9 +31,17 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
 
     Parameters:
     g: given automaton with secret states
+
+    secret_type: what behavior marks an observation period as secret
+        1: an observation period is secret if it contains ANY secret state
+        2: an observation period is secret if it contains ONLY secret states
+    default is 1
+
     h: where to put the result of the construction
+        if not specified, a new automaton will be constructed and returned
+
     Euo: set of unobservable events
-    anyNonsecIsNonsec:  if true then visiting a secret state is secret, if false then not visiting a nonsecret state is
+        if not specified, Euo will be determined from g.Euo
     """
     h_defined = True
     if h is None:
@@ -53,6 +61,8 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
     h.add_vertices(len(R), [(ind, 1) for ind in R])
     h.add_vertices(len(R), [(ind, 0) for ind in R])
 
+    h.vs["marked"] = True
+
     h.vs.select(range(len(R)))["orig_vert"] = Rlist
     h.vs.select(range(len(R)))["secret"] = True
     h.vs.select(range(len(R), 2 * len(R)))["orig_vert"] = Rlist
@@ -66,7 +76,7 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
     for r in R:
         x_ureach = set()
         unobservable_reach(x_ureach, r, g._graph, Euo)
-        if any_nonsec_is_nonsec:
+        if secret_type == 2:
             if not all(g.vs.select(x_ureach)["secret"]):
                 Rns.add(r)
             if g.vs["secret"][r]:
@@ -89,7 +99,7 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
 
         secret_succ = set()
         nonsecret_succ = set()
-        if any_nonsec_is_nonsec:
+        if secret_type == 2:
             ureach_ignore_states(secret_succ, r, g, Euo, orig_nonsecret_set)
             nonsecret_ureach = set(g.vs.select(ureach, secret=False).indices)
             ureach_from_set(nonsecret_succ, nonsecret_ureach, g._graph, Euo)
@@ -108,7 +118,6 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
                 if e.target in Rs
             ],
             labels=[e["label"] for e in obs_sec_succ_events if e.target in Rs],
-            fill_out=True,
         )
         h.add_edges(
             [
@@ -117,7 +126,6 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
                 if e.target in Rns
             ],
             labels=[e["label"] for e in obs_sec_succ_events if e.target in Rns],
-            fill_out=True,
         )
         h.add_edges(
             [
@@ -126,7 +134,6 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
                 if e.target in Rs
             ],
             labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rs],
-            fill_out=True,
         )
         h.add_edges(
             [
@@ -135,8 +142,9 @@ def contract_secret_traces(g, h=None, Euo=None, any_nonsec_is_nonsec=False):
                 if e.target in Rns
             ],
             labels=[e["label"] for e in obs_nonsec_succ_events if e.target in Rns],
-            fill_out=True,
         )
+
+    h.generate_out()
 
     if not h_defined:
         return h
