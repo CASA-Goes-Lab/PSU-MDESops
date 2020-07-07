@@ -19,7 +19,6 @@ pydash = "^4.7.6"
 requests = "^2.24.0"
 dd = "^0.5.5"
 tqdm = "^4.46.1"
-joblib = "^0.15.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
