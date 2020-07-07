@@ -1,6 +1,9 @@
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum, auto
-from typing import Optional, Set, Tuple
+from os import cpu_count
+from typing import List, Optional, Set, Tuple
 
+import pydash
 from tqdm import tqdm
 
 from DESops.automata import DFA
@@ -18,6 +21,7 @@ EventSet = Set[Event]
 StateSet = Set[int]
 
 SHOW_PROGRESS = False
+MAX_PROCESSES = cpu_count()
 
 
 def supremal_sublanguage(
@@ -72,11 +76,41 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
     Check the normality condition of states H and returns states violating the condition.
     """
     bad_states = set()
-    all_states = set(H.vs["name"])
-    for y in tqdm(H.vs, desc="Nomarlity", disable=SHOW_PROGRESS is False):
-        for q in G_obs.vs["name"]:
-            if y["name"] in q and not set(q) <= all_states:
-                bad_states.add(y.index)
+    all_H_names = H.vs["name"]
+    all_Gobs_names = G_obs.vs["name"]
+    with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
+        futures = []
+        for i, H_indecies in enumerate(
+            pydash.chunk(range(H.vcount()), H.vcount() // MAX_PROCESSES)
+        ):
+            futures.append(
+                executor.submit(
+                    __find_bad_states_nomal, H_indecies, all_Gobs_names, all_H_names, i
+                )
+            )
+
+        for f in as_completed(futures):
+            bad_states |= f.result()
+
+    return bad_states
+
+
+def __find_bad_states_nomal(
+    H_indecies: List[int], Gobs_names: List[str], H_names: List[str], barpos: int
+) -> StateSet:
+    bad_states = set()
+    for index in tqdm(
+        H_indecies,
+        desc="Nomarlity",
+        disable=SHOW_PROGRESS is False,
+        leave=False,
+        position=barpos,
+        mininterval=0.5,
+    ):
+        y = H_names[index]
+        for q in Gobs_names:
+            if y in q and not set(q) <= set(H_names):
+                bad_states.add(index)
                 break
 
     return bad_states
@@ -87,19 +121,61 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
     Check the controllability condition of states in H and returns states violating the condition.
     """
 
-    G_name_index = {v["name"]: v for v in G.vs}
+    G_all_states = {v["name"]: v["out"] for v in G.vs}
+    H_all_states = {v["name"]: {"index": v.index, "out": v["out"]} for v in H.vs}
+    bad_states = set()
+    Euc = G.Euc
+
+    with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
+        futures = []
+        for i, H_names in enumerate(
+            pydash.chunk(list(H_all_states.keys()), len(H_all_states) // MAX_PROCESSES)
+        ):
+            futures.append(
+                executor.submit(
+                    __find_bad_states_controllable,
+                    H_names,
+                    H_all_states,
+                    G_all_states,
+                    Euc,
+                    i,
+                )
+            )
+
+        for f in as_completed(futures):
+            bad_states |= f.result()
+
+    return bad_states
+
+
+def __find_bad_states_controllable(
+    H_names_to_check: List[str],
+    H_all_states: dict,
+    G_all_states: dict,
+    Euc: EventSet,
+    barpos: int,
+) -> StateSet:
     bad_states = set()
 
     # States at which the supervisor improperly disables uncontrollable events must be removed.
-    for xH in tqdm(H.vs, desc="Controllability", disable=SHOW_PROGRESS is False):
-        xG = G_name_index[xH["name"]]
-        xG_out_events = {x[1] for x in xG["out"]}
+    for H_name in tqdm(
+        H_names_to_check,
+        desc="Controllability",
+        disable=SHOW_PROGRESS is False,
+        leave=False,
+        position=barpos,
+        mininterval=0.5,
+    ):
+        xH = H_all_states[H_name]
+        xG = G_all_states[H_name]
+
+        xG_out_events = {x[1] for x in xG}
         xH_out_events = {x[1] for x in xH["out"]}
 
         if xG_out_events != xH_out_events:
             for e in xG_out_events - xH_out_events:
-                if e in G.Euc:
-                    bad_states.add(xH.index)
+                if e in Euc:
+                    bad_states.add(xH["index"])
                     break
 
     return bad_states
