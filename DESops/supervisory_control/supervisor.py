@@ -131,20 +131,4 @@ def preprocessing(
     H.vs["name"] = [str(i) for i in range(H.vcount())]
     H.delete_vertices(dead_states)
 
-    # H_names = {v["name"]: str(v.index) for v in H.vs}
-    # H.vs["name"] = list(H_names.values())
-    # G_name_index = H.vcount()
-    # new_names = []
-    # for v in tqdm(G.vs, desc="Renaming G states", disable=SHOW_PROGRESS is False):
-    #     name = H_names.get(v["name"])
-    #     if name is not None:
-    #         new_name = name
-    #     else:
-    #         new_name = str(G_name_index)
-    #         G_name_index += 1
-
-    #     new_names.append(new_name)
-
-    # G.vs["name"] = new_names
-
     return G, H
