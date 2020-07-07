@@ -111,7 +111,7 @@ copy_event_sets
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Iterable
-from typing import Set, TypeVar
+from typing import Set, Union
 
 from DESops.automata.event.event import Event
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
@@ -122,7 +122,7 @@ from DESops.error import (
     MissingAttributeError,
 )
 
-State_or_StateSet = TypeVar("State_or_StateSet", int, Set[int])
+State_or_StateSet = Union[int, Set[int]]
 
 
 try:

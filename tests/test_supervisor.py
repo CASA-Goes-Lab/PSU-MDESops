@@ -48,7 +48,7 @@ def test_preprocess():
     G = util.load_model("models/textbook/fig_3-21_G.fsm")
     H = util.load_model("models/textbook/fig_3-21_H.fsm")
 
-    Gpp, Hpp = sup.preprocessing(G, H)
+    Gpp, Hpp = sup.preprocessing(G, H, skip_subautomata=True)
     pass
 
 

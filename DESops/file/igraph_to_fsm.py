@@ -76,7 +76,7 @@ def write_fsm(fsm_filename, automaton, plot_prob=False, flatten_state_name=False
             f.write("\n")
             for trans in edge_seq:
                 if isinstance(trans["label"], Event):
-                    f.write(str(trans["label"]))
+                    f.write(trans["label"].label)
                 else:
                     f.write(str2(trans["label"]))
                 f.write("\t")

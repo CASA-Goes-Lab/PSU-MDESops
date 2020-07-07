@@ -49,15 +49,15 @@ def supremal_sublanguage(
     while True:
         deleted_states = set()
         if mode in [Mode.NORMAL, Mode.CONTROLLABLE_NORMAL]:
-            bad_states_to_normal = check_normality(H, G_obs)
-            H.delete_vertices(bad_states_to_normal)
-            deleted_states |= bad_states_to_normal
+            bad_states_for_normality = check_normality(H, G_obs)
+            H.delete_vertices(bad_states_for_normality)
+            deleted_states |= bad_states_for_normality
         if mode in [Mode.CONTROLLABLE, Mode.CONTROLLABLE_NORMAL]:
             inacc_states = unary.find_inacc(H)
             H.delete_vertices(inacc_states)
-            bad_states_to_controllable = check_controllability(H, G)
-            H.delete_vertices(bad_states_to_controllable)
-            deleted_states |= inacc_states | bad_states_to_controllable
+            bad_states_for_controllability = check_controllability(H, G)
+            H.delete_vertices(bad_states_for_controllability)
+            deleted_states |= inacc_states | bad_states_for_controllability
 
         bad_states_to_trim = unary.trim(H)
         H.delete_vertices(bad_states_to_trim)
@@ -107,7 +107,9 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
     return bad_states
 
 
-def preprocessing(G_given: DFA, H_given: DFA) -> Tuple[DFA, DFA]:
+def preprocessing(
+    G_given: DFA, H_given: DFA, skip_subautomata=False
+) -> Tuple[DFA, DFA]:
     """
     Preprocess to obtain G and H such that
         1. H is a strict subautomaton of G
@@ -115,27 +117,36 @@ def preprocessing(G_given: DFA, H_given: DFA) -> Tuple[DFA, DFA]:
     """
 
     # 1. Construct G_tilde and H_tilde from G_given and H_given such that H_tilde is a strict subautomaton of G_tilde.
-    H_tilde, G_tilde = composition.strict_subautomata(H_given, G_given)
+    if skip_subautomata:
+        G_tilde = G_given
+    else:
+        _, G_tilde = composition.strict_subautomata(H_given, G_given, skip_H_tilde=True)
 
     # 2. Construct G which is an SPA.
     G_obs = composition.observer(G_tilde)
-    G = parallel_comp([G_tilde, G_obs])
+    G = composition.parallel_bfs(G_tilde, G_obs)
 
     # 3. Extract H from G by deleteing all states ((x, y), z) of G where x = "dead".
     H = G.copy()
     dead_states = [v.index for v in H.vs if v["name"][0][0] == "dead"]
+    G.vs["name"] = [str(i) for i in range(G.vcount())]
+    H.vs["name"] = [str(i) for i in range(H.vcount())]
     H.delete_vertices(dead_states)
 
-    H_names = {str(v.index): v["name"] for v in H.vs}
-    H.vs["name"] = list(H_names.keys())
-    G_name_index = H.vcount()
-    for v in tqdm(G.vs, desc="Renaming G states", disable=SHOW_PROGRESS is False):
-        name = pydash.find(H_names.keys(), lambda k: H_names[k] == v["name"])
-        if name is not None:
-            new_name = name
-        else:
-            new_name = str(G_name_index)
-            G_name_index += 1
-        G.vs[v.index].update_attributes({"name": new_name})
+    # H_names = {v["name"]: str(v.index) for v in H.vs}
+    # H.vs["name"] = list(H_names.values())
+    # G_name_index = H.vcount()
+    # new_names = []
+    # for v in tqdm(G.vs, desc="Renaming G states", disable=SHOW_PROGRESS is False):
+    #     name = H_names.get(v["name"])
+    #     if name is not None:
+    #         new_name = name
+    #     else:
+    #         new_name = str(G_name_index)
+    #         G_name_index += 1
+
+    #     new_names.append(new_name)
+
+    # G.vs["name"] = new_names
 
     return G, H

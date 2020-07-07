@@ -56,7 +56,7 @@ class DFA(_Automata):
         # AVOID MULTIPLE TESTS. IF IT IS A DFA COPY, DEFINED BASED ON OPERATIONS ON DFAS THEN NO NEED TO CHECK
         # ONLY CHECK IF init IS A FRESH IGRAPH INSTANCE
 
-    def add_edges(self, pair_list, labels, check_DFA=True, fill_out=False):
+    def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True):
         """
         Add an iterable of edges to the DFA instance.
         Calls the igraph Graph add_edges() method on the underlying graph
@@ -82,15 +82,15 @@ class DFA(_Automata):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
+
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
         self.events.update(labels)
-
         self._graph.add_edges(pair_list)
-
         self._graph.es["label"] = new_labels
 
-        self.generate_out()
+        if fill_out:
+            self.generate_out()
 
         if check_DFA:
             dict_out = dict()
