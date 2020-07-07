@@ -521,7 +521,7 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     all_events = set(H.es["label"]) | set(G.es["label"])
     edges_to_dead = []
     for x in H.vs:
-        active_events = {out[1] for out in H.vs[x.index]["out"]}
+        active_events = {out[1] for out in x["out"]}
         non_active_events = all_events - active_events
         edges_to_dead.extend(
             [
