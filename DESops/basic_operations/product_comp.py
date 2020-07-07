@@ -9,7 +9,7 @@ previously those functions were implemented in both product_comp and
 parallel_comp but were essentially redundant.
 """
 import sys
-from collections import OrderedDict
+import warnings
 
 import DESops.automata as automata
 

@@ -1,13 +1,11 @@
 from enum import Enum, auto
 from typing import Optional, Set, Tuple
 
-import pydash
 from tqdm import tqdm
 
 from DESops.automata import DFA
 from DESops.automata.event.event import Event
 from DESops.basic_operations import composition, unary
-from DESops.basic_operations.parallel_comp import parallel_comp
 
 
 class Mode(Enum):
