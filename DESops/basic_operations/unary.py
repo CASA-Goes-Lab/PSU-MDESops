@@ -2,13 +2,9 @@
 Functions relevant to unary operations
 """
 
-import warnings
-
-from tqdm import tqdm
+from collections import deque
 
 from DESops.automata.automata import _Automata
-
-SHOW_PROGRESS = False
 
 
 def trim(G: _Automata) -> set:
@@ -27,21 +23,17 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
 
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
-    Q = list()
-    Q.append({0})
-    good_states = set()
-    good_states.add(0)
-    while Q:
-        q = Q.pop(0)
+    good_states = {0}
+    stack = deque(good_states)
+    while len(stack) > 0:
+        index = stack.pop()
         neighbors = {
-            t.target
-            for t in G.es(_source_in=q)
-            if t.target not in good_states and t.target not in states_removed
+            out[0]
+            for out in G.vs[index]["out"]
+            if out[0] not in good_states and out[0] not in states_removed
         }
-        if not neighbors:
-            continue
-        good_states.update(neighbors)
-        Q.append(frozenset(neighbors))
+        good_states |= neighbors
+        stack.extend(neighbors)
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
@@ -54,30 +46,24 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
 
-    marked_states = {v.index for v in G.vs.select(marked_eq=True)}
-    good_states = set()
+    good_states = {
+        v.index for v in G.vs.select(marked_eq=True) if v.index not in states_removed
+    }
+    if len(good_states) == 0:
+        return {i for i in range(G.vcount())}
 
-    if len(marked_states) == 0:
-        return good_states
+    # backtrack states from marked states
+    stack = deque(good_states)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        for x in tqdm(G.vs, desc="CoAccessible", disable=SHOW_PROGRESS is False):
-            state = x.index
-            if state in states_removed or state in good_states:
-                continue
-
-            if state in marked_states:
-                good_states.add(state)
-                continue
-
-            for mstate in marked_states:
-                shortest_paths = G._graph.get_shortest_paths(state, mstate)
-                if len(shortest_paths[0]) > 0:
-                    for path in shortest_paths:
-                        good_states |= set(path)
-
-                    break
+    while len(stack) > 0:
+        index = stack.pop()
+        src_states = {
+            src.index
+            for src in G.vs[index].predecessors()
+            if src.index not in good_states and src.index not in states_removed
+        }
+        good_states |= src_states
+        stack.extend(src_states)
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
