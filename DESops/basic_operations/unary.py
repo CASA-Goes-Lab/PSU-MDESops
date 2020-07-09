@@ -2,6 +2,7 @@
 Functions relevant to unary operations
 """
 
+import warnings
 from collections import deque
 
 from DESops.automata.automata import _Automata
@@ -23,6 +24,10 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
 
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
+    if G.vcount() == 0:
+        warnings.warn("Ac(): the given automaton is empty.")
+        return set()
+
     good_states = {0}
     stack = deque(good_states)
     while len(stack) > 0:
@@ -45,6 +50,9 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
 
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
+    if G.vcount() == 0:
+        warnings.warn("CoAc(): the given automaton is empty.")
+        return set()
 
     good_states = {
         v.index for v in G.vs.select(marked_eq=True) if v.index not in states_removed
