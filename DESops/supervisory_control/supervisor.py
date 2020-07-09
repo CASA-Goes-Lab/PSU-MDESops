@@ -65,7 +65,7 @@ def supremal_sublanguage(
         H.delete_vertices(bad_states_to_trim)
         deleted_states |= bad_states_to_trim
 
-        if H.vcount() == 0:
+        if H.vcount() == 0 or 0 in deleted_states:
             return None
         elif len(deleted_states) == 0:
             return H
