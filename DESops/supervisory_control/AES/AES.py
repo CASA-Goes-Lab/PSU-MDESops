@@ -2,12 +2,14 @@ import itertools
 import os
 import subprocess
 import time
+from collections import deque
 
 import igraph as ig
+import pydash
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
-from DESops.basic_operations.ureach import ureach_from_set_adj
+from DESops.basic_operations.ureach import ureach_from_set_adj, ureach_from_set_adjdict
 from DESops.supervisory_control import supr_contr
 
 
@@ -17,6 +19,7 @@ def construct_AES(G, X_crit, compact=False):
     # X_crit: safety specification based on name of the states
 
     # Computing the control decision set
+    process_G(G)
     Eo = G.events - G.Euo
     if compact:
         # Finding the compact control decision set
@@ -38,7 +41,7 @@ def construct_AES(G, X_crit, compact=False):
     # transitions labels map labels to transitions h1, h2
     labelh1, labelh2 = list(), list()
     Q1[frozenset({0})] = 0
-    queue = list()
+    queue = deque()
     Qname.append(setvs2statename(G, {0}))
     Qcrit.append(0)
     queue.append({0})
@@ -80,40 +83,38 @@ def construct_T(
     vertex_counter = 1
 
     Eo = G.events - G.Euo
-
+    Euo = frozenset(G.Euo)
     # used to not recompute UR
     UR_state_classes = dict()
     n = 0
     # queue holds states that must be visited
+    sumq1, sumq2 = 0, 0
     while queue:
-        # if len(Qname) > 50000:
-        #     # print("large state space")
-        #     # releasing memory of lists and pushing to igraph: just leave the dict
-        #     n = n + vertex_counter
-        #     print("BTS has %i states", n)
-        #     A.add_vertices(len(Qname), Qname)
-        #     Qname = list()
-        #     A.vs["crit"] = Qcrit
-        #     Qcrit = list()
-        #     A.add_edges(h1, labelh1)
-        #     A.add_edges(h2, labelh2)
-        #     h1, h2, labelh1, labelh2 = list(), list(), list(), list()
-        #     vertex_counter = 0
-        q = queue.pop(0)
+
+        q = queue.popleft()
 
         if Q1_state(q):
+
             qvs = frozenset(q)
-            # start_time = time.process_time()
-            # Finding the feasible control decision
-            if (qvs, frozenset(G.Euo)) not in UR_state_classes:
-                qureach = ureach_from_set_adj(qvs, G._graph, G.Euo)
-                ctr = feasible_control_decisions(qureach, Gamma, G)
-                UR_state_classes[(qvs, frozenset(G.Euo))] = qureach
-            else:
-                qureach = UR_state_classes[qvs, frozenset(G.Euo)]
-                ctr = feasible_control_decisions(qureach, Gamma, G)
-            for gamma in ctr:
-                if (qvs, frozenset(G.Euo.intersection(gamma))) not in UR_state_classes:
+            start_time = time.process_time()
+            # Finding the feasible control decision (SLOWER THAN WITHOUT IT)
+            # if (qvs, Euo) in UR_state_classes:
+            #     qureach = UR_state_classes[qvs, Euo]
+            #     ctr = feasible_control_decisions(qureach, Gamma, G)
+            # else:
+            #     qureach = ureach_from_set_adj(qvs, G._graph, G.Euo)
+            #     ctr = feasible_control_decisions(qureach, Gamma, G)
+            #     UR_state_classes[(qvs, Euo)] = qureach
+
+            # print(len(ctr))
+
+            for gamma in Gamma:
+                if (qvs, frozenset(G.Euo.intersection(gamma))) in UR_state_classes:
+
+                    q2_state = UR_state_classes[
+                        (qvs, frozenset(G.Euo.intersection(gamma)))
+                    ]
+                else:
                     q2_state = ureach_from_set_adj(
                         qvs, G._graph, G.Euo.intersection(gamma)
                     )
@@ -121,11 +122,6 @@ def construct_T(
                     UR_state_classes[
                         (qvs, frozenset(G.Euo.intersection(gamma)))
                     ] = q2_state
-
-                else:
-                    q2_state = UR_state_classes[
-                        (qvs, frozenset(G.Euo.intersection(gamma)))
-                    ]
                 q2 = (q2_state, gamma)
                 vertex_counter = Q2_add_state(
                     Q1[qvs],
@@ -141,16 +137,20 @@ def construct_T(
                     X_crit,
                     n,
                 )
-            # print(time.process_time() - start_time)
+            sumq1 = sumq1 + time.process_time() - start_time
 
         if Q2_state(q):
+            start_time = time.process_time()
             gamma = q[1]
             states = q[0]
             # print(gamma,Eo.intersection(gamma))
+            inter = Eo.intersection(gamma)
+            for e in inter:
 
-            for e in Eo.intersection(gamma):
-
-                nxstates = {v[0] for i in states for v in G.vs["out"][i] if v[1] == e}
+                # nxstates = {v[0] for i in states for v in G.vs["out"][i] if v[1] == e}
+                nxstates = {
+                    G.vs["out_dict"][i][e] for i in states if e in G.vs["out_dict"][i]
+                }
                 # print(nxstates)
                 if nxstates:
                     vertex_counter = Q1_add_state(
@@ -168,11 +168,16 @@ def construct_T(
                         X_crit,
                         n,
                     )
+            sumq2 = sumq2 + time.process_time() - start_time
+    print(sumq1 / len(Q1), sumq2 / len(Q2))
 
     # Creating BTS as DFA
     if Qname:
-        A.add_vertices(len(Qname), Qname)
-        A.vs["crit"] = Qcrit
+        args = {"crit": Qcrit}
+        A.add_vertices(len(Qname), Qname, **args)
+        # h1.extend(h2)
+        # labelh1.extend(labelh2)
+        # print(len(h1),len(labelh1))
         A.add_edges(h1, labelh1)
         A.add_edges(h2, labelh2)
 
@@ -189,7 +194,8 @@ def construct_T(
 
 
 def feasible_control_decisions(q, Gamma, G):
-    possible_events = set(G.es(_source_in=q)["label"])
+    # possible_events = set(G.es(_source_in=q)["label"])
+    possible_events = {e for s in q for t, e in G.vs["out"][s]}
     all_sets = set()
     for l in range(len(possible_events) + 1):
         all_sets.update(
@@ -241,6 +247,15 @@ def Q1_add_state(
     return v_counter
 
 
+def process_G(G):
+    out_list = list()
+    for i, s in enumerate(G.vs):
+        out = G.vs["out"][i]
+        out_dict = {e: t for (t, e) in out}
+        out_list.append(out_dict)
+    G.vs["out_dict"] = out_list
+
+
 # Adds Q2 state to lists
 def Q2_add_state(q1, q2, G, Qname, Qcrit, Q2, h1, labelh1, queue, v_counter, X_crit, n):
     q20 = frozenset(q2[0])
@@ -281,15 +296,18 @@ def find_compact_control_decisions_sets(E, Euc, Euo):
     Ecuo = list(Ec.intersection(Euo))
     Eco = list(Ec.intersection(E - Euo))
     # print(Ec,Ecuo,Eco)
-    GammaEcuo = list()
+    GammaEcuo = set()
     for l in range(len(Ec) + 1):
-        GammaEcuo.extend(
-            [frozenset(Euc.union(comb)) for comb in itertools.combinations(Ecuo, l)]
+        GammaEcuo = GammaEcuo.union(
+            set(
+                [frozenset(Euc.union(comb)) for comb in itertools.combinations(Ecuo, l)]
+            )
         )
-    Gamma = list()
+    # print(GammaEcuo)
+    Gamma = set()
     for e in Eco:
-        Gamma.extend([frozenset(gamma.union({e})) for gamma in GammaEcuo])
-    Gamma.extend(GammaEcuo)
+        Gamma = Gamma.union(set([frozenset(gamma.union({e})) for gamma in GammaEcuo]))
+    Gamma = Gamma.union(GammaEcuo)
     # print(Gamma)
     return Gamma
 
@@ -303,7 +321,7 @@ def find_control_decisions_sets(E, Euc):
         Gamma.extend(
             [frozenset(Euc.union(comb)) for comb in itertools.combinations(Ec, l)]
         )
-    return Gamma
+    return set(Gamma)
 
 
 # Transforms a control decision to string

@@ -123,6 +123,42 @@ def ureach_from_set_adj(S, g, e):
     return x_set
 
 
+def ureach_from_set_adjdict(S, g, e):
+    """
+    Find the collected unobservable reach for all states in S
+    S: set of states to search from (graph indicies)
+    g: graph to search
+    e: set of unobservable events to consider
+    """
+    x_set = set()
+    x_set.update(S)
+    if not e:
+        return x_set
+
+    # adj_S = [t for s in S for t in g.vs["adj"][s] if t[1] in e and t[0] not in x_set]
+    # print(S,adj_S)
+    # uc_neighbors = {t.target for t in g.es(_source_in = S) if t["label"] in e and t.target not in x_set}
+    uc_neighbors = {
+        g.vs["out_dict"][s][ev]
+        for s in S
+        for ev in e
+        if ev in g.vs["out_dict"][s] and g.vs["out_dict"][s][ev] not in x_set
+    }
+    # print(uc_neighbors)
+    while uc_neighbors:
+        x_set.update(uc_neighbors)
+        uc_neighbors = {
+            g.vs["out_dict"][s][ev]
+            for s in uc_neighbors
+            for ev in e
+            if ev in g.vs["out_dict"][s] and g.vs["out_dict"][s][ev] not in x_set
+        }
+        # print(uc_neighbors)
+        # uc_neighbors = {t.target for t in g.es(_source_in = uc_neighbors) if t["label"] in e and t.target not in x_set}
+
+    return x_set
+
+
 def ureach_from_set_adjlist(S, g, e, adj_list):
     x_set = set()
     x_set.update(S)
