@@ -1,8 +1,9 @@
 import DESops as d
 from tests.util import load_model
 
-joint_k_step_methods = ["mapping", "language", "state", "unified"]
-separate_k_step_methods = ["mapping", "language", "unified"]
+joint_k_step_methods = ["mapping", "language", "state", "state-observer", "unified"]
+separate_k_step_methods = ["mapping", "language", "state-observer", "unified"]
+joint_infinite_step_methods = ["language", "unified"]
 
 
 def test_current_state_opacity():
@@ -87,9 +88,11 @@ def test_joint_infinite_step_opacity():
     g.vs["secret"] = False
     g.vs[2]["secret"] = True
 
-    assert d.opacity.verify_infinite_step_opacity(g) is True
+    for m in joint_infinite_step_methods:
+        assert d.opacity.verify_infinite_step_opacity(g, method=m) is True
 
     g.vs["secret"] = False
     g.vs[4]["secret"] = True
 
-    assert d.opacity.verify_infinite_step_opacity(g) is False
+    for m in joint_infinite_step_methods:
+        assert d.opacity.verify_infinite_step_opacity(g, method=m) is False

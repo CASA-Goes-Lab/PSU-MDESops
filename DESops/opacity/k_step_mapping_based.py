@@ -12,13 +12,12 @@ def verify_k_step_opacity_mapping_based(
     """
     Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
+    Returns opaque(, num_states)
+
     Parameters:
     g: the automaton
     k: the number of steps
-
-    return_num_states: if true, the function will return a (bool, int) tuple where:
-        first return value tells whether g is k-step opaque
-        second return value is the number of states in the K-delay estimator
+    return_num_states: if True, the number of states in the constructed estimator is returned as an additional value
     """
     if secret_type is None:
         if joint:

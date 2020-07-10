@@ -2,27 +2,33 @@
 Functions related to the alternative method for k-step and infinite-step opacity that is based on language inclusion
 """
 from DESops.automata.NFA import NFA
-from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp_old
-from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
+from DESops.opacity.language_functions import language_inclusion
 
 
 def verify_k_step_opacity_language_based(
-    g, k, joint=True, secret_type=None, return_num_states=False
+    g,
+    k,
+    joint=True,
+    secret_type=None,
+    return_num_states=False,
+    return_violating_path=False,
 ):
     """
     Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
+    Returns: opaque(, num_states)(, violating_path)
+
     Parameters:
     g: the automaton
     k: the number of steps
-
-    return_num_states: if true, the function will return a (bool, int) tuple where:
-        first return value tells whether g is k-step opaque
-        second return value is the number of states in the product automaton constructed when checking language inclusion
+    return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
+    return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
     """
+    if "e_ext" in set(g.es["label"]):
+        raise ValueError("e_ext is a reserved event label")
+
     if secret_type is None:
         if joint:
             secret_type = 1
@@ -45,8 +51,6 @@ def verify_k_step_opacity_language_based(
 
     else:
         # add self loops to each state so that runs reaching a dead state can be extended
-        if "e_ext" in set(g.es["label"]):
-            raise ValueError("e_ext is a reserved event label")
         g_c.add_edges(
             [(i, i) for i in range(g_c.vcount())],
             ["e_ext"] * g_c.vcount(),
@@ -61,20 +65,31 @@ def verify_k_step_opacity_language_based(
         reverse(g_c, inplace=True)
         reverse(h, inplace=True)
 
-    return language_inclusion(g_c, h, Eo, return_num_states)
+    return_tuple = language_inclusion(
+        g_c, h, Eo, return_num_states, return_violating_path
+    )
+
+    if return_violating_path:
+        path = return_tuple[-1]
+        if path:
+            while "e_ext" in path:
+                path.remove("e_ext")
+
+    return return_tuple
 
 
 def verify_joint_infinite_step_opacity_language_based(
-    g, secret_type=1, return_num_states=False
+    g, secret_type=1, return_num_states=False, return_violating_path=False
 ):
     """
     Returns whether the given automaton with unobservable events and secret states is joint infinite-step opaque
 
+    Returns: opaque(, num_states)(, violating_path)
+
     Parameters:
     g: the automaton
-    return_num_states: if true, the function will return a (bool, int) tuple where:
-        first return value tells whether g is k-step opaque
-        second return value is the number of states in the product automaton constructed when checking language inclusion
+    return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
+    return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
     """
     Euo = g.Euo
     Eo = set(g.es["label"]).difference(Euo)
@@ -84,7 +99,7 @@ def verify_joint_infinite_step_opacity_language_based(
     h = g_c.copy()
     h.delete_vertices([v for v in h.vs if v["secret"]])
 
-    return language_inclusion(g_c, h, Eo, return_num_states)
+    return language_inclusion(g_c, h, Eo, return_num_states, return_violating_path)
 
 
 def construct_unfolded(g, k, joint=True):
@@ -176,32 +191,3 @@ def construct_unfolded(g, k, joint=True):
             h.vs["marked"] = [(state[1] == 0) for state in h.vs["name"]]
 
     return h
-
-
-def language_inclusion(g, h, Eo, return_num_states=False):
-    """
-    Returns whether the language marked by g is a subset of the language marked by h
-
-    Note: Only use this if the event sets are the same for both automata
-
-    g, h: the two automata
-    Eo: the set of observable events
-
-    return_num_states: if true, the function will return a (bool, int) tuple where:
-        first return value tells whether g is k-step opaque
-        second return value is the number of states in the product g x det(h)^c
-    """
-    h_det = observer_comp_old(h, save_marked_states=True)
-    complement(h_det, inplace=True, events=Eo)
-
-    prod = product_NFA([g, h_det], save_marked_states=True)
-
-    opaque = True
-    for v in prod.vs:
-        if v["marked"]:
-            opaque = False
-
-    if return_num_states:
-        return opaque, prod.vcount()
-
-    return opaque
