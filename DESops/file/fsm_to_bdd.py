@@ -30,14 +30,17 @@ def read_fsm_to_bdd(fsm_filename):
         n_events = int(line[1])
         bdd = BDD()
         bdd.configure(reordering=True)
+        states = set()
+        events = set()
         for k in range(n_states.bit_length()):
             name_t = "".join(["s", str(k)])
+            states.add(name_t)
             name_s = "".join(["t", str(k)])
             bdd.declare(name_s, name_t)
         for k in range(n_events.bit_length()):
             name_e = "".join(["e", str(k)])
             bdd.declare(name_e)
-
+            events.add(name_e)
         # next(f)
         index = 0
         index_event = 0
@@ -63,7 +66,7 @@ def read_fsm_to_bdd(fsm_filename):
             states_tuple[0] = ast.literal_eval(name) if name[0] == "(" else name
             if states_tuple[0] not in state_names:
                 binary = bin(index)[2:]
-                binary = binary.zfill(n_states.bit_length() - len(binary))
+                binary = binary.zfill(n_states.bit_length())
                 state_names[states_tuple[0]] = binary
                 index += 1
             source = state_names[states_tuple[0]]
@@ -92,14 +95,14 @@ def read_fsm_to_bdd(fsm_filename):
                 )
                 if trans_tuple[1] not in state_names:
                     binary = bin(index)[2:]
-                    binary = binary.zfill(n_states.bit_length() - len(binary))
+                    binary = binary.zfill(n_states.bit_length())
                     state_names[trans_tuple[1]] = binary
                     index += 1
                 target = state_names[trans_tuple[1]]
                 new_ev = False
                 if trans_tuple[0] not in event_names:
                     binary = bin(index_event)[2:]
-                    binary = binary.zfill(n_events.bit_length() - len(binary))
+                    binary = binary.zfill(n_events.bit_length())
                     event_names[trans_tuple[0]] = binary
                     index_event += 1
                     new_ev = True
@@ -116,7 +119,7 @@ def read_fsm_to_bdd(fsm_filename):
                         uctr = event_bdd_formula(event)
                     else:
                         uctr = " | ".join([uctr, event_bdd_formula(event)])
-                if trans_tuple[2] == "uo" and new_ev:
+                if trans_tuple[3] == "uo" and new_ev:
                     if uobs == "":
                         uobs = event_bdd_formula(event)
                     else:
@@ -150,8 +153,8 @@ def read_fsm_to_bdd(fsm_filename):
         "transitions": transitions,
         "uctr": uctr,
         "uobs": uobs,
-        "states": state_names,
-        "events": event_names,
+        "states": (state_names, states),
+        "events": (event_names, events),
     }
     G = DFA(**args)
     # A DFA CLASS MUST HAVE A BDD OPTIONAL

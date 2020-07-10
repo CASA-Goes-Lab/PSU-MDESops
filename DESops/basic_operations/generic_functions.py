@@ -111,12 +111,78 @@ def write_transition_attributes(G, Euc=set(), Euo=set()):
 def next_state_symbolic(state, event, G):
     # computes next state given set of state and set of event and DFA G
     # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables) and event is a formula over variables e0,...,em (event variables)
+    # Normally state is a set of states and events is a set of observable events
     # returns a formula over source variables again
 
     next_state = G.symbolic["transitions"] & state & event
-    bvar = {"s0", "s1", "e0"}
+    bvar = G.symbolic["states"].union(G.symbolic["events"])
+    subs = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
     next_state = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
+    next_state = G.symbolic["bdd"].let(subs, next_state)
     G.symbolic["bdd"].collect_garbage()
-    print(next_state.to_expr())
-    print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    # print(next_state.to_expr())
+    # print(list(G.symbolic["bdd"].pick_iter(next_state)))
     return next_state
+
+
+def ureach_symbolic(state, event, G):
+    # computes ureach state set given set of state and set of event and DFA G
+    # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables) and event is a formula over variables e0,...,em (event variables)
+    # Used as state represents a set of states and event represents a set of unobservable events
+    # returns a formula over source variables again
+
+    transitions = G.symbolic["transitions"]
+    bvar = G.symbolic["states"].union(G.symbolic["events"])
+    subs = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
+    # print(subs)
+    next_state = state
+    state = None
+    while next_state != state:
+        state = next_state
+        next_state = G.symbolic["transitions"] & state & event
+        next_state = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
+        next_state = G.symbolic["bdd"].let(subs, next_state)
+        next_state = next_state | state
+        # print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    G.symbolic["bdd"].collect_garbage()
+    # print(next_state.to_expr())
+    # print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    return next_state
+
+
+def obs_events_symbolic(state, G):
+    # computes available set of event at state set in DFA G
+    # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables)
+    # returns a formula over events variables
+    next_state = G.symbolic["transitions"] & state & ~G.symbolic["uobs"]
+    tvar = {"".join(["t", s[1:]]) for s in G.symbolic["states"]}
+    bvar = G.symbolic["states"].union(tvar)
+    events = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
+    G.symbolic["bdd"].collect_garbage()
+    # print(next_state.to_expr())
+    # print(list(G.symbolic["bdd"].pick_iter(events)))
+    return events
+
+
+def symbolic_observer(G):
+    queue = list()
+    init = G.symbolic["bdd"].add_expr("!s0 & !s1 & !s2")
+    uobs = G.symbolic["uobs"]
+    init = ureach_symbolic(init, uobs, G)
+    queue.append(init)
+    new_states = list()
+    new_states.append(init)
+    while queue:
+        state = queue.pop(0)
+        events = obs_events_symbolic(state, G)
+        list_ev = list(G.symbolic["bdd"].pick_iter(events))
+        for ev in list_ev:
+            event = "&".join([s if ev[s] else "".join(["!", s]) for s in ev.keys()])
+            event = G.symbolic["bdd"].add_expr(event)
+            next_state = next_state_symbolic(state, event, G)
+            next_state = ureach_symbolic(next_state, uobs, G)
+            # print(list(G.symbolic["bdd"].pick_iter(next_state)))
+            if next_state not in new_states:
+                queue.append(next_state)
+                new_states.append(next_state)
+    print(new_states)

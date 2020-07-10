@@ -3,6 +3,10 @@
 Functions related to finding unobservable
 and extended ubobservable reaches.
 """
+from abc import ABC, abstractmethod
+from collections import deque
+from collections.abc import Iterable
+from typing import Set, Union
 
 
 def unobservable_reach(x_set, state, g, e):
@@ -58,6 +62,32 @@ def ureach_from_set(x_set, S, g, e):
         }
 
     return
+
+
+# def ureach_from_set_adj(S, g, e):
+#         """
+#         Finds the set of states in the unobservable reach from the given state.
+#         """
+#         if isinstance(S, set) or isinstance(S, frozenset):
+#             states = set()
+#             for x in S:
+#                 states |= ureach_from_set_adj(x,g,e)
+
+#             return states
+
+#         visited = {S}
+#         states_stack = deque(visited)
+#         while len(states_stack) > 0:
+#             state = states_stack.pop()
+#             dests_by_unobs = {
+#                 out[0]
+#                 for out in g.vs[state]["out"]
+#                 if out[1] in e and out[0] not in visited
+#             }
+#             visited |= dests_by_unobs
+#             states_stack.extend(dests_by_unobs)
+
+#         return visited
 
 
 def ureach_from_set_adj(S, g, e):

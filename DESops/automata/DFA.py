@@ -40,9 +40,11 @@ class DFA(_Automata):
                 elif key == "uobs":
                     self.symbolic[key] = value
                 elif key == "states":
-                    self.symbolic[key] = value
+                    self.symbolic[key] = value[1]
+                    self.symbolic["states_dict"] = value[0]
                 elif key == "events":
-                    self.symbolic[key] = value
+                    self.symbolic[key] = value[1]
+                    self.symbolic["events_dict"] = value[0]
                 else:
                     sys.exit(
                         "ERROR:\nTRIED TO CREATE SYMBOLIC DFA ARG ERROR\nARG KEYS ARE:bdd,transitions,uctr,uobs,states,events"

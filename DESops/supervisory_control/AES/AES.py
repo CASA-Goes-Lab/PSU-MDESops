@@ -59,7 +59,7 @@ def construct_AES(G, X_crit, compact=False):
     # Finding supcon based on A and Atrim
     AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
 
-    return A
+    return AES, A
 
 
 def construct_T(
@@ -117,6 +117,7 @@ def construct_T(
                     q2_state = ureach_from_set_adj(
                         qvs, G._graph, G.Euo.intersection(gamma)
                     )
+
                     UR_state_classes[
                         (qvs, frozenset(G.Euo.intersection(gamma)))
                     ] = q2_state
@@ -140,6 +141,7 @@ def construct_T(
                     X_crit,
                     n,
                 )
+            # print(time.process_time() - start_time)
 
         if Q2_state(q):
             gamma = q[1]
