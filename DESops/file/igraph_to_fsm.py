@@ -50,7 +50,7 @@ def write_fsm(fsm_filename, automaton, plot_prob=False, flatten_state_name=False
         not_marked = True
 
     if "name" not in g.vs.attributes():
-        g.vs["name"] = [i for i in range(0, g.vcount())]
+        g.vs["name"] = list(range(0, g.vcount()))
     elif flatten_state_name is True:
         g.vs["name"] = [",".join(flatten_deep(v["name"])) for v in g.vs]
 

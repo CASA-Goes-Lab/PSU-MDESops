@@ -58,7 +58,7 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
         v.index for v in G.vs.select(marked_eq=True) if v.index not in states_removed
     }
     if len(good_states) == 0:
-        return {i for i in range(G.vcount())}
+        return set(range(G.vcount()))
 
     # backtrack states from marked states
     stack = deque(good_states)
