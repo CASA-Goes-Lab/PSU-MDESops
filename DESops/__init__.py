@@ -26,4 +26,4 @@ from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
-__version__ = "20.3.1"
+__version__ = "20.6.1a4"
