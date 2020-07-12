@@ -1,7 +1,7 @@
 # flake8: noqa
 # from DESops.automata.automata import _Automata
 
-from DESops import random_DFA
+from DESops import SDA, random_DFA
 from DESops.automata.DFA import DFA
 from DESops.automata.event.event import Event
 from DESops.automata.NFA import NFA
@@ -26,4 +26,4 @@ from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
-__version__ = "20.6.1a2"
+__version__ = "20.3.1"
