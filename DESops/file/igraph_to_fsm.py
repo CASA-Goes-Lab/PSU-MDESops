@@ -7,7 +7,6 @@ which is used/defined by the DESUMA software.
 from pydash import flatten_deep
 
 from DESops.automata.event.event import Event
-from DESops.automata.state.state import State
 
 
 def write_fsm(fsm_filename, automaton, plot_prob=False, flatten_state_name=False):
@@ -76,7 +75,7 @@ def write_fsm(fsm_filename, automaton, plot_prob=False, flatten_state_name=False
             f.write("\n")
             for trans in edge_seq:
                 if isinstance(trans["label"], Event):
-                    f.write(str(trans["label"]))
+                    f.write(trans["label"].label)
                 else:
                     f.write(str2(trans["label"]))
                 f.write("\t")

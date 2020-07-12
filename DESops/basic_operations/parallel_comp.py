@@ -8,8 +8,6 @@ assemble_graph and marked_bool used in product_comp
 """
 
 import sys
-from collections import OrderedDict
-from collections.abc import Iterable
 
 import DESops.automata as automata
 
@@ -300,8 +298,8 @@ def assemble_graph(
         # print(adj)
         # print(output_vert.values())
         adj = [
-            [(output_vert[v[0]][0], v[1]) for v in adj[l[2]]]
-            for l in output_vert.values()
+            [(output_vert[v[0]][0], v[1]) for v in adj[out_ver[2]]]
+            for out_ver in output_vert.values()
         ]
         output.vs["out"] = adj
 
