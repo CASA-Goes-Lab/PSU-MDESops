@@ -3,6 +3,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.automata import _Automata
+from DESops.automata.event.event import Event
 from DESops.error import IncongruencyError
 
 # MUST HAVE A DEFINITION NFA TO DFA
@@ -84,6 +85,14 @@ class DFA(_Automata):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
+
+        if not pair_list:
+            # no transitions provided
+            return
+
+        if isinstance(labels[0], str):
+            # convert labels from str to Event
+            labels = [Event(s) for s in labels]
 
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)

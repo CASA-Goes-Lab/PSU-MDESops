@@ -278,10 +278,15 @@ class _Automata:
             new_probs = list(self._graph.es["prob"])
             new_probs.extend(probs)
 
+        if not pair_list:
+            # no transitions provided
+            return
+
         self._graph.add_edges(pair_list)
 
-        if labels:
-            self.es["label"] = new_labels
+        if isinstance(labels[0], str):
+            # convert labels from str to Event
+            labels = [Event(s) for s in labels]
 
         if probs is not None:
             self.es["prob"] = new_probs
