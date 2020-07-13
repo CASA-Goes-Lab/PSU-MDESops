@@ -207,7 +207,15 @@ def preprocessing(
     if skip_subautomata:
         G_tilde = G_given
     else:
-        _, G_tilde = composition.strict_subautomata(H_given, G_given, skip_H_tilde=True)
+        H_tilde, G_tilde = composition.strict_subautomata(
+            H_given, G_given, skip_H_tilde=False
+        )
+
+    # Mark G_tilde consistently with H_tilde
+    H_tilde_name_marked = {v["name"]: v["marked"] for v in H_tilde.vs}
+    G_tilde.vs["marked"] = [
+        H_tilde_name_marked.get(name, False) for name in G_tilde.vs["name"]
+    ]
 
     # 2. Construct G which is an SPA.
     G_obs = composition.observer(G_tilde)
