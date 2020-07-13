@@ -20,12 +20,12 @@ no preprocessing (similar to how the SCS is handled).
 
 
 import DESops.automata as a
+from DESops.basic_operations import composition
 from DESops.basic_operations.generic_functions import find_obs_contr
-from DESops.basic_operations.observer_comp import observer_comp
 from DESops.supervisory_control.cn_pp import cn_preprocessing
 
 
-def supr_contr_norm(G_given, H_given, Euc=None, Euo=None):
+def supr_contr_norm(G_given, H_given=None, X_crit=None, Euc=None, Euo=None):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
@@ -45,25 +45,49 @@ def supr_contr_norm(G_given, H_given, Euc=None, Euo=None):
     Parameters:
     G_given: plant/system as an automaton.
     H_Given: specification as an automaton.
+    X_crit: alternative to providing spec, set of ritical state names in G_given
+
+    must provide one of H_given or X_crit
 
     Euc: optionally provided set of uncontrollable events
 
     Euo: optionally provided set of unobservable events
 
     """
+    if H_given is None and X_crit is None:
+        # raise some error, at least one of .. needs to be specified
+        import sys
+
+        sys.exit("supr_contr_norm: Requires at least one of H_given, X_crit specified.")
 
     # Find set of events that are unobservable/uncontrollable
+    if X_crit:
+        construct_SA = False
+    else:
+        construct_SA = True
+
     if not Euc:
-        Euc = G_given.Euc.union(H_given.Euc)
+        if H_given:
+            Euc = G_given.Euc.union(H_given.Euc)
+        else:
+            Euc = G_given.Euc
     if not Euo:
-        Euo = G_given.Euo.union(H_given.Euo)
+        if H_given:
+            Euo = G_given.Euo.union(H_given.Euo)
+        else:
+            Euo = G_given.Euo
 
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
     # NOTE: The states in H are not yet deleted and must be deleted in SCS
-    
-    [H, G, states_to_remove] = cn_preprocessing(H_given, G_given, Euc, Euo)
+
+    [H, G, states_to_remove] = cn_preprocessing(
+        G_given, H_given, Euc, Euo, construct_SA, X_crit
+    )
+
+    if 0 in states_to_remove:
+        return a.DFA()
 
     # For each state:
     # 2.1: Compute normality condition
@@ -72,10 +96,14 @@ def supr_contr_norm(G_given, H_given, Euc=None, Euo=None):
     # Collect set of good states, find set diff total_states - good_states = bad_states
     # delete all bad states, resulting in K^CN
     states_removed = set()
-    G_obs = a.automata_ctor.construct_automata(G)
 
-    observer_comp(G, G_obs, Euo=Euo, save_state_names=False, save_marked_states=True)
+    G_names = G.vs["name"]
+    G.vs["name"] = [str(i) for i in range(G.vcount())]
 
+    # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
+    G_obs = composition.observer(G)
+    G_obs.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
+    G.vs["name"] = G_names
     first_iter = True
     while True:
         if not first_iter and not states_to_remove:
@@ -95,13 +123,6 @@ def supr_contr_norm(G_given, H_given, Euc=None, Euo=None):
     return H
 
 
-def invalid_state(G, H, Euc, H_state):
-    H_uc_count = len([e for e in H.es(_source=H_state) if e["label"] in Euc])
-    G_assoc_state = H.vs["name"][H_state]
-    G_uc_count = len([e for e in G.es(_source=G_assoc_state) if e["label"] in Euc])
-    return H_uc_count < G_uc_count
-
-
 def find_inacc(G):
     """
     Returns a list of vertex indices of G that are inaccessible
@@ -109,18 +130,18 @@ def find_inacc(G):
 
     """
     Q = list()
-    Q.append({0})
+    Q.append(0)
     good_states = set()
     good_states.add(0)
     while Q:
-        q = Q.pop(0)
-        neighbors = {
-            t.target for t in G.es(_source_in=q) if t.target not in good_states
-        }
-        if not neighbors:
-            continue
-        good_states.update(neighbors)
-        Q.append(frozenset(neighbors))
+        v = Q.pop(0)
+
+        neighbors = set()
+        for t in G._graph.neighbors(v, mode="OUT"):
+            if t in good_states:
+                continue
+            good_states.add(t)
+            Q.append(t)
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
@@ -155,28 +176,39 @@ def scs(G, S, Euc, states_to_remove, first_iter):
     first_iter: bool, True if first iteration of SCS. If it's not the first
         iteration, the trim will be computed.
     """
+
     inacc_states = set()
     if not first_iter:
         inacc_states = find_inacc(S)
-    
+
+    # only need to check the predecessors of states marked for removal which are still reachable
     states_removed = set(states_to_remove).difference(inacc_states)
 
-    states_to_check = {
-        e.source
-        for e in S.es(_target_in=states_to_remove)
-        if e["label"] in Euc
-        and e.source not in states_removed
-        and e.source not in inacc_states
-    }
+    states_to_check = set()
+    for v in states_to_remove:
+        for e_i in S._graph.incident(v, mode="IN"):
+            e = S.es[e_i]
+            if (
+                e["label"] in Euc
+                and e.source not in states_removed
+                and e.source not in inacc_states
+            ):
+                states_to_check.add(e.source)
+
     while states_to_check:
         states_removed.update(states_to_check)
-        states_to_check_new = {
-            e.source
-            for e in S.es(_target_in=states_to_check)
-            if e["label"] in Euc
-            and e.source not in states_removed
-            and e.source not in inacc_states
-        }
+
+        states_to_check_new = set()
+        for v in states_to_check:
+            for e_i in S._graph.incident(v, mode="IN"):
+                e = S.es[e_i]
+                if (
+                    e["label"] in Euc
+                    and e.source not in states_removed
+                    and e.source not in inacc_states
+                ):
+                    states_to_check_new.add(e.source)
+
         states_to_check = states_to_check_new
     G_removed_vs_names = {S.vs[v]["name"][1] for v in states_removed}
     S.delete_vertices(states_removed | inacc_states)
@@ -211,8 +243,9 @@ def sns(G, G_obs, S, Euc, Euo, states_removed):
                     if not q_dict[q]:
                         bad_states.add(yi.index)
                 else:
-                    q_dict[q] = q.issubset(states_yi)
-                    if not q_dict[q]:
+                    good_state = q.issubset(states_yi)
+                    q_dict[q] = good_state
+                    if not good_state:
                         bad_states.add(yi.index)
 
     return bad_states
