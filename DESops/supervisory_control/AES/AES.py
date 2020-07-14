@@ -169,7 +169,7 @@ def construct_T(
                         n,
                     )
             sumq2 = sumq2 + time.process_time() - start_time
-    print(sumq1 / len(Q1), sumq2 / len(Q2))
+    # print(sumq1 / len(Q1), sumq2 / len(Q2))
 
     # Creating BTS as DFA
     if Qname:
