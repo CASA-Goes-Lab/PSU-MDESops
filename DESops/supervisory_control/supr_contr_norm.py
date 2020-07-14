@@ -19,16 +19,18 @@ no preprocessing (similar to how the SCS is handled).
 """
 
 
-import DESops.automata as a
+from DESops.automata.DFA import DFA
 from DESops.basic_operations import composition
 
 from ..basic_operations.construct_subautomata import strict_subautomata
+from ..basic_operations.observer_comp import observer_comp
+from ..basic_operations.parallel_comp import parallel_comp
 from ..basic_operations.product_comp import product_comp
 from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
-def supr_contr_norm(G, H, preprocess_all=True):
+def supr_contr_norm(G, H, preprocess=True):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
@@ -55,8 +57,12 @@ def supr_contr_norm(G, H, preprocess_all=True):
     if preprocess:
         # preH,preG = DFA(),DFA()
         (preH, preG) = strict_subautomata(H, G)
-        obsG = composition.observer(preG)
+        # print(preG.vs["name"])
+        obsG = observer_comp(preG)
         preG = parallel_comp([preG, obsG])
+        preH = find_H(preG)
+        print(preH.vs["name"])
+        print(preG.vs["name"])
         # print(len(preH.vs))
         # print(preG.vs["out"])
     else:
@@ -66,12 +72,9 @@ def supr_contr_norm(G, H, preprocess_all=True):
             "\nComputing the supremal controllable and normal sublanguage without strict subautomaton preprocessing\nAssuming that given H is a strict subautomaton of G\nStill preprocessing G,H to be Strict Partition Automata"
         )
 
-        obsG = composition.observer(G)
+        obsG = observer_comp(G)
         preG = parallel_comp([G, obsG])
-        preH = DFA(H)
-
-    if 0 in states_to_remove:
-        return a.DFA()
+        preH = find_H(preG)
 
     # For each state:
     # 2.1: Compute normality condition
@@ -81,12 +84,15 @@ def supr_contr_norm(G, H, preprocess_all=True):
     # delete all bad states, resulting in K^CN
     # states_removed = set()
 
-    # G_names = G.vs["name"]
-    # G.vs["name"] = [str(i) for i in range(G.vcount())]
-
+    G_names = {i: v["name"] for i, v in enumerate(preG.vs)}
+    preG.vs["name"] = [str(i) for i in range(preG.vcount())]
+    preH.vs["name"] = [
+        str(i) for i, v in enumerate(preG.vs) if preH.vs.select(name_eq=G_names[i])
+    ]
     # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
-    # G_obs = composition.observer(G)
-    # G_obs.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
+    obsG = observer_comp(preG)
+
+    # obsG.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
     # G.vs["name"] = G_names
     # first_iter = True
     # while True:
@@ -129,6 +135,20 @@ def find_inacc(G):
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
+
+
+def find_H(Gspa):
+    states_del = set()
+    for v in Gspa.vs:
+        # print(v['name'][0][0])
+        if v["name"][0][0] == "dead":
+            states_del.add(v.index)
+    H = DFA(Gspa)
+    H.delete_vertices(states_del)
+    inacc_states = find_inacc(H)
+    H.delete_vertices(inacc_states)
+    H.generate_out()
+    return H
 
 
 def scs(G, S, Euc, states_to_remove, first_iter):
