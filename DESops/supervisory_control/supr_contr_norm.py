@@ -19,13 +19,18 @@ no preprocessing (similar to how the SCS is handled).
 """
 
 
-import DESops.automata as a
+from DESops.automata.DFA import DFA
 from DESops.basic_operations import composition
-from DESops.basic_operations.generic_functions import find_obs_contr
-from DESops.supervisory_control.cn_pp import cn_preprocessing
+
+from ..basic_operations.construct_subautomata import strict_subautomata
+from ..basic_operations.observer_comp import observer_comp
+from ..basic_operations.parallel_comp import parallel_comp
+from ..basic_operations.product_comp import product_comp
+from ..basic_operations.refine_product import refine_product_SCS
+from ..basic_operations.unary import find_inacc
 
 
-def supr_contr_norm(G_given, H_given=None, X_crit=None, Euc=None, Euo=None):
+def supr_contr_norm(G, H, preprocess=True):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
@@ -35,59 +40,41 @@ def supr_contr_norm(G_given, H_given=None, X_crit=None, Euc=None, Euo=None):
     checked by verifying no states were removed in the last controllable/normal
     evaluation step.
 
-    The supremal controllable supervisor computation was reimplemented here,
-    in place of using the supremal_controllable_supervisor module, to take
-    advantage of the iterative structure of this problem.
-
     Returns: an igraph Graph as the automata realization of the supremal
     controllable-normal supervisor.
 
     Parameters:
-    G_given: plant/system as an automaton.
-    H_Given: specification as an automaton.
-    X_crit: alternative to providing spec, set of ritical state names in G_given
-
-    must provide one of H_given or X_crit
-
-    Euc: optionally provided set of uncontrollable events
-
-    Euo: optionally provided set of unobservable events
-
+    G: plant/system as an automaton.
+    H: specification as an automaton.
     """
-    if H_given is None and X_crit is None:
-        # raise some error, at least one of .. needs to be specified
-        import sys
 
-        sys.exit("supr_contr_norm: Requires at least one of H_given, X_crit specified.")
-
-    # Find set of events that are unobservable/uncontrollable
-    if X_crit:
-        construct_SA = False
-    else:
-        construct_SA = True
-
-    if not Euc:
-        if H_given:
-            Euc = G_given.Euc.union(H_given.Euc)
-        else:
-            Euc = G_given.Euc
-    if not Euo:
-        if H_given:
-            Euo = G_given.Euo.union(H_given.Euo)
-        else:
-            Euo = G_given.Euo
-
+    Euo = G.Euo
+    Euc = G.Euc
     # Process H, G to ensure conditions for ^CN computation
     #   1. H is a strict subautomat of G
     #   2. G is an SPA
     # NOTE: The states in H are not yet deleted and must be deleted in SCS
+    if preprocess:
+        # preH,preG = DFA(),DFA()
+        (preH, preG) = strict_subautomata(H, G)
+        # print(preG.vs["name"])
+        obsG = observer_comp(preG)
+        preG = parallel_comp([preG, obsG])
+        preH = find_H(preG)
+        print(preH.vs["name"])
+        print(preG.vs["name"])
+        # print(len(preH.vs))
+        # print(preG.vs["out"])
+    else:
+        import warnings
 
-    [H, G, states_to_remove] = cn_preprocessing(
-        G_given, H_given, Euc, Euo, construct_SA, X_crit
-    )
+        warnings.warn(
+            "\nComputing the supremal controllable and normal sublanguage without strict subautomaton preprocessing\nAssuming that given H is a strict subautomaton of G\nStill preprocessing G,H to be Strict Partition Automata"
+        )
 
-    if 0 in states_to_remove:
-        return a.DFA()
+        obsG = observer_comp(G)
+        preG = parallel_comp([G, obsG])
+        preH = find_H(preG)
 
     # For each state:
     # 2.1: Compute normality condition
@@ -95,32 +82,35 @@ def supr_contr_norm(G_given, H_given=None, X_crit=None, Euc=None, Euo=None):
     # 2.3: find_inacc (ensure we are only checking accessible states in the first place)
     # Collect set of good states, find set diff total_states - good_states = bad_states
     # delete all bad states, resulting in K^CN
-    states_removed = set()
+    # states_removed = set()
 
-    G_names = G.vs["name"]
-    G.vs["name"] = [str(i) for i in range(G.vcount())]
+    G_names = {i: v["name"] for i, v in enumerate(preG.vs)}
+    preG.vs["name"] = [str(i) for i in range(preG.vcount())]
+    preH.vs["name"] = [
+        str(i) for i, v in enumerate(preG.vs) if preH.vs.select(name_eq=G_names[i])
+    ]
+    # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
+    obsG = observer_comp(preG)
 
-    # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
-    G_obs = composition.observer(G)
-    G_obs.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
-    G.vs["name"] = G_names
-    first_iter = True
-    while True:
-        if not first_iter and not states_to_remove:
-            break
-        else:
-            states_just_removed = scs(G, H, Euc, states_to_remove, first_iter)
-        if not first_iter and not states_just_removed:
-            break
+    # obsG.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
+    # G.vs["name"] = G_names
+    # first_iter = True
+    # while True:
+    #     if not first_iter and not states_to_remove:
+    #         break
+    #     else:
+    #         states_just_removed = scs(G, H, Euc, states_to_remove, first_iter)
+    #     if not first_iter and not states_just_removed:
+    #         break
 
-        else:
-            states_removed.update(states_just_removed)
-            states_to_remove = sns(G, G_obs, H, Euc, Euo, states_removed)
+    #     else:
+    #         states_removed.update(states_just_removed)
+    #         states_to_remove = sns(G, G_obs, H, Euc, Euo, states_removed)
 
-        if first_iter:
-            first_iter = False
+    #     if first_iter:
+    #         first_iter = False
 
-    return H
+    # return H
 
 
 def find_inacc(G):
@@ -145,6 +135,20 @@ def find_inacc(G):
 
     bad_states = {v.index for v in G.vs if v.index not in good_states}
     return bad_states
+
+
+def find_H(Gspa):
+    states_del = set()
+    for v in Gspa.vs:
+        # print(v['name'][0][0])
+        if v["name"][0][0] == "dead":
+            states_del.add(v.index)
+    H = DFA(Gspa)
+    H.delete_vertices(states_del)
+    inacc_states = find_inacc(H)
+    H.delete_vertices(inacc_states)
+    H.generate_out()
+    return H
 
 
 def scs(G, S, Euc, states_to_remove, first_iter):

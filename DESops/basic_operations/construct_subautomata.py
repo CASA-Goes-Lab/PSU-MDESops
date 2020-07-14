@@ -22,7 +22,7 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
     dead = A.add_vertex(name="dead", marked=False)
 
     #   Completing the transition function of A
-    all_events = set(H.es["label"]) | set(G.es["label"])
+    all_events = H.events | G.events
     for x in H.vs:
         active_events = {out[1] for out in H.vs[x.index]["out"]}
         non_active_events = all_events - active_events
@@ -44,10 +44,12 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
         [edge["label"] for edge in dead_selfloops],
         fill_out=True,
     )
-
+    A.events = all_events
+    A.Euc = G.Euc
+    A.Euo = G.Euo
     # Step 2: Calculating the product automaton AG = A x G
     AG = product_comp([A, G])
-
+    # print(AG.vs['name'])
     # Step 3:
     #   Step 3.1: Obtaining G_tilde
     G_tilde = AG.copy()  # Taking AG
@@ -82,14 +84,16 @@ def strict_subautomata(H: DFA, G: DFA) -> Tuple[DFA, DFA]:
             H_tilde.vs[state.index].update_attributes({"marked": True})
         else:
             H_tilde.vs[state.index].update_attributes({"marked": False})
+
     G_tilde.Euc = G.Euc
     G_tilde.Euo = G.Euo
     G_tilde.events = G.events
+    G_tilde.generate_out()
 
     H_tilde.Euc = H.Euc
     H_tilde.Euo = H.Euo
     H_tilde.events = H.events
-
+    H_tilde.generate_out()
     return H_tilde, G_tilde
 
 

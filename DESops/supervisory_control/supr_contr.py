@@ -106,6 +106,8 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
     inacc_states = find_inacc(preH)
     preH.delete_vertices(inacc_states)
 
+    preH.generate_out()
+
     return preH
 
 
