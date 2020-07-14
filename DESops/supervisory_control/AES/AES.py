@@ -276,7 +276,7 @@ def Q2_add_state(q1, q2, G, Qname, Qcrit, Q2, h1, labelh1, queue, v_counter, X_c
         v = Q2[(q20, q2[1])]
     h1.append((q1, v))
     # print(ctr2str(gamma))
-    labelh1.append(Event(ctr2str(q2[1])))
+    labelh1.append(Event(q2[1]))
     return v_counter
 
 
@@ -325,6 +325,7 @@ def find_control_decisions_sets(E, Euc):
 
 
 # Transforms a control decision to string
+#       set is much more useful
 def ctr2str(gamma):
     name = str()
     first = True
@@ -348,3 +349,61 @@ def setvs2statename(G, set_states):
         else:
             name = ",".join([name, G.vs["name"][v]])
     return "".join([name, "}"])
+
+
+def extract_AES_super(AES):
+    """
+    Algorithm 1 in efficient AES paper
+
+    Extracts a supervisor from the AES structure
+    """
+    if AES.vcount() == 0:
+        return DFA()
+    # bfs:
+    queue = []
+
+    # transitions, init empty
+    trans = []
+    trans_labels = []
+
+    # store states as vertices in original AES?
+    states = dict()
+    # add initial state
+    states[0] = 0
+
+    queue.append(0)
+
+    while queue:
+        v = queue.pop()
+        # select largest control decision from this state
+        out = AES.vs[v]["out"]
+        if not out:
+            continue
+
+        max_index = lambda i: len(out[i][1].label)
+        max_gamma_index = max(range(len(out)), key=max_index)
+        max_gamma = set(out[max_gamma_index][1].label)
+        q2_state = out[max_gamma_index][0]
+        for q2_e in AES.vs[q2_state]["out"]:
+            if q2_e[1] in AES.Euo:
+                continue
+            # i might be assuming that the exists() clause in line 7 is trivial
+            next_v = q2_e[0]
+
+            if next_v not in states.keys():
+                states[next_v] = len(states)
+                queue.append(next_v)
+
+            trans.append((states[v], states[next_v]))
+            trans_labels.append(q2_e[1])
+            max_gamma.remove(q2_e[1])
+
+        for e in max_gamma:
+            # self-loops for all remaining events in control decision
+            trans.append((states[v], states[v]))
+            trans_labels.append(e)
+
+    sup = DFA()
+    sup.add_vertices(len(states))
+    sup.add_edges(trans, trans_labels)
+    return sup

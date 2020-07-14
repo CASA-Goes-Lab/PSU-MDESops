@@ -1,3 +1,4 @@
+import platform
 import shutil
 import subprocess
 from pathlib import Path
@@ -18,3 +19,6 @@ def build(setup_kwargs):
     makeopts = {"cwd": desops_regal, "check": True}
     subprocess.run(["make", "install-user"], **makeopts)
     subprocess.run(["make", "desops"], **makeopts)
+    win_exe = desops_regal.joinpath("random_DFA.exe")
+    if platform.system() == "Windows" and win_exe.exists():
+        win_exe.rename(desops_regal.joinpath("random_DFA"))

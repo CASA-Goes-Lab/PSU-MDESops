@@ -10,30 +10,29 @@ import igraph as ig
 from pydash import flatten_deep
 
 # Need to figure out what types for this still:
-from DESops.automata.automata_ctor import construct_automata
+from DESops.automata.DFA import DFA
 from DESops.basic_operations.construct_spa import construct_spa as construct_spa
 from DESops.basic_operations.construct_subautomata import construct_subautomata
 from DESops.basic_operations.generic_functions import write_transition_attributes
 
 
-def cn_preprocessing(H_given, G_given, Euc, Euo):
+def cn_preprocessing(G_given, H_given, Euc, Euo, construct_SA=True, X_crit=None):
     """
     Function handling preprocessing for the SCNS.
 
     Ensures that the assumptions on the given specification and system automata
     in the SCNS algorithm are met.
 
-    The required assumptions are:
+    Generates H, G satisfying:
 
     1. H (the specification) is a strict subautomata of G
     2. G is an SPA (state partitioned automaton)
 
-    Returns modified system and specification automata as igraph
-    Graphs that have these necessary properties. Additionally returns
-    a list of states that must be removed from G (these states will
+    Returns list of states that must be removed from G (these states will
     get removed in supremal_cn_supervisor, but not here). The
     states in G_states_to_delete are indices of vertices in G.
-    The returntype is a tuple of [spec Graph, system Graph, list of states]
+
+    Returns tuple of [spec Graph, system Graph, list of states]
 
     Parameters:
     H_given: given specification automaton, as an igraph Graph
@@ -47,36 +46,44 @@ def cn_preprocessing(H_given, G_given, Euc, Euo):
     """
 
     # Save marked states of H
-    marked_H_given = [v.attributes().get("marked", False) for v in H_given.vs]
+    # marked_H_given = [v.attributes().get("marked", False) for v in H_given.vs]
 
-    # TODO: does the automata type of these matter? DFA/NFA/PFA?
-    G = construct_automata(G_given)
-    H = construct_automata(H_given)
+    if construct_SA:
+        dead_state_index, H_t, G_t = construct_subautomata(
+            H_given, G_given, False, True
+        )
+    else:
+        G_t = G_given.copy()
 
-    G_t = construct_automata(G_given)
-    H_t = construct_automata(H_given)
+    # rename states of G_t s.t. observer can be found
+    sa_names = list(G_t.vs["name"])
+    G_t.vs["name"] = [str(i) for i in range(G_t.vcount())]
 
-    dead_state_index = construct_subautomata(H_given, G_given, H_t, G_t, False, True)
-
-    construct_spa(G_t, G, Euo)
+    G = construct_spa(G_t, sa_names, Euo)
 
     # After constructing SPA equivalent of G, H can be found by deleting dead states in G
     G_states_to_delete = list()
-    H = extract_H_from_G(G.copy(), dead_state_index, G_states_to_delete)
+
+    ttt = G.vs["name"]
+    H = extract_H_from_G(G.copy(), G_states_to_delete, X_crit=X_crit)
+
     # Mark state in H accordingly to H_given
     # NOTE: cannot mark H by just looking at marked_H_given because the states in G_states_to_delete are not yet deleted from H here
+    """
     H_given_states_in_H = [flatten_deep(v["name"])[0] for v in H.vs]
+
     H.vs["marked"] = [
-        marked_H_given[index] if index < len(marked_H_given) else False
+        marked_H_given[int(index)-1] if index != "dead" else False
         for index in H_given_states_in_H
     ]
+    """
     # Rewrite controllable/observable attributes to H, G
     add_event_attributes(H, G, Euo, Euc)
 
     return [H, G, G_states_to_delete]
 
 
-def extract_H_from_G(G, dead_state_index, states_to_delete):
+def extract_H_from_G(G, states_to_delete, X_crit=None):
     """
     Find H from G by deleting 'dead' states in G
     G has names ((x,y), z) where:
@@ -84,9 +91,12 @@ def extract_H_from_G(G, dead_state_index, states_to_delete):
         dead states are those with the largest x in set of states in G
     G is a copy of original G, return value is H
     """
-    states_to_delete.extend(
-        [state.index for state in G.vs if state["name"][0][0] == dead_state_index]
-    )
+    sdfasdf = G.vs["name"]
+    if X_crit:
+        states_to_delete.extend(v.index for v in G.vs if v["name"][0] in X_crit)
+    else:
+        states_to_delete.extend(v.index for v in G.vs if v["name"][0] == "dead")
+
     G.vs["name"] = [(v, i) for i, v in enumerate(G.vs["name"])]
     # G.delete_vertices(states_to_delete)
     return G
