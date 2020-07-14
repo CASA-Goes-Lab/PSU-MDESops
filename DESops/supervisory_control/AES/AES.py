@@ -214,8 +214,8 @@ def generate_ev_uc(Gamma, Euc):
     E = set()
     for ctr in Gamma:
         if ctr == Euc:
-            ev = Event(ctr2str(ctr))
-        E.add(Event(ctr2str(ctr)))
+            ev = Event(ctr)
+        E.add(Event(ctr))
     return (E, ev)
 
 
@@ -372,7 +372,7 @@ def extract_AES_super(AES):
     states[0] = 0
 
     queue.append(0)
-
+    ttttttttt = AES.vs["out"]
     while queue:
         v = queue.pop()
         # select largest control decision from this state
@@ -387,7 +387,7 @@ def extract_AES_super(AES):
         for q2_e in AES.vs[q2_state]["out"]:
             if q2_e[1] in AES.Euo:
                 continue
-            # i might be assuming that the exists() clause in line 7 is trivial
+            # Jack: I might be assuming that the exists() clause in line 7 is trivial
             next_v = q2_e[0]
 
             if next_v not in states.keys():
