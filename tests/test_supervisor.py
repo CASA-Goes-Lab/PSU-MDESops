@@ -18,7 +18,8 @@ def test_preprocessing_mark():
     G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
     G, H = sup.preprocessing(G_given, H_given)
-    assert G.vs.select(marked_eq=True)["name"] == H.vs.select(marked_eq=True)["name"]
+    assert len(G.vs.select(marked_eq=True)["name"]) == 3
+    assert len(H.vs.select(marked_eq=True)["name"]) == 2
 
 
 def test_supremal_controllable_normal_sublanguage():
