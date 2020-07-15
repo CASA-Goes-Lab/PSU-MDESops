@@ -13,6 +13,7 @@ from collections import OrderedDict
 from pydash import flatten_deep
 
 from DESops.automata.DFA import DFA
+from DESops.automata.NFA import NFA
 from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
@@ -40,10 +41,15 @@ def observer_comp(G) -> DFA:
     # computing ureach for every singleton states
     # states_ureach = preprocessing_ureach(G)
 
+    if isinstance(G, NFA):
+        init_states = {v.index for v in G.vs if v["init"]}
+    else:
+        init_states = {0}
+
     # v0 = states_ureach[0]
     states_ureach = dict()
-    v0 = frozenset(ureach_from_set_adj({0}, G, G.Euo))
-    states_ureach[frozenset({0})] = v0
+    v0 = frozenset(ureach_from_set_adj(init_states, G, G.Euo))
+    states_ureach[frozenset(init_states)] = v0
     # name_v0 = "{" + ",".join(flatten_deep([G.vs["name"][v] for v in v0])) + "}"
     name_v0 = frozenset([G.vs["name"][v] for v in v0])
     marking = any([G.vs["marked"][v] for v in v0])
