@@ -203,15 +203,7 @@ def preprocessing(
     if skip_subautomata:
         G_tilde = G_given
     else:
-        H_tilde, G_tilde = composition.strict_subautomata(
-            H_given, G_given, skip_H_tilde=False
-        )
-
-    # Mark G_tilde consistently with H_tilde
-    H_tilde_name_marked = {v["name"]: v["marked"] for v in H_tilde.vs}
-    G_tilde.vs["marked"] = [
-        H_tilde_name_marked.get(name, False) for name in G_tilde.vs["name"]
-    ]
+        _, G_tilde = composition.strict_subautomata(H_given, G_given, skip_H_tilde=True)
 
     # 2. Construct G which is an SPA.
     G_obs = composition.observer(G_tilde)
@@ -220,6 +212,10 @@ def preprocessing(
     # 3. Extract H from G by deleteing all states ((x, y), z) of G where x = "dead".
     H = G.copy()
     dead_states = [v.index for v in H.vs if v["name"][0][0] == "dead"]
+    H_given_name_marked = {v["name"]: v["marked"] for v in H_given.vs}
+    H.vs["marked"] = [
+        H_given_name_marked.get(name[0][0], False) for name in H.vs["name"]
+    ]
     G.vs["name"] = [str(i) for i in range(G.vcount())]
     H.vs["name"] = [str(i) for i in range(H.vcount())]
     H.delete_vertices(dead_states)
