@@ -269,6 +269,9 @@ class _Automata:
         if labels:
             if len(pair_list) != len(labels):
                 raise IncongruencyError("Length of pairs != length of labels")
+            if isinstance(labels[0], str):
+                # convert labels from str to Event
+                labels = [Event(s) for s in labels]
             new_labels = list(self._graph.es["label"])
             new_labels.extend(labels)
 
@@ -284,9 +287,8 @@ class _Automata:
 
         self._graph.add_edges(pair_list)
 
-        if isinstance(labels[0], str):
-            # convert labels from str to Event
-            labels = [Event(s) for s in labels]
+        if labels:
+            self.es["label"] = new_labels
 
         if probs is not None:
             self.es["prob"] = new_probs
