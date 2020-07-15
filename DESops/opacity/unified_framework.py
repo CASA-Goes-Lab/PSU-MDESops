@@ -1,6 +1,7 @@
 from DESops.automata import DFA, NFA
+from DESops.automata.event.event import Event
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp_old
+from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.language_functions import find_path_between, language_inclusion
 
@@ -24,9 +25,11 @@ def verify_k_step_opacity_unified_language(
     return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
     return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
     """
-    if "e_ext" in set(g.es["label"]):
+    e_ext = Event("e_ext")
+    e_init = Event("e_init")
+    if e_ext in set(g.es["label"]):
         raise ValueError("e_ext is a reserved event label")
-    if "e_init" in set(g.es["label"]):
+    if e_init in set(g.es["label"]):
         raise ValueError("e_init is a reserved event label")
 
     if secret_type is None:
@@ -37,14 +40,14 @@ def verify_k_step_opacity_unified_language(
 
     Euo = g.Euo
     Eo = set(g.es["label"]) - Euo
-    Eo.add("e_init")
+    Eo.add(e_init)
 
     # copy avoids changing original g outside of function
     g = g.copy()
     if not joint:
         # separate opacity uses self-loops to make all runs of g extendable
         for i in range(g.vcount()):
-            g.add_edge(i, i, "e_ext", fill_out=True)
+            g.add_edge(i, i, e_ext, fill_out=True)
     g = moore_to_standard(g)
 
     marked_events = set(g.es["label"])
@@ -57,15 +60,16 @@ def verify_k_step_opacity_unified_language(
     reverse(g, inplace=True)
 
     # replace (e, s) events with e events before creating observers
-    for t in g.es:
-        t["label"] = t["label"][0]
-    for t in g_ns.es:
-        t["label"] = t["label"][0]
+    g.es["label"] = [t["label"][0] for t in g.es]
+    g.Euo = {e[0] for e in g.Euo}
     g.generate_out()
+
+    g_ns.es["label"] = [t["label"][0] for t in g_ns.es]
+    g_ns.Euo = {e[0] for e in g_ns.Euo}
     g_ns.generate_out()
 
-    g_obs = observer_comp_old(g, Euo=Euo, save_marked_states=True)
-    g_ns_obs = observer_comp_old(g_ns, Euo=Euo, save_marked_states=True)
+    g_obs = observer_comp(g)
+    g_ns_obs = observer_comp(g_ns)
 
     return_tuple = language_inclusion(
         g_obs, g_ns_obs, Eo, return_num_states, return_violating_path
@@ -74,10 +78,10 @@ def verify_k_step_opacity_unified_language(
     if return_violating_path:
         path = return_tuple[-1]
         if path:
-            while "e_init" in path:
-                path.remove("e_init")
-            while "e_ext" in path:
-                path.remove("e_ext")
+            while e_init in path:
+                path.remove(e_init)
+            while e_ext in path:
+                path.remove(e_ext)
 
     return return_tuple
 
@@ -101,9 +105,11 @@ def verify_k_step_opacity_state_observer(
     return_num_states: if True, the number of states in the state observer is returned as an additional value
     return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
     """
-    if "e_ext" in set(g.es["label"]):
+    e_ext = Event("e_ext")
+    e_init = Event("e_init")
+    if e_ext in set(g.es["label"]):
         raise ValueError("e_ext is a reserved event label")
-    if "e_init" in set(g.es["label"]):
+    if e_init in set(g.es["label"]):
         raise ValueError("e_init is a reserved event label")
 
     if secret_type is None:
@@ -114,14 +120,14 @@ def verify_k_step_opacity_state_observer(
 
     Euo = g.Euo
     Eo = set(g.es["label"]) - Euo
-    Eo.add("e_init")
+    Eo.add(e_init)
 
     # copy avoids changing original g outside of function
     g = g.copy()
     if not joint:
         # separate opacity uses self-loops to make all runs of g extendable
         for i in range(g.vcount()):
-            g.add_edge(i, i, "e_ext", fill_out=True)
+            g.add_edge(i, i, e_ext, fill_out=True)
     g = moore_to_standard(g)
 
     marked_events = set(g.es["label"])
@@ -131,13 +137,11 @@ def verify_k_step_opacity_state_observer(
     g_ns = product_NFA([g, h_ns], save_marked_states=True)
 
     # replace (e, s) events with e events before creating observer
-    for t in g_ns.es:
-        t["label"] = t["label"][0]
+    g_ns.es["label"] = [t["label"][0] for t in g_ns.es]
+    g_ns.Euo = {e[0] for e in g_ns.Euo}
     g_ns.generate_out()
 
-    state_observer = observer_comp_old(
-        g_ns, Euo=Euo, save_state_names=True, save_marked_states=True
-    )
+    state_observer = observer_comp(g_ns)
 
     # opacity holds if every state containing a marked q_g also contains a marked q_h
     opaque = True
@@ -160,10 +164,10 @@ def verify_k_step_opacity_state_observer(
             inits = [v.index for v in state_observer.vs if v["init"]]
             path = find_path_between(state_observer, inits, violating_id)
 
-            while "e_init" in path:
-                path.remove("e_init")
-            while "e_ext" in path:
-                path.remove("e_ext")
+            while e_init in path:
+                path.remove(e_init)
+            while e_ext in path:
+                path.remove(e_ext)
 
             return_list.append(path)
 
@@ -186,7 +190,7 @@ def moore_to_standard(g):
     # this means that vertex i in g is vertex i+1 in h
     for v in g.vs:
         if v["init"]:
-            label = ("e_init", v["secret"])
+            label = (Event("e_init"), v["secret"])
             h.add_edge(0, v.index + 1, label)
     h.vs["init"] = False
     h.vs[0]["init"] = True
@@ -243,22 +247,24 @@ def construct_H_NS(k, joint, secret_type, events, Euo):
     if k == "infinite":
         if not joint:
             raise ValueError("Separate infinite-step opacity is not implemented")
-        return H_infinite_NS(secret_type, events, Euo)
-
-    h = H_star(events)
-
-    if joint:
-        # no secret behavior is allowed in final K+1 steps
-        for _ in range(0, k + 1):
-            concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
+        h = H_infinite_NS(secret_type, events, Euo)
 
     else:
-        # nonsecret bahvaior must occur K epochs ago
-        concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
-        # epochs 0 to K-1 steps ago don't matter
-        for _ in range(0, k):
-            concatenate_union(h, H_epoch_all(events, Euo))
+        h = H_star(events)
 
+        if joint:
+            # no secret behavior is allowed in final K+1 steps
+            for _ in range(0, k + 1):
+                concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
+
+        else:
+            # nonsecret bahvaior must occur K epochs ago
+            concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
+            # epochs 0 to K-1 steps ago don't matter
+            for _ in range(0, k):
+                concatenate_union(h, H_epoch_all(events, Euo))
+
+    h.Euo = Euo
     return h
 
 

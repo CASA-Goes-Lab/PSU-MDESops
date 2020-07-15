@@ -1,13 +1,14 @@
 """
 Methods for opacity verification of automata
 """
-from DESops.basic_operations.observer_comp import observer_comp_old
+from DESops.basic_operations.observer_comp import observer_comp
 from DESops.opacity.k_step_language_based import (
     verify_joint_infinite_step_opacity_language_based,
     verify_k_step_opacity_language_based,
 )
 from DESops.opacity.k_step_mapping_based import verify_k_step_opacity_mapping_based
 from DESops.opacity.k_step_state_based import verify_joint_k_step_opacity_state_based
+from DESops.opacity.k_step_two_way_observer import verify_separate_k_step_opacity_TWO
 from DESops.opacity.language_functions import find_path_between
 from DESops.opacity.unified_framework import (
     verify_k_step_opacity_state_observer,
@@ -28,7 +29,9 @@ def verify_current_state_opacity(
     return_num_states: if True, the number of states in the constructed observer is returned as an additional value
     return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
     """
-    g_det = observer_comp_old(g, Euo=g.Euo)
+    # names need to be indices so we can find them from observer
+    g.vs["name"] = g.vs.indices
+    g_det = observer_comp(g)
 
     opaque = True
     for estimate in g_det.vs:
@@ -85,6 +88,7 @@ def verify_k_step_opacity(
         "mapping" uses the state-mapping estimator method
         "state" uses the state-marking method
         "state-observer" uses the state observer method
+        "TWO" uses the two-way observer method
         "unified" uses the unified language method
     default is "unified"
 
@@ -123,18 +127,26 @@ def verify_k_step_opacity(
             return verify_joint_k_step_opacity_state_based(
                 g, k, return_num_states, return_violating_path
             )
-        else:
-            raise ValueError(
-                "State-based method is only implemented for joint opacity with type 1 secrets"
-            )
+        raise ValueError(
+            "State-based method is only implemented for joint opacity with type 1 secrets"
+        )
 
     if method == "state-observer":
         return verify_k_step_opacity_state_observer(
             g, k, joint, secret_type, return_num_states, return_violating_path
         )
 
+    if method == "TWO":
+        if not joint:
+            return verify_separate_k_step_opacity_TWO(
+                g, k, secret_type, return_num_states
+            )
+        raise ValueError(
+            "Two-way observer method is only implemented for separate opacity"
+        )
+
     raise ValueError(
-        "method must be one of: 'language', 'mapping', 'state', 'state-observer', 'unified'"
+        "method must be one of: 'language', 'mapping', 'state', 'state-observer', 'TWO', 'unified'"
     )
 
 
@@ -176,19 +188,34 @@ def verify_infinite_step_opacity(
         else:
             secret_type = 2
 
-    if not joint:
-        raise ValueError(
-            "Infinite step opacity is currently only implemented for joint opacity"
-        )
-
     if method == "unified":
-        return verify_k_step_opacity_unified_language(
-            g, "infinite", True, secret_type, return_num_states, return_violating_path
+        if joint:
+            return verify_k_step_opacity_unified_language(
+                g,
+                "infinite",
+                True,
+                secret_type,
+                return_num_states,
+                return_violating_path,
+            )
+        raise ValueError(
+            "Unified framework method is only implemented for joint opacity"
         )
 
     if method == "language":
-        return verify_joint_infinite_step_opacity_language_based(
-            g, secret_type, return_num_states, return_violating_path
+        if joint:
+            return verify_joint_infinite_step_opacity_language_based(
+                g, secret_type, return_num_states, return_violating_path
+            )
+        raise ValueError("Language-based method is only implemented for joint opacity")
+
+    if method == "TWO":
+        if not joint:
+            return verify_separate_k_step_opacity_TWO(
+                g, "infinite", secret_type, return_num_states
+            )
+        raise ValueError(
+            "Two-way observer method is only implemented for separate opacity"
         )
 
     raise ValueError("method must be one of: 'language', 'unified'")
