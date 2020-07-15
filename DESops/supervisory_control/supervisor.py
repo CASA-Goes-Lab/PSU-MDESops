@@ -83,11 +83,9 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
     all_Gobs_names = G_obs.vs["name"]
     with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
         futures = []
+        chk = H.vcount() // MAX_PROCESSES
         for i, H_indecies in enumerate(
-            pydash.chunk(
-                range(H.vcount()),
-                chk if (chk := H.vcount() // MAX_PROCESSES) > 0 else H.vcount(),
-            )
+            pydash.chunk(range(H.vcount()), chk if chk > 0 else H.vcount(),)
         ):
             futures.append(
                 executor.submit(
@@ -136,12 +134,10 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
 
     with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
         futures = []
+        chk = len(H_all_states) // MAX_PROCESSES
         for i, H_names in enumerate(
             pydash.chunk(
-                list(H_all_states.keys()),
-                chk
-                if (chk := len(H_all_states) // MAX_PROCESSES) > 0
-                else len(H_all_states),
+                list(H_all_states.keys()), chk if chk > 0 else len(H_all_states),
             )
         ):
             futures.append(
