@@ -116,20 +116,22 @@ def supr_contr_norm(G, H, preprocess=True):
     # at the beggining new_del_states always have states that we must check controllability
     while new_del_states:
         # controllability check
-        old_del_states = set(new_del_states)
-        for x in old_del_states:
+        states_to_check_ctr = set(new_del_states)
+        ctr_next_it = set()
+        for x in states_to_check_ctr:
             for prev_state in preG.vs["in"][int(x)]:
                 if (
                     preG.vs["name"][prev_state[0]] in preH.vs["name"]
                     and prev_state[1] in Euc
                 ):
+                    ctr_next_it.add(preG.vs["name"][prev_state[0]])
                     new_del_states.add(preG.vs["name"][prev_state[0]])
                     all_del_states.add(preG.vs["name"][prev_state[0]])
 
         # normality
         # saving which states were added in new_del_states that we haven't check ctr
         # this will be used to not check twice ctr in each state
-        states_add_ctr = new_del_states - old_del_states
+        # states_add_ctr = new_del_states - old_del_states
 
         #
         old_del_states = set(new_del_states)
@@ -142,14 +144,14 @@ def supr_contr_norm(G, H, preprocess=True):
             #    - check the if all states in the partition of a new to be deleted state is
             #    - were already deleted;
             #    - if this test fails then all states in this partition must be deleted
-            if dict_Gstate_obsGstate[x] not in all_del_states:
+            if not dict_Gstate_obsGstate[x].issubset(all_del_states):
                 new_del_states = new_del_states.union(
                     dict_Gstate_obsGstate[x].difference(all_del_states)
                 )
                 all_del_states = all_del_states.union(new_del_states)
 
         # computing deleted states that we must check controllability in the next iteration
-        new_del_states = states_add_ctr | new_del_states
+        new_del_states = ctr_next_it | new_del_states
 
         # states_add_ctr = states_add_ctr | new_del_states
 
