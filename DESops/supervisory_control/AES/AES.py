@@ -29,6 +29,11 @@ def construct_AES(G, X_crit, compact=False):
     # getting vertices of X_crit
     X_crit_vs = G.vs.select(name_in=X_crit)
     X_crit_vs = [v.index for v in X_crit_vs]
+
+    # get infinite cost states:
+    # TODO: clean this up; could be slightly faster
+    X_crit_vs = compute_state_costs(G, X_crit_vs, G.Euc)
+
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
     Q1, Q2 = dict(), dict()
     Qname, Qcrit = (
@@ -51,7 +56,7 @@ def construct_AES(G, X_crit, compact=False):
         G, Qname, Qcrit, Q1, Q2, h1, h2, labelh1, labelh2, queue, X_crit_vs, Gamma
     )
     # Pruning the BTS: (1) find states that violate X_crit (2) supremal controllable
-
+    Aout = A.vs["out"]
     # Find states that violate X_crit
     M = find_violation(A)
 
@@ -62,6 +67,7 @@ def construct_AES(G, X_crit, compact=False):
     # Finding supcon based on A and Atrim
     AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
 
+    AES.events = G.events.copy()
     return AES, A
 
 
@@ -372,7 +378,6 @@ def extract_AES_super(AES):
     states[0] = 0
 
     queue.append(0)
-    ttttttttt = AES.vs["out"]
     while queue:
         v = queue.pop()
         # select largest control decision from this state
@@ -380,13 +385,19 @@ def extract_AES_super(AES):
         if not out:
             continue
 
-        max_index = lambda i: len(out[i][1].label)
-        max_gamma_index = max(range(len(out)), key=max_index)
-        max_gamma = set(out[max_gamma_index][1].label)
-        q2_state = out[max_gamma_index][0]
-        for q2_e in AES.vs[q2_state]["out"]:
-            if q2_e[1] in AES.Euo:
+        events = {l for e in out for l in e[1].label}
+
+        # max control decision is something like the union of the defined control decisions
+        q2_e_generator = (
+            o for n in AES._graph.neighbors(v, mode="OUT") for o in AES.vs[n]["out"]
+        )
+
+        used_events = set()
+
+        for q2_e in q2_e_generator:
+            if q2_e[1] in AES.Euo or q2_e[1] in used_events:
                 continue
+            used_events.add(q2_e[1])
             # Jack: I might be assuming that the exists() clause in line 7 is trivial
             next_v = q2_e[0]
 
@@ -396,9 +407,9 @@ def extract_AES_super(AES):
 
             trans.append((states[v], states[next_v]))
             trans_labels.append(q2_e[1])
-            max_gamma.remove(q2_e[1])
 
-        for e in max_gamma:
+        unused_events = events - used_events
+        for e in unused_events:
             # self-loops for all remaining events in control decision
             trans.append((states[v], states[v]))
             trans_labels.append(e)
@@ -406,4 +417,24 @@ def extract_AES_super(AES):
     sup = DFA()
     sup.add_vertices(len(states))
     sup.add_edges(trans, trans_labels)
+
+    sup.events = AES.events.copy()
     return sup
+
+
+def compute_state_costs(G, states_removed, Euc):
+    # updates states_removed with infinite cost states
+
+    # can make this a queue?
+    bad_states = set()
+    states_to_check = states_removed
+    while states_to_check:
+        bad_states.update(states_to_check)
+        # Back out the next potentially infinite-cost states as those with uncontrollable transitions
+        # to the most recent set of infinite cost states (states_to_check on the RHS).
+        states_to_check = {
+            e.source
+            for e in G.es(_target_in=states_to_check)
+            if e["label"] in Euc and e.source not in bad_states
+        }
+    return bad_states

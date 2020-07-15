@@ -69,6 +69,7 @@ def offline_VLPPO(
             Euc = plant.Euc.union(spec.Euc)
         else:
             Euc = plant.Euc
+
     elif isinstance(Euc, list):
         Euc = set(Euc)
 
@@ -88,14 +89,14 @@ def offline_VLPPO(
             H_pp = DFA()
             construct_subautomata(spec, plant, H_pp, G_pp)
             # To keep names simple, reassign H, G to their pre-processed counterparts.
-            spec_pp = H_SA
-            plant_pp = G_SA
-            print(H_SA.vs["name"])
-            print(G_SA.vs["name"])
+            spec_pp = H_pp
+            plant_pp = G_pp
+
         else:
             spec_pp = spec
             plant_pp = plant
 
+        # probably don't need this:
         H_o = parallel_comp([plant_pp, spec_pp])
         X_crit = [
             v["name"][0]
@@ -115,6 +116,15 @@ def offline_VLPPO(
 
     bad_states = compute_state_costs(plant_pp, X_crit_ind, Euc)
     # State is illegal if in bad_states
+
+    # if initial state is in bad_states, there is no solution:
+
+    if 0 in bad_states:
+        # return empty DFA
+
+        # do a warning here ! ! !
+        empty_sol = DFA()
+        return empty_sol
 
     if not event_ordering:
         # "unspecified" event_ordering follows nondeterministic set ordering
@@ -159,6 +169,8 @@ def offline_VLPPO(
     # EVENT TODO: switch this to more general event updating
     supervisor.Euc = Euc.copy()
     supervisor.Euo = Euo.copy()
+
+    supervisor.events = plant.events.copy()
 
     if not supervisor_def:
         return supervisor
@@ -207,6 +219,7 @@ def search_VLPPO(
     while Q:
         (ACT, PS) = Q.pop(0)
         E_set = set(t[1] for v in PS for t in G.vs[v]["out"])
+
         for e in ACT:
             NS = PS
             if e not in Euo and e in E_set:
@@ -247,7 +260,7 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering):
 
     # 3. Determine UR of states in PS via unobservable events in ACT (not necessarily Euc?)
     PS_new = ureach_from_set_adj(NS, G, ACT.intersection(Euo))
-    return [ACT, PS_new]
+    return ACT, PS_new
 
 
 def control_action(G, NS, E_list, Euc, Euo, bad_states):
@@ -280,9 +293,9 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states):
                 return set(E_list)
             return ACT.union(E_list)
         # 2.2: If for ALL x in ure(S from ACT), f(x, E_list[Pt]) does not exist
-        tttt = G.vs["out"]
+
         trans_labels = lambda states: {t[1] for v in states for t in G.vs[v]["out"]}
-        temp = trans_labels(ACT_eur)
+
         if E_list[Pt] not in trans_labels(ACT_eur):
             Pt += 1
             continue
@@ -293,6 +306,7 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states):
         a.add(E_list[Pt])
 
         extended_ureach_from_set(ure_ACT_E_list, NS, G, a, Euo)
+        # if ure_ACT_E_list.intersection(bad_states)
         if any(True if x in bad_states else False for x in ure_ACT_E_list):
             E_list.remove(E_list[Pt])
             continue
@@ -361,7 +375,6 @@ def compute_state_costs(G, states_removed, Euc):
     # can make this a queue?
     bad_states = set()
     states_to_check = states_removed
-
     while states_to_check:
         bad_states.update(states_to_check)
         # Back out the next potentially infinite-cost states as those with uncontrollable transitions

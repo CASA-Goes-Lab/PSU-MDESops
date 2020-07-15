@@ -23,11 +23,8 @@ def compare_language(g1, g2):
         # both empty, so equivalent
         return True
 
-    # no vertices implies no edges.
-    # if only one of g1 or g2 have any vertices, they are only langauge equivalent if the other
-    # has no edges
-    elif g1.ecount() == 0 and g2.ecount() == 0:
-        return True
+    elif g1.vcount() == 0 or g2.vcount() == 0:
+        return False
 
     vertice_names = list()  # list of vertex names for igraph construction
     vertice_number = dict()  # dictionary vertex_names -> vertex_id
