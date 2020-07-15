@@ -30,7 +30,7 @@ from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
-def supr_contr_norm(G, H, preprocess=True):
+def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     """
     Computes the supremal controllable-normal supervisor for the given
     plant and specification Automata. An iterative process is used, where the
@@ -46,6 +46,13 @@ def supr_contr_norm(G, H, preprocess=True):
     Parameters:
     G: plant/system as an automaton.
     H: specification as an automaton.
+
+    If preprocess=False: will extract critical states from G, either by states named "dead" or by specified X_crit vertice names
+
+    Valid inputs:
+        (H, preprocess)
+        (H, not prep)
+        (not prep, X_crit)
     """
 
     Euo = G.Euo
@@ -71,10 +78,20 @@ def supr_contr_norm(G, H, preprocess=True):
         warnings.warn(
             "\nComputing the supremal controllable and normal sublanguage without strict subautomaton preprocessing\nAssuming that given H is a strict subautomaton of G\nStill preprocessing G,H to be Strict Partition Automata"
         )
-
+        t = G.vs["name"]
+        if X_crit:
+            G.vs["name"] = ["dead" if v in X_crit else v for v in G.vs["name"]]
+        tt = G.vs["name"]
         obsG = observer_comp(G)
         preG = parallel_comp([G, obsG])
+        ttt = preG.vs["name"]
         preH = find_H(preG)
+
+    teeeeee = preG.vs["out"]
+    if preH is None:
+        # no solution
+        # todo warn here
+        return DFA()
 
     # For each state:
     # 2.1: Compute normality condition
@@ -180,7 +197,9 @@ def supr_contr_norm(G, H, preprocess=True):
 
 
 def find_H(Gspa):
-    states_del = {v.index for v in Gspa.vs if v["name"][0][0] == "dead"}
+    states_del = {v.index for v in Gspa.vs if v["name"][0] == "dead"}
+    if 0 in states_del:
+        return None
     H = DFA(Gspa)
     H.delete_vertices(states_del)
     inacc_states = find_inacc(H)
