@@ -57,7 +57,7 @@ def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
     R.update([e.target for e in g.es.select(label_notin=Euo)])
     Rlist = list(R)
 
-    # names must be in this form for verify_joint_k_step_opacity_alternative
+    # names must be in this form for language-based k-step opacity methods
     h.add_vertices(len(R), [(ind, 1) for ind in R])
     h.add_vertices(len(R), [(ind, 0) for ind in R])
 

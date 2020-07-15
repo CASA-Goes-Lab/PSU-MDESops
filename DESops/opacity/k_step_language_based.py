@@ -96,7 +96,7 @@ def verify_joint_infinite_step_opacity_language_based(
 
     g_c = contract_secret_traces(g, secret_type)
 
-    h = g_c.copy()
+    h = NFA(g_c)
     h.delete_vertices([v for v in h.vs if v["secret"]])
 
     return language_inclusion(g_c, h, Eo, return_num_states, return_violating_path)

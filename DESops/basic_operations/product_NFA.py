@@ -7,11 +7,11 @@ current product_comp to work with NFAs, rather than having this as a separate fu
 """
 from collections import OrderedDict
 
-from DESops.automata.automata import _Automata
+from DESops.automata.NFA import NFA
 from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
 
 
-def product_NFA(g_list, g_comp=None, save_state_names=True, save_marked_states=False):
+def product_NFA(g_list, save_state_names=True, save_marked_states=True):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.
@@ -43,10 +43,7 @@ def product_NFA(g_list, g_comp=None, save_state_names=True, save_marked_states=F
 
     Doesn't return anything to avoid potentially making redundant copies.
     """
-    g_comp_defined = True
-    if g_comp is None:
-        g_comp = _Automata()
-        g_comp_defined = False
+    g_comp = NFA()
 
     # Compute intersection of events of all included graphs:
     all_events = g_list[0].es["label"]
@@ -107,7 +104,7 @@ def product_NFA(g_list, g_comp=None, save_state_names=True, save_marked_states=F
                 # the first multiplicand, g1.
                 g_comp_vert[(v1, v2)] = [index, list(v1["name"]) + [v2]]
             else:
-                g_comp_vert[(v1, v2)] = [index, [v1, v2]]
+                g_comp_vert[(v1, v2)] = [index, (v1, v2)]
             index = index + 1
             init.append(True)
 
@@ -178,5 +175,5 @@ def product_NFA(g_list, g_comp=None, save_state_names=True, save_marked_states=F
     # to iterate through list of inputs
     # g_list[i] = g_comp
 
-    if not g_comp_defined:
-        return g_comp
+    g_comp.Euo = set.intersection(*[g.Euo for g in g_list])
+    return g_comp
