@@ -40,9 +40,7 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
     if not Euc:
         Euc = G.Euc.union(H.Euc)
 
-    # PREPROCESS IS INCORRECT IT MUST RETURN G AND H
     if preprocess:
-        # preH,preG = DFA(),DFA()
         (preH, preG) = strict_subautomata(H, G)
         # print(len(preH.vs))
         # print(preG.vs["out"])

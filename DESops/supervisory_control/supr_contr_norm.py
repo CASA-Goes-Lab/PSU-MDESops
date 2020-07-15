@@ -61,8 +61,8 @@ def supr_contr_norm(G, H, preprocess=True):
         obsG = observer_comp(preG)
         preG = parallel_comp([preG, obsG])
         preH = find_H(preG)
-        print(preH.vs["name"])
-        print(preG.vs["name"])
+        # print(preH.vs["name"])
+        # print(preG.vs["name"])
         # print(len(preH.vs))
         # print(preG.vs["out"])
     else:
@@ -92,57 +92,93 @@ def supr_contr_norm(G, H, preprocess=True):
     # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
     obsG = observer_comp(preG)
 
-    # obsG.vs["name"] = [frozenset(int(s) for s in name) for name in G_obs.vs["name"]]
-    # G.vs["name"] = G_names
-    # first_iter = True
-    # while True:
-    #     if not first_iter and not states_to_remove:
-    #         break
-    #     else:
-    #         states_just_removed = scs(G, H, Euc, states_to_remove, first_iter)
-    #     if not first_iter and not states_just_removed:
-    #         break
+    obsG_names = obsG.vs["name"]
+    dict_Gstate_obsGstate = {st: n for n in obsG_names for st in n}
 
-    #     else:
-    #         states_removed.update(states_just_removed)
-    #         states_to_remove = sns(G, G_obs, H, Euc, Euo, states_removed)
+    if "in" not in preH.vs.attributes():
+        incoming_adj = [[] for _ in range(preH.vcount())]
+        for e in preH.es():
+            incoming_adj[e.target].append((e.source, e["label"]))
+        preH.vs["in"] = incoming_adj
+    if "in" not in preG.vs.attributes():
+        incoming_adj = [[] for _ in range(preG.vcount())]
+        for e in preG.es():
+            incoming_adj[e.target].append((e.source, e["label"]))
+        preG.vs["in"] = incoming_adj
 
-    #     if first_iter:
-    #         first_iter = False
+    preG_name_dict = {v["name"]: v for v in preG.vs()}
 
-    # return H
+    # Finding which states were already delete from G to compute H
+    all_del_states = set(preG.vs["name"]) - set(preH.vs["name"])
+    new_del_states = set(preG.vs["name"]) - set(preH.vs["name"])
 
+    # print(new_del_states)
+    # at the beggining new_del_states always have states that we must check controllability
+    while new_del_states:
+        # controllability check
+        old_del_states = set(new_del_states)
+        for x in old_del_states:
+            for prev_state in preG.vs["in"][int(x)]:
+                if (
+                    preG.vs["name"][prev_state[0]] in preH.vs["name"]
+                    and prev_state[1] in Euc
+                ):
+                    new_del_states.add(preG.vs["name"][prev_state[0]])
+                    all_del_states.add(preG.vs["name"][prev_state[0]])
 
-def find_inacc(G):
-    """
-    Returns a list of vertex indices of G that are inaccessible
-    and should be removed.
+        # normality
+        # saving which states were added in new_del_states that we haven't check ctr
+        # this will be used to not check twice ctr in each state
+        states_add_ctr = new_del_states - old_del_states
 
-    """
-    Q = list()
-    Q.append(0)
-    good_states = set()
-    good_states.add(0)
-    while Q:
-        v = Q.pop(0)
+        #
+        old_del_states = set(new_del_states)
 
-        neighbors = set()
-        for t in G._graph.neighbors(v, mode="OUT"):
-            if t in good_states:
-                continue
-            good_states.add(t)
-            Q.append(t)
+        # this will hold which new states must be deleted due to violation of normality
+        new_del_states = set()
 
-    bad_states = {v.index for v in G.vs if v.index not in good_states}
-    return bad_states
+        for x in old_del_states:
+            # normality check since G is SPA
+            #    - check the if all states in the partition of a new to be deleted state is
+            #    - were already deleted;
+            #    - if this test fails then all states in this partition must be deleted
+            if dict_Gstate_obsGstate[x] not in all_del_states:
+                new_del_states = new_del_states.union(
+                    dict_Gstate_obsGstate[x].difference(all_del_states)
+                )
+                all_del_states = all_del_states.union(new_del_states)
+
+        # computing deleted states that we must check controllability in the next iteration
+        new_del_states = states_add_ctr | new_del_states
+
+        # states_add_ctr = states_add_ctr | new_del_states
+
+        # finding the indices of these state in preH
+        states_to_remove = [v.index for v in preH.vs.select(name_in=new_del_states)]
+        preH.delete_vertices(states_to_remove)
+
+        # computing accessible part
+        inacc_states = find_inacc(preH)
+        preH.delete_vertices(inacc_states)
+        inacc_states = {preG.vs["name"][v] for v in inacc_states}
+
+        # augmenting new_del_states with states deleted due inaccessibility
+        new_del_states = new_del_states | inacc_states
+        # print(new_del_states)
+
+    if preH.vcount() == 0:
+        import warnings
+
+        warnings.warn(
+            "\nPrefix closed Sup CN has no solution for given G,H\n Returning an empty automaton"
+        )
+        return DFA()
+    else:
+        return preH
 
 
 def find_H(Gspa):
-    states_del = set()
-    for v in Gspa.vs:
-        # print(v['name'][0][0])
-        if v["name"][0][0] == "dead":
-            states_del.add(v.index)
+    states_del = {v.index for v in Gspa.vs if v["name"][0][0] == "dead"}
     H = DFA(Gspa)
     H.delete_vertices(states_del)
     inacc_states = find_inacc(H)
