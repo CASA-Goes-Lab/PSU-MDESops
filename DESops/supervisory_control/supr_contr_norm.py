@@ -63,20 +63,10 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     #   2. G is an SPA
     # NOTE: The states in H are not yet deleted and must be deleted in SCS
     if preprocess:
-        # preH,preG = DFA(),DFA()
         (preH, preG) = strict_subautomata(H, G)
-        # print(preG.vs["name"])
         obsG = observer_comp(preG)
-        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
-        # obsG = composition.observer(preG)
-        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
         preG = parallel_comp([preG, obsG])
-        # plot(preG,bbox_i=(0, 0, 4000, 4000))
         preH = find_H(preG)
-
-        # print(preG.vs["name"])
-        # print(len(preH.vs))
-        # print(preG.vs["out"])
     else:
         import warnings
 
@@ -113,32 +103,21 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     ]
     # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
     obsG = observer_comp(preG)
-    # plot(preG,bbox_i=(0, 0, 4000, 4000))
-    # plot(preH,bbox_i=(0, 0, 4000, 4000))
-    # plot(obsG,bbox_i=(0, 0, 4000, 4000))
     obsG_names = obsG.vs["name"]
     dict_Gstate_obsGstate = {st: n for n in obsG_names for st in n}
-
-    # if "in" not in preH.vs.attributes():
-    #     incoming_adj = [[] for _ in range(preH.vcount())]
-    #     for e in preH.es():
-    #         incoming_adj[e.target].append((e.source, e["label"]))
-    #     preH.vs["in"] = incoming_adj
     if "in" not in preG.vs.attributes():
         incoming_adj = [[] for _ in range(preG.vcount())]
         for e in preG.es():
             incoming_adj[e.target].append((e.source, e["label"]))
         preG.vs["in"] = incoming_adj
-
     preG_name_dict = {v["name"]: v for v in preG.vs()}
-
     # Finding which states were already delete from G to compute H
     all_del_states = set(preG.vs["name"]) - set(preH.vs["name"])
     new_del_states = set(preG.vs["name"]) - set(preH.vs["name"])
 
-    # print(new_del_states)
     # at the beggining new_del_states always have states that we must check controllability
     while new_del_states:
+        preH_name_dict = {v["name"]: v.index for v in preH.vs()}
         # controllability check
         states_to_check_ctr = set(new_del_states)
         ctr_next_it = set()
@@ -175,26 +154,21 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
                 all_del_states = all_del_states.union(new_del_states)
 
         # computing deleted states that we must check controllability in the next iteration
-        # print(ctr_next_it)
-        # print(new_del_states)
         new_del_states = ctr_next_it | new_del_states
 
-        # states_add_ctr = states_add_ctr | new_del_states
-
         # finding the indices of these state in preH
-        # print(new_del_states)
-        states_to_remove = [v.index for v in preH.vs.select(name_in=new_del_states)]
+        # states_to_remove = [v.index for v in preH.vs.select(name_in=new_del_states)]
+        states_to_remove = [
+            preH_name_dict[v] for v in new_del_states if v in preH_name_dict
+        ]
         preH.delete_vertices(states_to_remove)
         # computing accessible part
         inacc_states = find_inacc(preH)
         inacc_states_names = {preH.vs["name"][v] for v in inacc_states}
         preH.delete_vertices(inacc_states)
 
-        # print(inacc_states_names)
         # augmenting new_del_states with states deleted due inaccessibility
         new_del_states = new_del_states | inacc_states_names
-        # print(new_del_states)
-
     if preH.vcount() == 0:
         import warnings
 
