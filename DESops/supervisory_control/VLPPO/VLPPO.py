@@ -371,8 +371,6 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
 
 def compute_state_costs(G, states_removed, Euc):
     # updates states_removed with infinite cost states
-
-    # can make this a queue?
     bad_states = set()
     states_to_check = states_removed
     while states_to_check:
@@ -380,9 +378,10 @@ def compute_state_costs(G, states_removed, Euc):
         # Back out the next potentially infinite-cost states as those with uncontrollable transitions
         # to the most recent set of infinite cost states (states_to_check on the RHS).
         states_to_check = {
-            e.source
-            for e in G.es(_target_in=states_to_check)
-            if e["label"] in Euc and e.source not in bad_states
+            G.es[e].source
+            for v in states_to_check
+            for e in G._graph.incident(v, mode="IN")
+            if G.es[e]["label"] in Euc and G.es[e].source not in bad_states
         }
     return bad_states
 
