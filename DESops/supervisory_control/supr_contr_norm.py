@@ -28,6 +28,7 @@ from ..basic_operations.parallel_comp import parallel_comp
 from ..basic_operations.product_comp import product_comp
 from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
+from ..visualization.plot import plot
 
 
 def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
@@ -66,8 +67,13 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
         (preH, preG) = strict_subautomata(H, G)
         # print(preG.vs["name"])
         obsG = observer_comp(preG)
+        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
+        # obsG = composition.observer(preG)
+        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
         preG = parallel_comp([preG, obsG])
+        # plot(preG,bbox_i=(0, 0, 4000, 4000))
         preH = find_H(preG)
+
         # print(preG.vs["name"])
         # print(len(preH.vs))
         # print(preG.vs["out"])
@@ -107,7 +113,9 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     ]
     # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
     obsG = observer_comp(preG)
-
+    # plot(preG,bbox_i=(0, 0, 4000, 4000))
+    # plot(preH,bbox_i=(0, 0, 4000, 4000))
+    # plot(obsG,bbox_i=(0, 0, 4000, 4000))
     obsG_names = obsG.vs["name"]
     dict_Gstate_obsGstate = {st: n for n in obsG_names for st in n}
 
@@ -167,21 +175,24 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
                 all_del_states = all_del_states.union(new_del_states)
 
         # computing deleted states that we must check controllability in the next iteration
+        # print(ctr_next_it)
+        # print(new_del_states)
         new_del_states = ctr_next_it | new_del_states
 
         # states_add_ctr = states_add_ctr | new_del_states
 
         # finding the indices of these state in preH
-        print(new_del_states)
+        # print(new_del_states)
         states_to_remove = [v.index for v in preH.vs.select(name_in=new_del_states)]
         preH.delete_vertices(states_to_remove)
         # computing accessible part
         inacc_states = find_inacc(preH)
+        inacc_states_names = {preH.vs["name"][v] for v in inacc_states}
         preH.delete_vertices(inacc_states)
-        inacc_states = {preG.vs["name"][v] for v in inacc_states}
 
+        # print(inacc_states_names)
         # augmenting new_del_states with states deleted due inaccessibility
-        new_del_states = new_del_states | inacc_states
+        new_del_states = new_del_states | inacc_states_names
         # print(new_del_states)
 
     if preH.vcount() == 0:

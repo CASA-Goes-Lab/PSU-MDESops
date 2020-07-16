@@ -34,7 +34,7 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
     good_states = {0}
     stack = deque(good_states)
     while len(stack) > 0:
-        index = stack.pop()
+        index = stack.popleft()
         neighbors = {
             out[0]
             for out in G.vs[index]["out"]
