@@ -27,6 +27,9 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
     if G.vcount() == 0:
         warnings.warn("Ac(): the given automaton is empty.")
         return set()
+    if 0 in states_removed:
+        warnings.warn("Initial state deleted.")
+        return set([v.index for v in G.vs])
 
     good_states = {0}
     stack = deque(good_states)

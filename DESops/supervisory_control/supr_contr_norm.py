@@ -68,7 +68,6 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
         obsG = observer_comp(preG)
         preG = parallel_comp([preG, obsG])
         preH = find_H(preG)
-        # print(preH.vs["name"])
         # print(preG.vs["name"])
         # print(len(preH.vs))
         # print(preG.vs["out"])
@@ -112,11 +111,11 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     obsG_names = obsG.vs["name"]
     dict_Gstate_obsGstate = {st: n for n in obsG_names for st in n}
 
-    if "in" not in preH.vs.attributes():
-        incoming_adj = [[] for _ in range(preH.vcount())]
-        for e in preH.es():
-            incoming_adj[e.target].append((e.source, e["label"]))
-        preH.vs["in"] = incoming_adj
+    # if "in" not in preH.vs.attributes():
+    #     incoming_adj = [[] for _ in range(preH.vcount())]
+    #     for e in preH.es():
+    #         incoming_adj[e.target].append((e.source, e["label"]))
+    #     preH.vs["in"] = incoming_adj
     if "in" not in preG.vs.attributes():
         incoming_adj = [[] for _ in range(preG.vcount())]
         for e in preG.es():
@@ -173,9 +172,9 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
         # states_add_ctr = states_add_ctr | new_del_states
 
         # finding the indices of these state in preH
+        print(new_del_states)
         states_to_remove = [v.index for v in preH.vs.select(name_in=new_del_states)]
         preH.delete_vertices(states_to_remove)
-
         # computing accessible part
         inacc_states = find_inacc(preH)
         preH.delete_vertices(inacc_states)
@@ -197,7 +196,8 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
 
 
 def find_H(Gspa):
-    states_del = {v.index for v in Gspa.vs if v["name"][0] == "dead"}
+    states_del = {v.index for v in Gspa.vs if v["name"][0][0] == "dead"}
+    # print(states_del)
     if 0 in states_del:
         return None
     H = DFA(Gspa)

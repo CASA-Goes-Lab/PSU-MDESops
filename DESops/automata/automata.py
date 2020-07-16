@@ -205,10 +205,18 @@ class _Automata:
         self.__bool__ = self._graph.__bool__()
 
     def delete_vertices(self, vs):
-        self._graph.delete_vertices(vs)
-        for state in self.vs:
-            new_out = [(e.target, e["label"]) for e in state.out_edges()]
-            self.vs[state.index].update_attributes({"out": new_out})
+        # initial state in vs
+        if 0 in vs:
+            import warnings
+
+            warnings.warn("Initial state deleted.")
+            self._graph.delete_vertices([v.index for v in self.vs])
+            return
+        else:
+            self._graph.delete_vertices(vs)
+            for state in self.vs:
+                new_out = [(e.target, e["label"]) for e in state.out_edges()]
+                self.vs[state.index].update_attributes({"out": new_out})
 
     def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
