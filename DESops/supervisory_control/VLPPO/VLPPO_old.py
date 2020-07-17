@@ -14,10 +14,7 @@ from DESops.automata.DFA import DFA
 from DESops.basic_operations.construct_subautomata import construct_subautomata
 from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.refine_product import refine_product_SCS
-from DESops.basic_operations.ureach import (
-    extended_ureach_from_set_adj,
-    ureach_from_set_adj,
-)
+from DESops.basic_operations.ureach import extended_ureach_from_set, ureach_from_set_adj
 
 
 def offline_VLPPO(
@@ -127,7 +124,7 @@ def offline_VLPPO(
 
         # do a warning here ! ! !
         empty_sol = DFA()
-        return empty_sol, 0
+        return empty_sol
 
     if not event_ordering:
         # "unspecified" event_ordering follows nondeterministic set ordering
@@ -135,12 +132,10 @@ def offline_VLPPO(
             label for label in set(plant_pp.es["label"]) if label not in Euc
         ]
 
-    plant.vs["ooo"] = [[t[1] for t in v["out"]] for v in plant.vs()]
-
     edge_labels = list()
     edge_pairs = list()
     # Compute next set of present states PS, and control policy ACT
-    ACT, PS, time_tot = VLPPO(plant, Euc, Euo, {0}, {}, bad_states, event_ordering)
+    ACT, PS = VLPPO(plant, Euc, Euo, {0}, {}, bad_states, event_ordering)
     init_set = frozenset(PS)
 
     supervisor_def = True
@@ -149,10 +144,9 @@ def offline_VLPPO(
         supervisor = DFA()
 
     # If the first VLPPO computation found a possible next set of states, use bfs to traverse all sets of states
-
     if PS:
         sets_of_states.add(init_set)
-        et = search_VLPPO(
+        search_VLPPO(
             plant,
             Euc,
             Euo,
@@ -164,13 +158,12 @@ def offline_VLPPO(
             ACT,
             event_ordering,
         )
-        time_tot += et
+
         # Create graph P using sets_of_states, edge_labels & edge_pairs
         # modifies sets_of_states
         convert_to_graph(
             supervisor, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_set
         )
-
     # Otherwise, P will be an empty graph?
 
     # EVENT TODO: switch this to more general event updating
@@ -219,9 +212,10 @@ def search_VLPPO(
     event_ordering: priority ordering of controllable events, with largest priorty going
         to the first element.
     """
+
     Q = list()
     Q.append((ACT, PS))
-    tot = 0
+
     while Q:
         (ACT, PS) = Q.pop(0)
         E_set = set(t[1] for v in PS for t in G.vs[v]["out"])
@@ -230,10 +224,7 @@ def search_VLPPO(
             NS = PS
             if e not in Euo and e in E_set:
                 # Only check observable & valid neighbors (in active event set of PS) for more VLPPOCP computations
-                [ACT_new, NS, et] = VLPPO(
-                    G, Euc, Euo, PS, e, bad_states, event_ordering
-                )
-                tot += et
+                [ACT_new, NS] = VLPPO(G, Euc, Euo, PS, e, bad_states, event_ordering)
                 if NS not in sets_of_states:
                     sets_of_states.add(frozenset(NS))
                     Q.append((ACT_new, NS))
@@ -241,7 +232,7 @@ def search_VLPPO(
             edge_labels.append(e)
             edge_pairs.append((frozenset(PS), frozenset(NS)))
 
-    return tot
+    return
 
 
 def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering):
@@ -259,20 +250,17 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering):
     """
     # 1. Determine set of next states NS
     #       Unobservable reach from current state
-
     NS = get_N(event, PS, G, Euo)
 
     # If no event ordering is provided,
     # assume event ordering is whatever the random order of the set of labels is
 
     # 2. Determine the control action ACT
-    ACT, tttt = control_action(G, NS, event_ordering.copy(), Euc, Euo, bad_states)
+    ACT = control_action(G, NS, event_ordering.copy(), Euc, Euo, bad_states)
 
     # 3. Determine UR of states in PS via unobservable events in ACT (not necessarily Euc?)
-
     PS_new = ureach_from_set_adj(NS, G, ACT.intersection(Euo))
-
-    return ACT, PS_new, tttt
+    return ACT, PS_new
 
 
 def control_action(G, NS, E_list, Euc, Euo, bad_states):
@@ -292,69 +280,42 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states):
     ACT.update(Euc)
     Pt = 0
 
-    import time
-
-    pt = time.process_time
-    tot = 0
-
-    ACT_eur = extended_ureach_from_set_adj(NS, G, ACT, Euo)
+    ACT_eur = set()
+    ACT_eur.update(NS)
+    extended_ureach_from_set(ACT_eur, NS, G, ACT, Euo)
 
     # 2. available controllable events list isn't empty:
     while E_list:
         bad_state_found = False
         # 2.1
-        if Pt >= len(E_list):
+        if Pt > len(E_list) - 1:
             if not ACT:
-                return set(E_list), tot
-            return ACT.union(E_list), tot
-
+                return set(E_list)
+            return ACT.union(E_list)
         # 2.2: If for ALL x in ure(S from ACT), f(x, E_list[Pt]) does not exist
 
-        # trans_labels = lambda states: {t[1] for v in states for t in G.vs[v]["out"]}
+        trans_labels = lambda states: {t[1] for v in states for t in G.vs[v]["out"]}
 
-        # temp_set = {t[1] for v in ACT_eur for t in G.vs[v]["out"]}
-
-        e = E_list[Pt]
-        e_defined = False
-        for v in ACT_eur:
-            for t in G.vs[v]["ooo"]:
-                if e == t:
-                    e_defined = True
-                    break
-            else:
-                continue
-            break
-
-        if not e_defined:
+        if E_list[Pt] not in trans_labels(ACT_eur):
             Pt += 1
-            # tot += pt() - st
             continue
 
         # 2.3:
+        ure_ACT_E_list = set()
+        a = ACT.copy()
+        a.add(E_list[Pt])
 
-        # constant time to add/delete; possibly faster than union or copy+add
-        ACT.add(E_list[Pt])
-
-        st = pt()
-        ure_ACT_E_list = extended_ureach_from_set_adj(NS, G, ACT, Euo)
-        tot += pt() - st
-
-        ACT.remove(E_list[Pt])
-
+        extended_ureach_from_set(ure_ACT_E_list, NS, G, a, Euo)
+        # if ure_ACT_E_list.intersection(bad_states)
         if any(True if x in bad_states else False for x in ure_ACT_E_list):
             E_list.remove(E_list[Pt])
-            # tot += pt() - st
             continue
 
         # 2.4:
-        x = E_list.pop(Pt)
-        # tot += pt() - st
-
-        ACT.add(x)
-
+        ACT.add(E_list[Pt])
+        E_list.remove(E_list[Pt])
         Pt = 0
-        # tot += pt() - st
-    return ACT, tot
+    return ACT
 
 
 def get_N(event, S, G, Euo):
