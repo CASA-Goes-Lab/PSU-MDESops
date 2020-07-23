@@ -24,7 +24,6 @@ from DESops.supervisory_control.AES.AES import construct_AES, extract_AES_super
 from DESops.supervisory_control.supr_contr import supr_contr
 from DESops.supervisory_control.supr_contr_norm import supr_contr_norm
 from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
-from DESops.supervisory_control.VLPPO.VLPPO_old import offline_VLPPO as oldV
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
