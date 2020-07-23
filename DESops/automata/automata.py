@@ -95,16 +95,6 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
     files. For example, the observer() method in the Automata class merely does a call to
     the function 'observer_comp' in '..basic.observer_comp'
 
-Methods:?
-
-Additional functions in this file:
-parallel_comp
-product_comp
-supremal_controllable_supervisor
-supremal_cn_supervisor
-offline_VLPPO
-str2
-copy_event_sets
 
 """
 
@@ -113,7 +103,7 @@ from collections import deque
 from collections.abc import Iterable
 from typing import Set, Union
 
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
     ConversionError,
@@ -528,55 +518,6 @@ def str2(label):
     if isinstance(label, frozenset):
         return str(set(label))
     return str(label)
-
-
-# def supremal_contr_supervisor(system, specification):
-#     """
-#     Computes the supremal controllable supervisor for the given plant
-#     and specficiation Automata.
-
-#     Returns the supremal controllable supervisor as an Automata.
-
-#     Parameters:
-#     system: Automata representing the plant/system.
-#     specification: Automata representing the desired specification.
-
-#     The set of uncontrollable events, Euc, is found as the union
-#     of the Euc sets in the plant & specification.
-
-#     Assumes K is a sublanguage of M, where L(plant) = M & L(spec) = K
-
-#     Depends on supremal_controllable_supervisor, implemented in
-#     automata_operations/supremal/supremal_controllable_supervisor
-#     """
-#     Euc_u = system.Euc.union(specification.Euc)
-#     A = Automata(scs_i(system, specification, Euc_u))
-#     copy_event_sets([system, specification], A)
-#     return A
-
-
-# def supremal_cn_supervisor(system, specification):
-#     """
-#     Computes the supremal controllable-normal supervisor for the given
-#     plant and specification Automata.
-
-#     Returns the supremal CN supervisor as an Automata.
-
-#     Parameters:
-#     system: Automata representing the plant/system.
-#     specification: Automata representing the desired specification.
-
-#     The sets of uncontrollable and unobservable events, Euc and Euo,
-#     are found as the unions of their respective sets in the plant & specification.
-
-#     Depends on supremal_cn_supervisor, implemented in
-#     automata_operations/supremal/supremal_cn_supervisor
-#     """
-#     Euc_u = system.Euc | specification.Euc
-#     Euo_u = system.Euo | specification.Euo
-#     A = Automata(supremal_cn_supervisor_i(specification, system, Euc_u, Euo_u))
-#     copy_event_sets([system, specification], A)
-#     return A
 
 
 def copy_event_sets(this, other):

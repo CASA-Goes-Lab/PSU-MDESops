@@ -4,7 +4,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.automata.PFA import PFA
 

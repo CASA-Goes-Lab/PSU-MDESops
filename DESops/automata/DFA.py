@@ -3,7 +3,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.automata import _Automata
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.error import IncongruencyError
 
 # MUST HAVE A DEFINITION NFA TO DFA

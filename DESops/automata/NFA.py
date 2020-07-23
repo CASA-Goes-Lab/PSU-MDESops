@@ -1,7 +1,7 @@
 from typing import Set
 
 from DESops.automata.automata import _Automata
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 
 
 class NFA(_Automata):

@@ -6,7 +6,7 @@ The implementation is modified from the FsmGenerator in the VEiP GitLab reposito
 from random import choice, randint, randrange, sample, shuffle
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.file.igraph_to_fsm import write_fsm
 

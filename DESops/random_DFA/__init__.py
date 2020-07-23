@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.random_DFA.helpers import *
 
 # On import, ensure random_DFA file exists:

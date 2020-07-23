@@ -5,7 +5,7 @@ import igraph as ig
 from dd.autoref import BDD
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 
 
 def read_fsm_to_bdd(fsm_filename):

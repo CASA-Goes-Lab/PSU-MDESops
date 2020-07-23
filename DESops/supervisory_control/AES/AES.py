@@ -8,7 +8,7 @@ import igraph as ig
 import pydash
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations.ureach import ureach_from_set_adj, ureach_from_set_adjdict
 from DESops.supervisory_control import supr_contr
 

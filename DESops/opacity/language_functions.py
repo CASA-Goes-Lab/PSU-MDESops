@@ -3,7 +3,7 @@ Functions related to automaton languages
 """
 import warnings
 
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.product_NFA import product_NFA

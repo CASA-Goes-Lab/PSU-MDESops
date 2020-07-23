@@ -83,16 +83,14 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
         warnings.warn(
             "\nComputing the supremal controllable and normal sublanguage without strict subautomaton preprocessing\nAssuming that given H is a strict subautomaton of G\nStill preprocessing G,H to be Strict Partition Automata"
         )
-        t = G.vs["name"]
+
         if X_crit:
             G.vs["name"] = ["dead" if v in X_crit else v for v in G.vs["name"]]
-        tt = G.vs["name"]
         obsG = observer_comp(G)
         preG = parallel_comp([G, obsG])
-        ttt = preG.vs["name"]
+        preG.vs["name"] = [([v[0]], v[1]) for v in preG.vs["name"]]
         preH = find_H(preG)
 
-    teeeeee = preG.vs["out"]
     if preH is None:
         # no solution
         # todo warn here
