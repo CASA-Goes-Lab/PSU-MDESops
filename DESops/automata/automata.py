@@ -208,6 +208,14 @@ class _Automata:
                 new_out = [(e.target, e["label"]) for e in state.out_edges()]
                 self.vs[state.index].update_attributes({"out": new_out})
 
+    def delete_edges(self, es):
+        """
+        Proxy to igraph delete_edges.
+        Might invalidate reachability, this function will not compute trim after deleting edges.
+        """
+        self._graph.delete_edges(es)
+        self.generate_out()
+
     def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
@@ -433,9 +441,43 @@ class _Automata:
             else:
                 print("{}  :  {}".format(v, self.vs["out"][v]))
 
-    # Methods to interface w/ functions from automata_operations/basic/generic_functions
-    # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
-    # Results are stored within the the Euc & Euo objects in the current automata.
+    def compute_state_costs(self, starting_states=None, Euc=None):
+        """
+        Computes the uncontrollable traces preceding states in starting_states.
+        Used to find invalid states, e.g. those which transition uncontrollably to critical states.
+
+        starting_states: set of vertex indices to search from, default behavior is to convert
+            states in automata attr X_crit to vertex indices and uses these.
+
+        Euc: optionally specify uncontrollable event set. If unspecified, uses automata Euc attr.
+
+        Returns vertex indice set, which includes states in starting_states.
+
+        TODO: check if this particular automata has an ingoing adjacency list generated already
+        and if so, use that.
+        """
+
+        if not Euc:
+            Euc = self.Euc
+
+        if not starting_states:
+            starting_states = [v.index for v in self.vs.select(name_in=self.X_crit)]
+
+        # updates starting_states with infinite cost states
+        bad_states = set()
+        states_to_check = starting_states
+        while states_to_check:
+            bad_states.update(states_to_check)
+            # Back out the next potentially infinite-cost states as those with uncontrollable transitions
+            # to the most recent set of infinite cost states (states_to_check on the RHS).
+            states_to_check = {
+                self.es[e].source
+                for v in states_to_check
+                for e in self._graph.incident(v, mode="IN")
+                if self.es[e]["label"] in Euc and self.es[e].source not in bad_states
+            }
+        return bad_states
+
     def find_Euc_Euo(self):
         """
         Extract uncontrollable & unoberservable events

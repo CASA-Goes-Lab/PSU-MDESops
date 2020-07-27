@@ -111,11 +111,12 @@ def offline_VLPPO(
     else:
         # X_crit provided; specification is plant w/o X_crit states
         plant_pp = plant
-
+    ttttttttttt = plant.vs["name"]
+    tttt = plant.vs["out"]
     X_crit_vs = plant_pp.vs.select(name_in=X_crit)
     X_crit_ind = [v.index for v in X_crit_vs]
-
-    bad_states = compute_state_costs(plant_pp, X_crit_ind, Euc)
+    aaaaaa = [plant.vs["name"][v] for v in X_crit_ind]
+    bad_states = plant_pp.compute_state_costs(X_crit_ind, Euc)
     # State is illegal if in bad_states
 
     # if initial state is in bad_states, there is no solution:
@@ -141,7 +142,7 @@ def offline_VLPPO(
         Euc,
         Euo,
         frozenset(0 for _ in range(1)),
-        {},
+        None,
         bad_states,
         event_ordering,
         eur_dict,
@@ -229,6 +230,8 @@ def search_VLPPO(
     event_ordering: priority ordering of controllable events, with largest priorty going
         to the first element.
     """
+    tttt = G.vs["out"]
+    ttttt = G.vs["name"]
     Q = list()
     Q.append((ACT, PS))
     while Q:
@@ -360,7 +363,7 @@ def get_N(event, S, G, Euo):
     where NS are states {x exists in X: x = delta(y, event) for y exists on S}
     Event must be within the event set or null-event (condition comes from N-function definition)
     """
-    if not event:
+    if event is None:
         return S
     # Otherwise, find the next set of states:
     return frozenset(t[0] for v in S for t in G.vs[v]["out"] if t[1] == event)
@@ -389,23 +392,6 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
 
     P.vs["out"] = out
     P.add_edges(new_edge_pairs, edge_labels, fill_out=False)
-
-
-def compute_state_costs(G, states_removed, Euc):
-    # updates states_removed with infinite cost states
-    bad_states = set()
-    states_to_check = states_removed
-    while states_to_check:
-        bad_states.update(states_to_check)
-        # Back out the next potentially infinite-cost states as those with uncontrollable transitions
-        # to the most recent set of infinite cost states (states_to_check on the RHS).
-        states_to_check = {
-            G.es[e].source
-            for v in states_to_check
-            for e in G._graph.incident(v, mode="IN")
-            if G.es[e]["label"] in Euc and G.es[e].source not in bad_states
-        }
-    return bad_states
 
 
 def invalid_state(G, H, Euc, H_state):

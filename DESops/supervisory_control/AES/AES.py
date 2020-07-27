@@ -32,14 +32,12 @@ def construct_AES(G, X_crit, compact=False):
 
     # get infinite cost states:
     # TODO: clean this up; could be slightly faster
-    X_crit_vs = compute_state_costs(G, X_crit_vs, G.Euc)
+    X_crit_vs = G.compute_state_costs(X_crit=X_crit_vs)
 
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
     Q1, Q2 = dict(), dict()
-    Qname, Qcrit = (
-        list(),
-        list(),
-    )  # holds the names of each state in order of their vertex index
+    Qname, Qcrit = list(), list()
+    # holds the names of each state in order of their vertex index
     # transitions for igraph constructed using vertex index
     h1, h2 = list(), list()
 
@@ -337,10 +335,10 @@ def ctr2str(gamma):
     first = True
     for e in gamma:
         if first:
-            name = "".join(["{", e.label])
+            name = "".join(["{", str(e.label)])
             first = False
         else:
-            name = ",".join([name, e.label])
+            name = ",".join([name, str(e.label)])
     return "".join([name, "}"])
 
 
@@ -420,20 +418,3 @@ def extract_AES_super(AES):
 
     sup.events = AES.events.copy()
     return sup
-
-
-def compute_state_costs(G, states_removed, Euc):
-    # updates states_removed with infinite cost states
-    bad_states = set()
-    states_to_check = states_removed
-    while states_to_check:
-        bad_states.update(states_to_check)
-        # Back out the next potentially infinite-cost states as those with uncontrollable transitions
-        # to the most recent set of infinite cost states (states_to_check on the RHS).
-        states_to_check = {
-            G.es[e].source
-            for v in states_to_check
-            for e in G._graph.incident(v, mode="IN")
-            if G.es[e]["label"] in Euc and G.es[e].source not in bad_states
-        }
-    return bad_states
