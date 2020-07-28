@@ -9,7 +9,6 @@ import pydash
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
-from DESops.basic_operations.ureach import ureach_from_set_adj, ureach_from_set_adjdict
 from DESops.supervisory_control import supr_contr
 
 
@@ -32,7 +31,7 @@ def construct_AES(G, X_crit, compact=False):
 
     # get infinite cost states:
     # TODO: clean this up; could be slightly faster
-    X_crit_vs = G.compute_state_costs(X_crit=X_crit_vs)
+    X_crit_vs = G.compute_state_costs(starting_states=X_crit_vs)
 
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
     Q1, Q2 = dict(), dict()
@@ -113,6 +112,8 @@ def construct_T(
             # print(len(ctr))
 
             for gamma in Gamma:
+                q2_state = G.UR.from_set(qvs, frozenset(G.Euo.intersection(gamma)))
+                """
                 if (qvs, frozenset(G.Euo.intersection(gamma))) in UR_state_classes:
 
                     q2_state = UR_state_classes[
@@ -126,6 +127,7 @@ def construct_T(
                     UR_state_classes[
                         (qvs, frozenset(G.Euo.intersection(gamma)))
                     ] = q2_state
+                    """
                 q2 = (q2_state, gamma)
                 vertex_counter = Q2_add_state(
                     Q1[qvs],

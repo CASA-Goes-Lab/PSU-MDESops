@@ -194,6 +194,9 @@ class _Automata:
 
         self.__bool__ = self._graph.__bool__()
 
+        # Attach UR class object (defined below)
+        self.UR = UnobservableReach(self.Euo, self.vs)
+
     def delete_vertices(self, vs):
         # initial state in vs
         if 0 in vs:
@@ -589,3 +592,111 @@ def copy_event_sets(this, other):
         other.Euo = set.union(*[a.Euo for a in this])
         other.Euc = set.union(*[a.Euc for a in this])
         other.Ea = set.union(*[a.Ea for a in this])
+
+
+class UnobservableReach:
+    """
+    Class for saving unobservable reach computations
+    """
+
+    def __init__(self, Euo, vs):
+        self.use_cache = True
+        self.set_of_states_dict = dict()
+        self.single_state_dict = dict()
+        self.Euo = Euo
+        self.vs = vs
+
+    def empty_cache(self):
+        self.set_of_states_dict = dict()
+        self.single_state_dict = dict()
+
+    def from_set(self, set_of_states, events=None, freeze_result=False):
+        """
+        Compute the unobersvable reach from a set of starting states, considering unobservable events
+
+        set_of_states: collection of state indices to start from
+        events: set of events to consider as unobservable.
+            Default 'None': uses parent Automata Euo attribute
+
+        If using cache and set_of_states and events are NOT hashable types, this function will construct frozensets
+        from each in order to use hashing.
+
+
+        If a key has already been cached, but a not-frozenset was stored and key is now accessed with freeze_result=True:
+            Return a frozenset of the previously stored result, so as to return what's expected.
+            Currently overwrites the val (where dict[key]=val) with it's frozenset, although this behavior could be removed.
+        """
+        if events is None:
+            events = self.Euo
+
+        if not self.use_cache:
+            if freeze_result:
+                return frozenset(self.__ureach_from_set(set_of_states, events))
+            return self.__ureach_from_set(set_of_states, events)
+
+        try:
+            key = (set_of_states, events)
+            if key in self.set_of_states_dict:
+                result = self.set_of_states_dict[key]
+                if freeze_result and not isinstance(result, frozenset):
+                    result = frozenset(result)
+                    self.set_of_states_dict[key] = result
+
+                return result
+            else:
+                ur_set = self.__ureach_from_set(set_of_states, events)
+                if freeze_result:
+                    ur_set = frozenset(ur_set)
+                self.set_of_states_dict[key] = ur_set
+                return ur_set
+
+        except TypeError:
+            # Trying to hash an 'unhashable type'
+            try:
+                key = (frozenset(set_of_states), frozenset(events))
+                if key in self.set_of_states_dict:
+                    result = self.set_of_states_dict[key]
+                    if freeze_result and not isinstance(result, frozenset):
+                        result = frozenset(result)
+                        self.set_of_states_dict[key] = result
+
+                    return result
+                else:
+                    ur_set = self.__ureach_from_set(set_of_states, events)
+                    if freeze_result:
+                        ur_set = frozenset(ur_set)
+                    self.set_of_states_dict[key] = ur_set
+                    return ur_set
+            except:
+                # Couldn't convert to frozenset?
+                print("Entry unhashble, error converting to frozenset().")
+                raise
+
+    def __ureach_from_set(self, set_of_states, events):
+        """
+        Find the collected unobservable reach for all states in S
+        set_of_states: set of states to search from (graph indicies)
+        events: set of unobservable events to consider
+        """
+        x_set = set()
+        x_set.update(set_of_states)
+
+        if not events:
+            return x_set
+
+        uc_neighbors = {
+            t[0]
+            for s in set_of_states
+            for t in self.vs["out"][s]
+            if t[1] in events and t[0] not in x_set
+        }
+
+        while uc_neighbors:
+            x_set.update(uc_neighbors)
+            uc_neighbors = {
+                t[0]
+                for s in uc_neighbors
+                for t in self.vs["out"][s]
+                if t[1] in events and t[0] not in x_set
+            }
+        return x_set

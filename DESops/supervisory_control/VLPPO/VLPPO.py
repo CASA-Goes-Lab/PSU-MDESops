@@ -14,7 +14,6 @@ from DESops.automata.DFA import DFA
 from DESops.basic_operations.construct_subautomata import construct_subautomata
 from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.refine_product import refine_product_SCS
-from DESops.basic_operations.ureach import ureach_from_set_adj
 
 
 def offline_VLPPO(
@@ -282,13 +281,8 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict, ur_dict)
     # 3. Determine UR of states in PS via unobservable events in ACT
 
     events = frozenset(l for l in ACT if l in Euo)
-    key = (NS, events)
-    if key in ur_dict:
-        PS_new = ur_dict[key]
-    else:
-        PS_new = ureach_from_set_adj(NS, G, events)
-        ur_dict[key] = PS_new
 
+    PS_new = G.UR.from_set(NS, events, freeze_result=True)
     return ACT, frozenset(PS_new)
 
 
@@ -308,7 +302,8 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict, ur_dict):
     ACT = Euc.copy()
     Pt = 0
     unobs_ACT = ACT.intersection(Euo)
-    UR_set_ACT = UR_with_dict(NS, G, unobs_ACT, ur_dict)
+
+    UR_set_ACT = G.UR.from_set(NS, unobs_ACT, freeze_result=True)
     ACT_eur = extended_ureach_from_set_adj(UR_set_ACT, G, ACT, Euo, eur_dict)
 
     ACT_eur_labels = {t[1] for v in ACT_eur for t in G.vs[v]["out"]}
@@ -334,7 +329,9 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict, ur_dict):
         if event in Euo:
             unobs_ACT.add(event)
 
-        UR_set = UR_with_dict(UR_set_ACT, G, unobs_ACT, ur_dict)
+        # UR_set = UR_with_dict(UR_set_ACT, G, unobs_ACT, ur_dict)
+        UR_set = G.UR.from_set(UR_set_ACT, unobs_ACT, freeze_result=True)
+
         ure_ACT_E_list = extended_ureach_from_set_adj(
             UR_set, G, ACT, Euo, eur_dict, event
         )
