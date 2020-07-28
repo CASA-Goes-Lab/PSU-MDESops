@@ -234,6 +234,9 @@ class _Automata:
 
         self._graph.add_edge(source, target)
         if label:
+            if isinstance(label, str):
+                # convert labels from str to Event
+                label = Event(label)
             self.es[self.ecount() - 1].update_attributes({"label": label})
         if prob:
             self.es[self.ecount() - 1].update_attributes({"prob": prob})
