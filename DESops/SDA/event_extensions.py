@@ -1,4 +1,4 @@
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 
 
 def inserted_event(event):
@@ -29,3 +29,32 @@ def deleted_event(event):
         label = event
     d = {"inserted": False, "deleted": True}
     return Event(label, d)
+
+
+def unedited_event(event):
+    """
+    Creates an event matching label of given event and without any attributes
+    """
+    if isinstance(event, Event):
+        label = event.label
+    else:
+        label = event
+    return Event(label)
+
+
+def is_deleted(event):
+    """
+    Returns whether an event has deleted : True attr
+    """
+    if "deleted" in event.__dict__:
+        return event.deleted
+    return False
+
+
+def is_inserted(event):
+    """
+    Returns whether an event has inserted : True attr
+    """
+    if "inserted" in event.__dict__:
+        return event.inserted
+    return False
