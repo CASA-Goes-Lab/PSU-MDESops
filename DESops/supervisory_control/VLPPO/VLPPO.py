@@ -110,11 +110,10 @@ def offline_VLPPO(
     else:
         # X_crit provided; specification is plant w/o X_crit states
         plant_pp = plant
-    ttttttttttt = plant.vs["name"]
-    tttt = plant.vs["out"]
+
     X_crit_vs = plant_pp.vs.select(name_in=X_crit)
     X_crit_ind = [v.index for v in X_crit_vs]
-    aaaaaa = [plant.vs["name"][v] for v in X_crit_ind]
+
     bad_states = plant_pp.compute_state_costs(X_crit_ind, Euc)
     # State is illegal if in bad_states
 
@@ -133,7 +132,7 @@ def offline_VLPPO(
 
     edge_labels, edge_pairs = list(), list()
 
-    ur_dict, eur_dict = dict(), dict()
+    eur_dict = dict()
 
     # Compute next set of present states PS, and control policy ACT
     ACT, PS = VLPPO(
@@ -145,7 +144,6 @@ def offline_VLPPO(
         bad_states,
         event_ordering,
         eur_dict,
-        ur_dict,
     )
     init_set = PS
 
@@ -170,7 +168,6 @@ def offline_VLPPO(
             ACT,
             event_ordering,
             eur_dict,
-            ur_dict,
         )
         # Create graph P using sets_of_states, edge_labels & edge_pairs
         # modifies sets_of_states
@@ -203,7 +200,6 @@ def search_VLPPO(
     ACT,
     event_ordering,
     eur_dict,
-    ur_dict,
 ):
     """
     Executes VLPPO for a set of states PS
@@ -242,7 +238,7 @@ def search_VLPPO(
             if e not in Euo and e in E_set:
                 # Only check observable & valid neighbors (in active event set of PS) for more VLPPOCP computations
                 ACT_new, NS = VLPPO(
-                    G, Euc, Euo, PS, e, bad_states, event_ordering, eur_dict, ur_dict
+                    G, Euc, Euo, PS, e, bad_states, event_ordering, eur_dict
                 )
                 if NS not in sets_of_states:
                     sets_of_states.add(NS)
@@ -254,7 +250,7 @@ def search_VLPPO(
     return
 
 
-def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict, ur_dict):
+def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict):
     """
     Implementation of VLPPO algorithm:
     G: system automata
@@ -275,9 +271,7 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict, ur_dict)
     # assume event ordering is whatever the random order of the set of labels is
 
     # 2. Determine the control action ACT
-    ACT = control_action(
-        G, NS, event_ordering.copy(), Euc, Euo, bad_states, eur_dict, ur_dict
-    )
+    ACT = control_action(G, NS, event_ordering.copy(), Euc, Euo, bad_states, eur_dict)
     # 3. Determine UR of states in PS via unobservable events in ACT
 
     events = frozenset(l for l in ACT if l in Euo)
@@ -286,7 +280,7 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict, ur_dict)
     return ACT, frozenset(PS_new)
 
 
-def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict, ur_dict):
+def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict):
     """
     Given event ordering and set of next states, determine control action ACT
     G: system Automata
@@ -304,7 +298,7 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict, ur_dict):
     unobs_ACT = ACT.intersection(Euo)
 
     UR_set_ACT = G.UR.from_set(NS, unobs_ACT, freeze_result=True)
-    ACT_eur = extended_ureach_from_set_adj(UR_set_ACT, G, ACT, Euo, eur_dict)
+    ACT_eur = ext_ur_from_set(UR_set_ACT, G, ACT, Euo, eur_dict)
 
     ACT_eur_labels = {t[1] for v in ACT_eur for t in G.vs[v]["out"]}
 
@@ -329,12 +323,9 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict, ur_dict):
         if event in Euo:
             unobs_ACT.add(event)
 
-        # UR_set = UR_with_dict(UR_set_ACT, G, unobs_ACT, ur_dict)
         UR_set = G.UR.from_set(UR_set_ACT, unobs_ACT, freeze_result=True)
 
-        ure_ACT_E_list = extended_ureach_from_set_adj(
-            UR_set, G, ACT, Euo, eur_dict, event
-        )
+        ure_ACT_E_list = ext_ur_from_set(UR_set, G, ACT, Euo, eur_dict)
 
         ACT.remove(event)
         if event in Euo:
@@ -398,14 +389,13 @@ def invalid_state(G, H, Euc, H_state):
     return H_uc_count < G_uc_count
 
 
-def extended_ureach_from_set_adj(set_of_states, g, ACT, Euo, eur_dict, event=None):
+def ext_ur_from_set(set_of_states, g, ACT, Euo, eur_dict):
     """
     Find extended_ureach for each state in set_of_states.
 
     set_of_states: states to begin from
     g: igraph Graph object
     ACT: events to consider
-    event: marginal event to consider along with ACT
     Euo: set of unobservable events in g
     """
 
@@ -423,18 +413,3 @@ def extended_ureach_from_set_adj(set_of_states, g, ACT, Euo, eur_dict, event=Non
     eur_dict[key] = new_set
     return new_set
     # return x_set.union(t[0] for state in x_set for t in g.vs[state]["out"] if t[1] in e and t[1] not in Euo)
-
-
-def UR_with_dict(set_of_states, g, unobs_ACT, ur_dict):
-    # unobs_ACT is ACT.intersection(Euo)
-    key = (set_of_states, frozenset(unobs_ACT))
-    if key in ur_dict:
-        # make a copy?
-        return ur_dict[key]
-
-    x_set = ureach_from_set_adj(set_of_states, g, unobs_ACT)
-
-    x_set = frozenset(x_set)
-    ur_dict[key] = x_set
-
-    return x_set
