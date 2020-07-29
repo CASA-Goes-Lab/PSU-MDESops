@@ -1,0 +1,595 @@
+81
+
+11,33	0	4
+rE	12,33	c	o
+rN	21,33	c	o
+rW2	11,32	c	o
+rS2	11,23	c	o
+
+11,11	0	4
+rE	12,11	c	o
+rN	21,11	c	o
+rE2	11,12	c	o
+rN2	11,21	c	o
+
+11,12	0	5
+rE	12,12	c	o
+rN	21,12	c	o
+rW2	11,11	c	o
+rE2	11,13	c	o
+rN2	11,22	c	o
+
+11,13	0	4
+rE	12,13	c	o
+rN	21,13	c	o
+rW2	11,12	c	o
+rN2	11,23	c	o
+
+11,21	0	5
+rE	12,21	c	o
+rN	21,21	c	o
+rS2	11,11	c	o
+rE2	11,22	c	o
+rN2	11,31	c	o
+
+11,22	0	6
+rE	12,22	c	o
+rN	21,22	c	o
+rW2	11,21	c	o
+rS2	11,12	c	o
+rE2	11,23	c	o
+rN2	11,32	c	o
+
+11,23	0	5
+rE	12,23	c	o
+rN	21,23	c	o
+rW2	11,22	c	o
+rS2	11,13	c	o
+rN2	11,33	c	o
+
+11,31	0	4
+rE	12,31	c	o
+rN	21,31	c	o
+rS2	11,21	c	o
+rE2	11,32	c	o
+
+11,32	0	5
+rE	12,32	c	o
+rN	21,32	c	o
+rW2	11,31	c	o
+rS2	11,22	c	o
+rE2	11,33	c	o
+
+12,11	0	5
+rE	13,11	c	o
+rN	22,11	c	o
+rW	11,11	c	o
+rE2	12,12	c	o
+rN2	12,21	c	o
+
+12,12	0	6
+rE	13,12	c	o
+rN	22,12	c	o
+rW2	12,11	c	o
+rW	11,12	c	o
+rE2	12,13	c	o
+rN2	12,22	c	o
+
+12,13	0	5
+rE	13,13	c	o
+rN	22,13	c	o
+rW2	12,12	c	o
+rW	11,13	c	o
+rN2	12,23	c	o
+
+12,21	0	6
+rE	13,21	c	o
+rN	22,21	c	o
+rS2	12,11	c	o
+rW	11,21	c	o
+rE2	12,22	c	o
+rN2	12,31	c	o
+
+12,22	0	7
+rE	13,22	c	o
+rN	22,22	c	o
+rW2	12,21	c	o
+rS2	12,12	c	o
+rW	11,22	c	o
+rE2	12,23	c	o
+rN2	12,32	c	o
+
+12,23	0	6
+rE	13,23	c	o
+rN	22,23	c	o
+rW2	12,22	c	o
+rS2	12,13	c	o
+rW	11,23	c	o
+rN2	12,33	c	o
+
+12,31	0	5
+rE	13,31	c	o
+rN	22,31	c	o
+rS2	12,21	c	o
+rW	11,31	c	o
+rE2	12,32	c	o
+
+12,32	0	6
+rE	13,32	c	o
+rN	22,32	c	o
+rW2	12,31	c	o
+rS2	12,22	c	o
+rW	11,32	c	o
+rE2	12,33	c	o
+
+12,33	0	5
+rE	13,33	c	o
+rN	22,33	c	o
+rW2	12,32	c	o
+rS2	12,23	c	o
+rW	11,33	c	o
+
+13,11	0	4
+rN	23,11	c	o
+rW	12,11	c	o
+rE2	13,12	c	o
+rN2	13,21	c	o
+
+13,12	0	5
+rN	23,12	c	o
+rW2	13,11	c	o
+rW	12,12	c	o
+rE2	13,13	c	o
+rN2	13,22	c	o
+
+13,13	0	4
+rN	23,13	c	o
+rW2	13,12	c	o
+rW	12,13	c	o
+rN2	13,23	c	o
+
+13,21	0	5
+rN	23,21	c	o
+rS2	13,11	c	o
+rW	12,21	c	o
+rE2	13,22	c	o
+rN2	13,31	c	o
+
+13,22	0	6
+rN	23,22	c	o
+rW2	13,21	c	o
+rS2	13,12	c	o
+rW	12,22	c	o
+rE2	13,23	c	o
+rN2	13,32	c	o
+
+13,23	0	5
+rN	23,23	c	o
+rW2	13,22	c	o
+rS2	13,13	c	o
+rW	12,23	c	o
+rN2	13,33	c	o
+
+13,31	0	4
+rN	23,31	c	o
+rS2	13,21	c	o
+rW	12,31	c	o
+rE2	13,32	c	o
+
+13,32	0	5
+rN	23,32	c	o
+rW2	13,31	c	o
+rS2	13,22	c	o
+rW	12,32	c	o
+rE2	13,33	c	o
+
+13,33	0	4
+rN	23,33	c	o
+rW2	13,32	c	o
+rS2	13,23	c	o
+rW	12,33	c	o
+
+21,11	0	5
+rE	22,11	c	o
+rN	31,11	c	o
+rS	11,11	c	o
+rE2	21,12	c	o
+rN2	21,21	c	o
+
+21,12	0	6
+rE	22,12	c	o
+rN	31,12	c	o
+rW2	21,11	c	o
+rS	11,12	c	o
+rE2	21,13	c	o
+rN2	21,22	c	o
+
+21,13	0	5
+rE	22,13	c	o
+rN	31,13	c	o
+rW2	21,12	c	o
+rS	11,13	c	o
+rN2	21,23	c	o
+
+21,21	0	6
+rE	22,21	c	o
+rN	31,21	c	o
+rS2	21,11	c	o
+rS	11,21	c	o
+rE2	21,22	c	o
+rN2	21,31	c	o
+
+21,22	0	7
+rE	22,22	c	o
+rN	31,22	c	o
+rW2	21,21	c	o
+rS2	21,12	c	o
+rS	11,22	c	o
+rE2	21,23	c	o
+rN2	21,32	c	o
+
+21,23	0	6
+rE	22,23	c	o
+rN	31,23	c	o
+rW2	21,22	c	o
+rS2	21,13	c	o
+rS	11,23	c	o
+rN2	21,33	c	o
+
+21,31	0	5
+rE	22,31	c	o
+rN	31,31	c	o
+rS2	21,21	c	o
+rS	11,31	c	o
+rE2	21,32	c	o
+
+21,32	0	6
+rE	22,32	c	o
+rN	31,32	c	o
+rW2	21,31	c	o
+rS2	21,22	c	o
+rS	11,32	c	o
+rE2	21,33	c	o
+
+21,33	0	5
+rE	22,33	c	o
+rN	31,33	c	o
+rW2	21,32	c	o
+rS2	21,23	c	o
+rS	11,33	c	o
+
+22,11	0	6
+rE	23,11	c	o
+rN	32,11	c	o
+rW	21,11	c	o
+rS	12,11	c	o
+rE2	22,12	c	o
+rN2	22,21	c	o
+
+22,12	0	7
+rE	23,12	c	o
+rN	32,12	c	o
+rW2	22,11	c	o
+rW	21,12	c	o
+rS	12,12	c	o
+rE2	22,13	c	o
+rN2	22,22	c	o
+
+22,13	0	6
+rE	23,13	c	o
+rN	32,13	c	o
+rW2	22,12	c	o
+rW	21,13	c	o
+rS	12,13	c	o
+rN2	22,23	c	o
+
+22,21	0	7
+rE	23,21	c	o
+rN	32,21	c	o
+rS2	22,11	c	o
+rW	21,21	c	o
+rS	12,21	c	o
+rE2	22,22	c	o
+rN2	22,31	c	o
+
+22,22	0	8
+rE	23,22	c	o
+rN	32,22	c	o
+rW2	22,21	c	o
+rS2	22,12	c	o
+rW	21,22	c	o
+rS	12,22	c	o
+rE2	22,23	c	o
+rN2	22,32	c	o
+
+22,23	0	7
+rE	23,23	c	o
+rN	32,23	c	o
+rW2	22,22	c	o
+rS2	22,13	c	o
+rW	21,23	c	o
+rS	12,23	c	o
+rN2	22,33	c	o
+
+22,31	0	6
+rE	23,31	c	o
+rN	32,31	c	o
+rS2	22,21	c	o
+rW	21,31	c	o
+rS	12,31	c	o
+rE2	22,32	c	o
+
+22,32	0	7
+rE	23,32	c	o
+rN	32,32	c	o
+rW2	22,31	c	o
+rS2	22,22	c	o
+rW	21,32	c	o
+rS	12,32	c	o
+rE2	22,33	c	o
+
+22,33	0	6
+rE	23,33	c	o
+rN	32,33	c	o
+rW2	22,32	c	o
+rS2	22,23	c	o
+rW	21,33	c	o
+rS	12,33	c	o
+
+23,11	0	5
+rN	33,11	c	o
+rW	22,11	c	o
+rS	13,11	c	o
+rE2	23,12	c	o
+rN2	23,21	c	o
+
+23,12	0	6
+rN	33,12	c	o
+rW2	23,11	c	o
+rW	22,12	c	o
+rS	13,12	c	o
+rE2	23,13	c	o
+rN2	23,22	c	o
+
+23,13	0	5
+rN	33,13	c	o
+rW2	23,12	c	o
+rW	22,13	c	o
+rS	13,13	c	o
+rN2	23,23	c	o
+
+23,21	0	6
+rN	33,21	c	o
+rS2	23,11	c	o
+rW	22,21	c	o
+rS	13,21	c	o
+rE2	23,22	c	o
+rN2	23,31	c	o
+
+23,22	0	7
+rN	33,22	c	o
+rW2	23,21	c	o
+rS2	23,12	c	o
+rW	22,22	c	o
+rS	13,22	c	o
+rE2	23,23	c	o
+rN2	23,32	c	o
+
+23,23	0	6
+rN	33,23	c	o
+rW2	23,22	c	o
+rS2	23,13	c	o
+rW	22,23	c	o
+rS	13,23	c	o
+rN2	23,33	c	o
+
+23,31	0	5
+rN	33,31	c	o
+rS2	23,21	c	o
+rW	22,31	c	o
+rS	13,31	c	o
+rE2	23,32	c	o
+
+23,32	0	6
+rN	33,32	c	o
+rW2	23,31	c	o
+rS2	23,22	c	o
+rW	22,32	c	o
+rS	13,32	c	o
+rE2	23,33	c	o
+
+23,33	0	5
+rN	33,33	c	o
+rW2	23,32	c	o
+rS2	23,23	c	o
+rW	22,33	c	o
+rS	13,33	c	o
+
+31,11	0	4
+rE	32,11	c	o
+rS	21,11	c	o
+rE2	31,12	c	o
+rN2	31,21	c	o
+
+31,12	0	5
+rE	32,12	c	o
+rW2	31,11	c	o
+rS	21,12	c	o
+rE2	31,13	c	o
+rN2	31,22	c	o
+
+31,13	0	4
+rE	32,13	c	o
+rW2	31,12	c	o
+rS	21,13	c	o
+rN2	31,23	c	o
+
+31,21	0	5
+rE	32,21	c	o
+rS2	31,11	c	o
+rS	21,21	c	o
+rE2	31,22	c	o
+rN2	31,31	c	o
+
+31,22	0	6
+rE	32,22	c	o
+rW2	31,21	c	o
+rS2	31,12	c	o
+rS	21,22	c	o
+rE2	31,23	c	o
+rN2	31,32	c	o
+
+31,23	0	5
+rE	32,23	c	o
+rW2	31,22	c	o
+rS2	31,13	c	o
+rS	21,23	c	o
+rN2	31,33	c	o
+
+31,31	0	4
+rE	32,31	c	o
+rS2	31,21	c	o
+rS	21,31	c	o
+rE2	31,32	c	o
+
+31,32	0	5
+rE	32,32	c	o
+rW2	31,31	c	o
+rS2	31,22	c	o
+rS	21,32	c	o
+rE2	31,33	c	o
+
+31,33	0	4
+rE	32,33	c	o
+rW2	31,32	c	o
+rS2	31,23	c	o
+rS	21,33	c	o
+
+32,11	0	5
+rE	33,11	c	o
+rW	31,11	c	o
+rS	22,11	c	o
+rE2	32,12	c	o
+rN2	32,21	c	o
+
+32,12	0	6
+rE	33,12	c	o
+rW2	32,11	c	o
+rW	31,12	c	o
+rS	22,12	c	o
+rE2	32,13	c	o
+rN2	32,22	c	o
+
+32,13	0	5
+rE	33,13	c	o
+rW2	32,12	c	o
+rW	31,13	c	o
+rS	22,13	c	o
+rN2	32,23	c	o
+
+32,21	0	6
+rE	33,21	c	o
+rS2	32,11	c	o
+rW	31,21	c	o
+rS	22,21	c	o
+rE2	32,22	c	o
+rN2	32,31	c	o
+
+32,22	0	7
+rE	33,22	c	o
+rW2	32,21	c	o
+rS2	32,12	c	o
+rW	31,22	c	o
+rS	22,22	c	o
+rE2	32,23	c	o
+rN2	32,32	c	o
+
+32,23	0	6
+rE	33,23	c	o
+rW2	32,22	c	o
+rS2	32,13	c	o
+rW	31,23	c	o
+rS	22,23	c	o
+rN2	32,33	c	o
+
+32,31	0	5
+rE	33,31	c	o
+rS2	32,21	c	o
+rW	31,31	c	o
+rS	22,31	c	o
+rE2	32,32	c	o
+
+32,32	0	6
+rE	33,32	c	o
+rW2	32,31	c	o
+rS2	32,22	c	o
+rW	31,32	c	o
+rS	22,32	c	o
+rE2	32,33	c	o
+
+32,33	0	5
+rE	33,33	c	o
+rW2	32,32	c	o
+rS2	32,23	c	o
+rW	31,33	c	o
+rS	22,33	c	o
+
+33,11	0	4
+rW	32,11	c	o
+rS	23,11	c	o
+rE2	33,12	c	o
+rN2	33,21	c	o
+
+33,12	0	5
+rW2	33,11	c	o
+rW	32,12	c	o
+rS	23,12	c	o
+rE2	33,13	c	o
+rN2	33,22	c	o
+
+33,13	0	4
+rW2	33,12	c	o
+rW	32,13	c	o
+rS	23,13	c	o
+rN2	33,23	c	o
+
+33,21	0	5
+rS2	33,11	c	o
+rW	32,21	c	o
+rS	23,21	c	o
+rE2	33,22	c	o
+rN2	33,31	c	o
+
+33,22	0	6
+rW2	33,21	c	o
+rS2	33,12	c	o
+rW	32,22	c	o
+rS	23,22	c	o
+rE2	33,23	c	o
+rN2	33,32	c	o
+
+33,23	0	5
+rW2	33,22	c	o
+rS2	33,13	c	o
+rW	32,23	c	o
+rS	23,23	c	o
+rN2	33,33	c	o
+
+33,31	0	4
+rS2	33,21	c	o
+rW	32,31	c	o
+rS	23,31	c	o
+rE2	33,32	c	o
+
+33,32	0	5
+rW2	33,31	c	o
+rS2	33,22	c	o
+rW	32,32	c	o
+rS	23,32	c	o
+rE2	33,33	c	o
+
+33,33	0	4
+rW2	33,32	c	o
+rS2	33,23	c	o
+rW	32,33	c	o
+rS	23,33	c	o

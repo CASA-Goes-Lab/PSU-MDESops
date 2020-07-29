@@ -1,0 +1,17 @@
+5
+
+A	0	2
+rN	B	c	o
+rE	C	c	o
+
+B	0	1
+rS	D	c	o
+
+C	0	1
+rW	E	c	o
+
+D	0	1
+rN	B	c	o
+
+E	0	1
+rE	C	c	o

@@ -1,0 +1,31 @@
+9
+
+1	0	2
+Bint	2	uc	o
+Rint	4	c	o
+
+2	0	2
+Bout	3	uc	o
+Rint	5	c	o
+
+3	0	1
+Rint	6	c	o
+
+4	0	2
+Rout	7	c	o
+Bint	5	uc	o
+
+5	0	2
+Bout	6	uc	o
+Rout	8	c	o
+
+6	0	1
+Rout	9	c	o
+
+7	0	1
+Bint	8	uc	o
+
+8	0	1
+Bout	9	uc	o
+
+9	0	0

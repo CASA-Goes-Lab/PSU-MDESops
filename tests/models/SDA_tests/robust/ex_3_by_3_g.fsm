@@ -1,0 +1,43 @@
+9
+
+11	0	2
+rE	12	c	o
+rN	21	c	o
+
+12	0	3
+rW	11	c	o
+rN	22	c	o
+rE	13	c	o
+
+13	0	2
+rN	23	c	o
+rW	12	c	o
+
+21	0	3
+rS	11	c	o
+rE	22	c	o
+rN	31	c	o
+
+22	0	4
+rS	12	c	o
+rW	21	c	o
+rN	32	c	o
+rE	23	c	o
+
+23	0	3
+rN	33	c	o
+rS	13	c	o
+rW	22	c	o
+
+31	0	2
+rS	21	c	o
+rE	32	c	o
+
+32	0	3
+rS	22	c	o
+rE	33	c	o
+rW	31	c	o
+
+33	0	2
+rS	23	c	o
+rW	32	c	o
