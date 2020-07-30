@@ -6,7 +6,7 @@ import time
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations.ureach import ureach_from_set_adj
 from DESops.SDA.event_extensions import deleted_event, inserted_event
 from DESops.supervisory_control import supr_contr
@@ -48,7 +48,7 @@ def construct_AIDA(G, R, Ea, X_crit):
         # If Q1 (Supervisor player)
         if p == 1:
             gamma = {e for (target, e) in R.vs["out"][Rvs]}
-            ev = Event(ctr2str(gamma))
+            ev = Event(gamma)
             Gamma.add(ev)
             if (Gvs, frozenset(G.Euo.intersection(gamma))) not in UR_state_classes:
                 next_Gvs = frozenset(
@@ -130,7 +130,7 @@ def construct_AIDA(G, R, Ea, X_crit):
                                 Qcrit.append(0)
                         h2.append((Q2[(Gvs, Rvs, p)], Q1[q1d]))
                         # labelh2.append(Event("".join([e.name(), "_del"])))
-                        labelh2.append(deleted_event(e.name()))
+                        labelh2.append(deleted_event(e))
                     q1i = (Gvs, next_Rvs, 1)
                     q1name = (setvs2statename(G, Gvs), R.vs["name"][next_Rvs], "1")
                     if q1i not in Q1:
@@ -152,7 +152,7 @@ def construct_AIDA(G, R, Ea, X_crit):
                             Qdead.append(0)
                     h2.append((Q2[(Gvs, Rvs, p)], Q1[q1i]))
                     # labelh2.append(Event("".join([e.name(), "_ins"])))
-                    labelh2.append(inserted_event(e.name()))
+                    labelh2.append(inserted_event(e))
                 else:
                     next_Gvs = frozenset(
                         {
@@ -195,15 +195,12 @@ def construct_AIDA(G, R, Ea, X_crit):
         A.vs["dead"] = Qdead
         A.add_edges(h1, labelh1)
         A.add_edges(h2, labelh2)
-    # Ev = generate_ev_uc(Gamma, G.Euc)
 
     A.events = G.events.copy()
     A.events = A.events.union(Gamma)
-    # ins = {Event("".join([e.name(), "_ins"])) for e in Ea}
-    ins = {inserted_event(e.name()) for e in Ea}
+    ins = {inserted_event(e) for e in Ea}
 
-    # dele = {Event("".join([e.name(), "_del"])) for e in Ea}
-    dele = {deleted_event(e.name()) for e in Ea}
+    dele = {deleted_event(e) for e in Ea}
 
     A.events = A.events.union(ins)
     A.events = A.events.union(dele)
@@ -211,26 +208,6 @@ def construct_AIDA(G, R, Ea, X_crit):
     A.Euc = A.Euc.union(Gamma)
     A.generate_out()
     return A
-
-
-# Transforms a control decision to string
-def ctr2str(gamma):
-    name = str()
-    first = True
-    for e in gamma:
-        if first:
-            name = "".join(["{", e.label])
-            first = False
-        else:
-            name = ",".join([name, e.label])
-    return "".join([name, "}"])
-
-
-def generate_ev_uc(Gamma, Euc):
-    E = set()
-    for ctr in Gamma:
-        E.add(Event(ctr2str(ctr)))
-    return E
 
 
 # transforms a set of vertices to a string with their respective names
