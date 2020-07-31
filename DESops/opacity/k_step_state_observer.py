@@ -83,8 +83,7 @@ def verify_k_step_opacity_state_observer(
         if opaque:
             return_list.append(None)
         else:
-            inits = [v.index for v in state_observer.vs if v["init"]]
-            path = find_path_between(state_observer, inits, violating_id)
+            path = find_path_between(state_observer, 0, violating_id)
 
             while e_init in path:
                 path.remove(e_init)
