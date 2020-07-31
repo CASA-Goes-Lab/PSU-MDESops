@@ -6,7 +6,7 @@ from DESops.automata.DFA import DFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 
-def verify_k_step_opacity_mapping_based(
+def verify_k_step_opacity_trajectory_based(
     g, k, joint=True, secret_type=None, return_num_states=False
 ):
     """
