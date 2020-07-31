@@ -58,3 +58,6 @@ def read_pickle(filename, automata, compress=False):
         automata.X_crit = automata._graph["X_crit"]
 
     automata.type = automata._graph["type"]
+
+    automata.vs = automata._graph.vs
+    automata.es = automata._graph.es
