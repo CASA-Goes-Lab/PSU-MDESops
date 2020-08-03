@@ -100,6 +100,10 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
 
 """
 
+from abc import ABC, abstractmethod
+from collections import deque
+from collections.abc import Iterable
+from copy import deepcopy
 from typing import Set, Union
 
 from DESops.automata.event import Event
@@ -110,9 +114,6 @@ from DESops.error import (
     IncongruencyError,
     MissingAttributeError,
 )
-
-State_or_StateSet = Union[int, Set[int]]
-
 
 try:
     import igraph as ig
@@ -156,13 +157,15 @@ class _Automata:
         if isinstance(init, ig.Graph):
             # Create Automata from igraph Graph
             graph = init
-            self._graph = graph.copy()
+            # deepcopy copies attributes
+            self._graph = deepcopy(graph)
             self.events = E
             # find_obs_contr(self._graph, self.Euc, self.Euo, self.events)
 
         elif isinstance(init, _Automata):
             # Create Automata from another Automata
-            self._graph = init._graph.copy()
+            # deepcopy copies attributes
+            self._graph = deepcopy(init._graph)
             self.events = init.events.copy()
             self.states = init.states.copy()
             self.type = init.type

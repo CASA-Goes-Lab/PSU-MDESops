@@ -37,10 +37,7 @@ def construct_reverse(g, g_r=None, save_state_names=False):
     g_r.add_vertices(g.vcount())
 
     # swap marked/initial states
-    if any(g.vs["marked"]):
-        g_r.vs["init"] = g.vs["marked"]
-    else:
-        g_r.vs["init"] = True
+    g_r.vs["init"] = g.vs["marked"]
 
     if "init" in g.vs.attributes():
         g_r.vs["marked"] = g_r.vs["init"]
@@ -75,10 +72,7 @@ def inplace_reverse(g):
         g.vs[0]["init"] = True
     old_init = g.vs["init"]
 
-    if any(g.vs["marked"]):
-        g.vs["init"] = g.vs["marked"]
-    else:
-        g.vs["init"] = True
+    g.vs["init"] = g.vs["marked"]
 
     g.vs["marked"] = old_init
 
