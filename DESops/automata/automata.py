@@ -5,6 +5,9 @@ Automata class & methods:
 Used to represent finite-state automata, by means of a directed
 graph object (from the igraph library) with labelled transitions.
 
+Implemented here is the abstract base class _Automata. Use DFA, NFA or PFA
+classes instead.
+
 Provides access to many useful methods in discrete event systems,
 e.g. parallel & product compositions or observer construction.
 
@@ -18,10 +21,9 @@ interface with DESUMA.
 Alternatively, Automata can be created starting from an underlying
 igraph Graph object.
 
-The Automata structure is a directed graph with labelled transitions.
-An igraph Graph object (member var '_graph') is used to represent this
-structure. The graph is composed of edges and vertices, annotated respectively
-with labels and names. These attributes can be accessed via the igraph Graph
+The Automata structure is a directed graph with labelled transitions,
+implemented as an igraph Graph object (member var '_graph').
+Vertex names and edge labels can be accessed via the igraph Graph
 EdgeSeq and VertSeq methods, accessed for an Automata G as follows:
 >>> vert_seq = G.vs()
 >>> edge_seq = G.es()
@@ -98,9 +100,6 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
 
 """
 
-from abc import ABC, abstractmethod
-from collections import deque
-from collections.abc import Iterable
 from typing import Set, Union
 
 from DESops.automata.event import Event
@@ -253,7 +252,7 @@ class _Automata:
 
             self.vs[source].update_attributes({"out": out})
 
-    def add_edges(self, pair_list, labels, probs=None, fill_out=False):
+    def add_edges(self, pair_list, labels, probs=None, fill_out=False, **kwargs):
         """
         Add an iterable of edges to the Automata instance.
         Calls the igraph Graph add_edges() method on the underlying graph
@@ -304,6 +303,14 @@ class _Automata:
 
         if probs is not None:
             self.es["prob"] = new_probs
+
+        if kwargs:
+            for key, value in kwargs.items():
+                if len(pair_list) != len(value):
+                    raise IncongruencyError(
+                        "Length fo pairs != length of kwarg {}".format(key)
+                    )
+                self.es[key] = value
 
         if fill_out:
             out_list = self.vs["out"]
@@ -391,17 +398,6 @@ class _Automata:
         A = _Automata(self)
         return A
 
-    # Methods to store event info in an Automata instance
-    def add_attackable_event(self, event):
-        """
-        Add event to the Ea attribute.
-        Alternative to directly adding to the attribute:
-        >>> this_graph.Ea.add(event)
-        instead of:
-        >>> this_graph.add_attackable_event(event)
-        """
-        self.Ea.add(event)
-
     def add_critical_state(self, X_crit_state):
         """
         Alternative to adding a critical state, e.g.
@@ -484,25 +480,6 @@ class _Automata:
             }
         return bad_states
 
-    def find_Euc_Euo(self):
-        """
-        Extract uncontrollable & unoberservable events
-        from igraph Graph instance.
-        """
-        find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
-
-    def find_Euc(self):
-        """
-        Extract uncontrollable events from igraph Graph instance.
-        """
-        find_Euc_i(self._graph, self.Euc)
-
-    def find_Euo(self):
-        """
-        Extract unobservable events from igraph Graph instance.
-        """
-        find_Euo_i(self._graph, self.Euo)
-
     # Methods to interface with graph variables & methods
     def vcount(self):
         """
@@ -519,31 +496,6 @@ class _Automata:
         This is the preferred method to find edge count.
         """
         return self._graph.ecount()
-
-    def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
-        """
-        Finds the set of states in the unobservable reach from the given state.
-        """
-        if isinstance(from_state, set):
-            states = set()
-            for x in from_state:
-                states |= self.unobservable_reach(x)
-
-            return states
-
-        visited = {from_state}
-        states_stack = deque(visited)
-        while len(states_stack) > 0:
-            state = states_stack.pop()
-            dests_by_unobs = {
-                out[0]
-                for out in self.vs[state]["out"]
-                if out[1] in self.Euo and out[0] not in visited
-            }
-            visited |= dests_by_unobs
-            states_stack.extend(dests_by_unobs)
-
-        return visited
 
 
 def str2(label):
@@ -588,13 +540,11 @@ def copy_event_sets(this, other):
 
     """
     if isinstance(this, _Automata):
-        other.Euo = this.Euo
-        other.Euc = this.Euc
-        other.Ea = this.Ea
+        other.Euo = this.Euo.copy()
+        other.Euc = this.Euc.copy()
     else:
-        other.Euo = set.union(*[a.Euo for a in this])
-        other.Euc = set.union(*[a.Euc for a in this])
-        other.Ea = set.union(*[a.Ea for a in this])
+        other.Euo = set.union(a.Euo for a in this)
+        other.Euc = set.union(a.Euc for a in this)
 
 
 class UnobservableReach:
