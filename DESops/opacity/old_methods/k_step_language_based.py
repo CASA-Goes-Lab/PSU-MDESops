@@ -1,6 +1,7 @@
 """
 Functions related to the alternative method for k-step and infinite-step opacity that is based on language inclusion
 """
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.basic_operations.construct_reverse import reverse
 from DESops.opacity.contract_secret_traces import contract_secret_traces
@@ -26,7 +27,8 @@ def verify_k_step_opacity_language_based(
     return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
     return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
     """
-    if "e_ext" in set(g.es["label"]):
+    e_ext = Event("e_ext")
+    if e_ext in set(g.es["label"]):
         raise ValueError("e_ext is a reserved event label")
 
     if secret_type is None:
@@ -53,10 +55,10 @@ def verify_k_step_opacity_language_based(
         # add self loops to each state so that runs reaching a dead state can be extended
         g_c.add_edges(
             [(i, i) for i in range(g_c.vcount())],
-            ["e_ext"] * g_c.vcount(),
+            [e_ext] * g_c.vcount(),
             fill_out=True,
         )
-        Eo.add("e_ext")
+        Eo.add(e_ext)
 
     h = construct_unfolded(g_c, k, joint)
 
@@ -72,8 +74,8 @@ def verify_k_step_opacity_language_based(
     if return_violating_path:
         path = return_tuple[-1]
         if path:
-            while "e_ext" in path:
-                path.remove("e_ext")
+            while e_ext in path:
+                path.remove(e_ext)
 
     return return_tuple
 

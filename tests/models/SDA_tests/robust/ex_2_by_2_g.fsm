@@ -1,0 +1,17 @@
+4
+
+11	0	2
+rE	12	c	o
+rN	21	c	o
+
+12	0	2
+rW	11	c	o
+rN	22	c	o
+
+21	0	2
+rS	11	c	o
+rE	22	c	o
+
+22	0	2
+rS	12	c	o
+rW	21	c	o

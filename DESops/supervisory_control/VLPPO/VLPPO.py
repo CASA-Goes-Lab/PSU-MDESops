@@ -14,7 +14,6 @@ from DESops.automata.DFA import DFA
 from DESops.basic_operations.construct_subautomata import construct_subautomata
 from DESops.basic_operations.parallel_comp import parallel_comp
 from DESops.basic_operations.refine_product import refine_product_SCS
-from DESops.basic_operations.ureach import extended_ureach_from_set, ureach_from_set_adj
 
 
 def offline_VLPPO(
@@ -61,8 +60,9 @@ def offline_VLPPO(
             Euo = plant.Euo.union(spec.Euo)
         else:
             Euo = plant.Euo
+        Euo = frozenset(Euo)
     elif isinstance(Euo, list):
-        Euo = set(Euo)
+        Euo = frozenset(Euo)
 
     if not Euc:
         if spec:
@@ -114,7 +114,7 @@ def offline_VLPPO(
     X_crit_vs = plant_pp.vs.select(name_in=X_crit)
     X_crit_ind = [v.index for v in X_crit_vs]
 
-    bad_states = compute_state_costs(plant_pp, X_crit_ind, Euc)
+    bad_states = plant_pp.compute_state_costs(X_crit_ind, Euc)
     # State is illegal if in bad_states
 
     # if initial state is in bad_states, there is no solution:
@@ -122,21 +122,30 @@ def offline_VLPPO(
     if 0 in bad_states:
         # return empty DFA
 
-        # do a warning here ! ! !
+        # do a warning here?
         empty_sol = DFA()
         return empty_sol
 
     if not event_ordering:
         # "unspecified" event_ordering follows nondeterministic set ordering
-        event_ordering = [
-            label for label in set(plant_pp.es["label"]) if label not in Euc
-        ]
+        event_ordering = [label for label in plant_pp.events if label not in Euc]
 
-    edge_labels = list()
-    edge_pairs = list()
+    edge_labels, edge_pairs = list(), list()
+
+    eur_dict = dict()
+
     # Compute next set of present states PS, and control policy ACT
-    ACT, PS = VLPPO(plant, Euc, Euo, {0}, {}, bad_states, event_ordering)
-    init_set = frozenset(PS)
+    ACT, PS = VLPPO(
+        plant,
+        Euc,
+        Euo,
+        frozenset(0 for _ in range(1)),
+        None,
+        bad_states,
+        event_ordering,
+        eur_dict,
+    )
+    init_set = PS
 
     supervisor_def = True
     if not supervisor:
@@ -144,6 +153,7 @@ def offline_VLPPO(
         supervisor = DFA()
 
     # If the first VLPPO computation found a possible next set of states, use bfs to traverse all sets of states
+
     if PS:
         sets_of_states.add(init_set)
         search_VLPPO(
@@ -157,13 +167,15 @@ def offline_VLPPO(
             edge_pairs,
             ACT,
             event_ordering,
+            eur_dict,
         )
-
         # Create graph P using sets_of_states, edge_labels & edge_pairs
         # modifies sets_of_states
+
         convert_to_graph(
             supervisor, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_set
         )
+
     # Otherwise, P will be an empty graph?
 
     # EVENT TODO: switch this to more general event updating
@@ -187,6 +199,7 @@ def search_VLPPO(
     edge_pairs,
     ACT,
     event_ordering,
+    eur_dict,
 ):
     """
     Executes VLPPO for a set of states PS
@@ -212,10 +225,10 @@ def search_VLPPO(
     event_ordering: priority ordering of controllable events, with largest priorty going
         to the first element.
     """
-
+    tttt = G.vs["out"]
+    ttttt = G.vs["name"]
     Q = list()
     Q.append((ACT, PS))
-
     while Q:
         (ACT, PS) = Q.pop(0)
         E_set = set(t[1] for v in PS for t in G.vs[v]["out"])
@@ -224,18 +237,20 @@ def search_VLPPO(
             NS = PS
             if e not in Euo and e in E_set:
                 # Only check observable & valid neighbors (in active event set of PS) for more VLPPOCP computations
-                [ACT_new, NS] = VLPPO(G, Euc, Euo, PS, e, bad_states, event_ordering)
+                ACT_new, NS = VLPPO(
+                    G, Euc, Euo, PS, e, bad_states, event_ordering, eur_dict
+                )
                 if NS not in sets_of_states:
-                    sets_of_states.add(frozenset(NS))
+                    sets_of_states.add(NS)
                     Q.append((ACT_new, NS))
                 # some transition(s) still possible, target already exists
             edge_labels.append(e)
-            edge_pairs.append((frozenset(PS), frozenset(NS)))
+            edge_pairs.append((PS, NS))
 
     return
 
 
-def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering):
+def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering, eur_dict):
     """
     Implementation of VLPPO algorithm:
     G: system automata
@@ -250,20 +265,22 @@ def VLPPO(G, Euc, Euo, PS, event, bad_states, event_ordering):
     """
     # 1. Determine set of next states NS
     #       Unobservable reach from current state
-    NS = get_N(event, PS, G, Euo)
 
+    NS = get_N(event, PS, G, Euo)
     # If no event ordering is provided,
     # assume event ordering is whatever the random order of the set of labels is
 
     # 2. Determine the control action ACT
-    ACT = control_action(G, NS, event_ordering.copy(), Euc, Euo, bad_states)
+    ACT = control_action(G, NS, event_ordering.copy(), Euc, Euo, bad_states, eur_dict)
+    # 3. Determine UR of states in PS via unobservable events in ACT
 
-    # 3. Determine UR of states in PS via unobservable events in ACT (not necessarily Euc?)
-    PS_new = ureach_from_set_adj(NS, G, ACT.intersection(Euo))
-    return ACT, PS_new
+    events = frozenset(l for l in ACT if l in Euo)
+
+    PS_new = G.UR.from_set(NS, events, freeze_result=True)
+    return ACT, frozenset(PS_new)
 
 
-def control_action(G, NS, E_list, Euc, Euo, bad_states):
+def control_action(G, NS, E_list, Euc, Euo, bad_states, eur_dict):
     """
     Given event ordering and set of next states, determine control action ACT
     G: system Automata
@@ -276,44 +293,53 @@ def control_action(G, NS, E_list, Euc, Euo, bad_states):
 
     Returns ACT, the next set of control decisions.
     """
-    ACT = set()
-    ACT.update(Euc)
+    ACT = Euc.copy()
     Pt = 0
+    unobs_ACT = ACT.intersection(Euo)
 
-    ACT_eur = set()
-    ACT_eur.update(NS)
-    extended_ureach_from_set(ACT_eur, NS, G, ACT, Euo)
+    UR_set_ACT = G.UR.from_set(NS, unobs_ACT, freeze_result=True)
+    ACT_eur = ext_ur_from_set(UR_set_ACT, G, ACT, Euo, eur_dict)
+
+    ACT_eur_labels = {t[1] for v in ACT_eur for t in G.vs[v]["out"]}
 
     # 2. available controllable events list isn't empty:
     while E_list:
         bad_state_found = False
         # 2.1
-        if Pt > len(E_list) - 1:
-            if not ACT:
-                return set(E_list)
+        if Pt >= len(E_list):
             return ACT.union(E_list)
+
         # 2.2: If for ALL x in ure(S from ACT), f(x, E_list[Pt]) does not exist
 
-        trans_labels = lambda states: {t[1] for v in states for t in G.vs[v]["out"]}
-
-        if E_list[Pt] not in trans_labels(ACT_eur):
+        event = E_list[Pt]
+        if event not in ACT_eur_labels:
             Pt += 1
             continue
 
         # 2.3:
-        ure_ACT_E_list = set()
-        a = ACT.copy()
-        a.add(E_list[Pt])
 
-        extended_ureach_from_set(ure_ACT_E_list, NS, G, a, Euo)
-        # if ure_ACT_E_list.intersection(bad_states)
+        # constant time to add/delete; possibly faster than union or copy+add
+        ACT.add(event)
+        if event in Euo:
+            unobs_ACT.add(event)
+
+        UR_set = G.UR.from_set(UR_set_ACT, unobs_ACT, freeze_result=True)
+
+        ure_ACT_E_list = ext_ur_from_set(UR_set, G, ACT, Euo, eur_dict)
+
+        ACT.remove(event)
+        if event in Euo:
+            unobs_ACT.remove(event)
+
         if any(True if x in bad_states else False for x in ure_ACT_E_list):
-            E_list.remove(E_list[Pt])
+            E_list.remove(event)
             continue
 
         # 2.4:
-        ACT.add(E_list[Pt])
-        E_list.remove(E_list[Pt])
+        x = E_list.pop(Pt)
+
+        ACT.add(x)
+
         Pt = 0
     return ACT
 
@@ -325,10 +351,10 @@ def get_N(event, S, G, Euo):
     where NS are states {x exists in X: x = delta(y, event) for y exists on S}
     Event must be within the event set or null-event (condition comes from N-function definition)
     """
-    if not event:
+    if event is None:
         return S
     # Otherwise, find the next set of states:
-    return {t[0] for v in S for t in G.vs[v]["out"] if t[1] == event}
+    return frozenset(t[0] for v in S for t in G.vs[v]["out"] if t[1] == event)
 
 
 def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_set):
@@ -352,39 +378,8 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
         new_edge_pairs.append((source, target))
         out[source].append((target, l))
 
-    # Below required to name states (currently just using generic names)
-
-    # Replace indices in sets (in sets_of_states) w/ their respective names in G
-    # sets_of_states = {frozenset({G.vs["name"][i] if not isinstance(i,Event) else G.vs["name"][i].tuple() for i in s}) for s in sets_of_states}
-    # init_set = frozenset({G.vs["name"][i] for i in init_set})
-
-    # vs_names = list()
-    # vs_names.append(init_set)
-    # vs_names.extend(sets_of_states)
-
-    # Rm.vs["name"] = vs_names
     P.vs["out"] = out
-    P.add_edges(new_edge_pairs, edge_labels)
-    P.es["label"] = edge_labels
-    P.vs["name"] = [i for i in range(0, P.vcount())]
-
-
-def compute_state_costs(G, states_removed, Euc):
-    # updates states_removed with infinite cost states
-
-    # can make this a queue?
-    bad_states = set()
-    states_to_check = states_removed
-    while states_to_check:
-        bad_states.update(states_to_check)
-        # Back out the next potentially infinite-cost states as those with uncontrollable transitions
-        # to the most recent set of infinite cost states (states_to_check on the RHS).
-        states_to_check = {
-            e.source
-            for e in G.es(_target_in=states_to_check)
-            if e["label"] in Euc and e.source not in bad_states
-        }
-    return bad_states
+    P.add_edges(new_edge_pairs, edge_labels, fill_out=False)
 
 
 def invalid_state(G, H, Euc, H_state):
@@ -392,3 +387,29 @@ def invalid_state(G, H, Euc, H_state):
     G_assoc_state = H.vs["name"][H_state][0]
     G_uc_count = len([_ for v in G.vs[G_assoc_state]["out"] if v[1] in Euc])
     return H_uc_count < G_uc_count
+
+
+def ext_ur_from_set(set_of_states, g, ACT, Euo, eur_dict):
+    """
+    Find extended_ureach for each state in set_of_states.
+
+    set_of_states: states to begin from
+    g: igraph Graph object
+    ACT: events to consider
+    Euo: set of unobservable events in g
+    """
+
+    key = (set_of_states, frozenset(ACT))
+    if key in eur_dict:
+        return eur_dict[key]
+
+    new_set = set(set_of_states)
+    for state in set_of_states:
+        for t in g.vs[state]["out"]:
+            if t[1] in ACT and t[1] not in Euo:
+                new_set.add(t[0])
+
+    new_set = frozenset(new_set)
+    eur_dict[key] = new_set
+    return new_set
+    # return x_set.union(t[0] for state in x_set for t in g.vs[state]["out"] if t[1] in e and t[1] not in Euo)

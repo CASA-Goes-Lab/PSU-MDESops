@@ -203,17 +203,17 @@ def extended_ureach(x_set, state, g, e, Euo):
     return
 
 
-def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
+def extended_ureach_from_set_adj(set_of_states, g, e, Euo):
     """
     Find extended_ureach for each state in set_of_states.
 
-    x_set: output set
     set_of_states: states to begin from
     g: igraph Graph object
     e: events to consider
     Euo: set of unobservable events in g
     """
-    ureach_from_set(x_set, set_of_states, g, e.intersection(Euo))
+    x_set = ureach_from_set_adj(set_of_states, g, e.intersection(Euo))
+
     new_set = set()
 
     for state in x_set:
@@ -223,7 +223,29 @@ def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
         new_set.update(new_states)
 
     x_set.update(new_set)
-    return
+    return x_set
+
+
+def extended_ureach_from_set(x_set, set_of_states, g, e, Euo):
+    """
+    Find extended_ureach for each state in set_of_states.
+
+    set_of_states: states to begin from
+    g: igraph Graph object
+    e: events to consider
+    Euo: set of unobservable events in g
+    """
+    ureach_from_set(x_set, set_of_states, g, e.intersection(Euo))
+
+    new_set = set()
+
+    for state in x_set:
+        new_states = set(
+            t[0] for t in g.vs[state]["out"] if t[1] in e and t[1] not in Euo
+        )
+        new_set.update(new_states)
+
+    x_set.update(new_set)
 
 
 def ureach_ignore_states(x_set, state, g, e, ignore):

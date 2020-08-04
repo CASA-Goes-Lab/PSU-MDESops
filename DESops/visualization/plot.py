@@ -1,7 +1,7 @@
 import igraph as ig
 from pydash import flatten_deep
 
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 
 
 def plot(

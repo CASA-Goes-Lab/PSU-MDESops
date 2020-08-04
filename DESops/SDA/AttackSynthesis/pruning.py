@@ -6,7 +6,7 @@ import time
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 
 from ...basic_operations.unary import find_inacc
 

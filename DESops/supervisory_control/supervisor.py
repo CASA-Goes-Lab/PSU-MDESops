@@ -7,7 +7,7 @@ import pydash
 from tqdm import tqdm
 
 from DESops.automata import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations import composition, unary
 
 
@@ -21,7 +21,8 @@ EventSet = Set[Event]
 StateSet = Set[int]
 
 SHOW_PROGRESS = False
-MAX_PROCESSES = cpu_count()
+# MAX_PROCESSES = cpu_count()
+MAX_PROCESSES = 1
 
 
 def supremal_sublanguage(
@@ -31,6 +32,7 @@ def supremal_sublanguage(
     Euo: Optional[EventSet] = None,
     mode: Mode = Mode.CONTROLLABLE_NORMAL,
     preprocess: bool = True,
+    plant_obs: DFA = None,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
@@ -46,7 +48,11 @@ def supremal_sublanguage(
     G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
     (G, H) = preprocessing(G_given, H_given) if preprocess else (G_given, H_given)
-    G_obs = composition.observer(G)
+
+    if plant_obs is not None:
+        G_obs = plant_obs
+    else:
+        G_obs = composition.observer(G)
 
     while True:
         deleted_states = set()
@@ -66,7 +72,7 @@ def supremal_sublanguage(
         deleted_states |= bad_states_to_trim
 
         if H.vcount() == 0 or 0 in deleted_states:
-            return None
+            return DFA()
         elif len(deleted_states) == 0:
             return H
 

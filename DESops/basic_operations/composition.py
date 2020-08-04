@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from DESops.automata.automata import _Automata
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.basic_operations.unary import find_inacc
 from DESops.error import MissingAttributeError

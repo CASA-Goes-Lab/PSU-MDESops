@@ -15,12 +15,18 @@ def write_pickle(filename, automata, compress=False):
 
     Need to package any relevant Automata info into igraph Graph object.
     """
+    automata._graph["events"] = automata.events
     automata._graph["Euc"] = automata.Euc
     automata._graph["Euo"] = automata.Euo
 
-    automata._graph["Ea"] = automata.Ea
-    automata._graph["X_crit"] = automata.X_crit
+    if hasattr(automata, "Ea"):
+        automata._graph["Ea"] = automata.Ea
+
+    if hasattr(automata, "X_crit"):
+        automata._graph["X_crit"] = automata.X_crit
+
     automata._graph["type"] = automata.type
+
     if not compress:
         automata._graph.write_pickle(filename)
     else:
@@ -41,8 +47,17 @@ def read_pickle(filename, automata, compress=False):
     else:
         automata._graph = ig.Graph.Read_Picklez(filename)
     # Retrieve any other releveant info from graph object e.g. obs/contr sets.
+    automata.events = automata._graph["events"]
     automata.Euc = automata._graph["Euc"]
     automata.Euo = automata._graph["Euo"]
-    automata.Ea = automata._graph["Ea"]
-    automata.X_crit = automata._graph["X_crit"]
+
+    if "Ea" in automata._graph.attributes():
+        automata.Ea = automata._graph["Ea"]
+
+    if "X_crit" in automata._graph.attributes():
+        automata.X_crit = automata._graph["X_crit"]
+
     automata.type = automata._graph["type"]
+
+    automata.vs = automata._graph.vs
+    automata.es = automata._graph.es

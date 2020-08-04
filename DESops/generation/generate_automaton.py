@@ -6,9 +6,9 @@ The implementation is modified from the FsmGenerator in the VEiP GitLab reposito
 from random import choice, randint, randrange, sample, shuffle
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
-from DESops.file.igraph_to_fsm import write_fsm
+from DESops.file.igraph_pickle import write_pickle
 
 
 def generate_automaton(
@@ -22,8 +22,7 @@ def generate_automaton(
     num_secret=0,
     num_uo=0,
     num_uc=0,
-    fsm_filename=None,
-    attr_filename=None,
+    filename=None,
     enforce_accesibility=True,
     enforce_max_trans_per_state=True,
 ):
@@ -95,11 +94,8 @@ def generate_automaton(
         Requires 0 <= num_uc <= num_events
         By default no events are uncontrollable
 
-    fsm_filename:
-        If specified, the generated automaton will be written to fsm_filename
-
-    attr_filename:
-        If specified, automaton attributes will be written to attr_filename
+    filename:
+        If specified, the generated automaton will be saved as a pickle file to this location
 
     enforce_accesibility:
         Ensures that every vertex is accesible
@@ -120,8 +116,6 @@ def generate_automaton(
         num_secret,
         num_uo,
         num_uc,
-        fsm_filename,
-        attr_filename,
         enforce_accesibility,
         enforce_max_trans_per_state,
     )
@@ -131,7 +125,10 @@ def generate_automaton(
         success = generator.generate_automaton()
 
     generator.g.generate_out()
-    generator.write_files()
+
+    if filename:
+        write_pickle(filename, generator.g)
+
     return generator.g
 
 
@@ -148,8 +145,6 @@ class randomAutomata:
         num_secret,
         num_uo,
         num_uc,
-        fsm_filename,
-        attr_filename,
         enforce_accesibility,
         enforce_max_trans_per_state,
     ):
@@ -171,8 +166,6 @@ class randomAutomata:
         self.num_marked = num_marked
         self.num_uo = num_uo
         self.num_uc = num_uc
-        self.fsm_filename = fsm_filename
-        self.attr_filename = attr_filename
         self.enforce_accesibility = enforce_accesibility
         self.enforce_max_trans_per_state = enforce_max_trans_per_state
 
@@ -468,29 +461,3 @@ class randomAutomata:
         #  and remove this (parent) state from the list of unprocessed states:
         if state in self.unprocessed_states:
             self.unprocessed_states.remove(state)
-
-    def write_files(self):
-        """
-        Writes the fsm file of the automaton and writes a file containing all attributes
-        """
-        if self.fsm_filename:
-            write_fsm(self.fsm_filename, self.g)
-
-        if self.attr_filename:
-            with open(self.attr_filename, "w") as f:
-                f.write("Initial States:\n")
-                f.write(" ".join([str(v["name"]) for v in self.g.vs if v["init"]]))
-
-                f.write("\n\nMarked States:\n")
-                f.write(" ".join([str(v["name"]) for v in self.g.vs if v["marked"]]))
-
-                f.write("\n\nSecret States:\n")
-                f.write(" ".join([str(v["name"]) for v in self.g.vs if v["secret"]]))
-
-                f.write("\n\nUnobservable Events:\n")
-                f.write(" ".join([e.label for e in self.g.Euo]))
-
-                f.write("\n\nUncontrollable Events:\n")
-                f.write(" ".join([e.label for e in self.g.Euc]))
-
-                f.write("\n")

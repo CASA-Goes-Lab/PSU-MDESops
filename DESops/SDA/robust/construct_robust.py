@@ -1,68 +1,91 @@
 import itertools
 
 from DESops.automata.DFA import DFA
-from DESops.basic_operations.ureach import unobservable_reach
-from DESops.SDA.event_extensions import deleted_event, inserted_event
+from DESops.automata.event import Event
+from DESops.basic_operations.ureach import ureach_from_set_adj
+from DESops.SDA.event_extensions import (
+    deleted_event,
+    inserted_event,
+    is_deleted,
+    is_inserted,
+    unedited_event,
+)
 
 # from DESops.Event.Event import Event
 
 
-def construct_arena_opt_with_attacker(
-    G, A, Ea, Euo, Euc, X_crit, arena=None, reduced=False, debug=False
-):
+def construct_robust_arena(G, X_crit, Ea, A=None, arena=None, reduced=False):
     # G: input system automata, igraph graph object
+    # X_crit: critical state names
+    # A: optionally provide attack specification
     # Ea: set of compromised events
     # Euo:set of unobservable events
     # Euc: set of uncontrollable events
-    # reduced: True: use reduced arena construction method (much faster, less states),
+    # reduced: True: use reduced arena construction method (much faster, fewer states),
     #          False: use full arena construction method (slower, more states)
     #          default: False
-    # debug:   True: print updates for states & time to construct arena
-    #          False: no debug information
-    #          default: False
-    if debug:
-        import time
 
-        start_time = time.process_time()
-
-    # TODO: is arena always a DFA?
     if arena is not None:
+        arena_provided = True
+    else:
         arena_provided = False
         arena = DFA()
-    else:
-        arena_provided = True
 
-    E = set(G.es["label"])
-    Eo = set([e for e in E if e not in Euo])
-    A1 = set()
-    find_A1_sets(A1, G, Euc)
+    E = G.events
+    Euo = G.Euo
+    Euc = G.Euc
+
     Ea_e = find_Ea_e_events(G, E, Ea)
-    A2 = Ea_e | Eo
+
     queue = list()
-    init_state = (frozenset({0}), 0)
-    queue.append(init_state)
-    Q1, Q2, h1, h2 = set(), set(), list(), list()
-    Q1.add(init_state)
-    adj_dict = dict()
+    if A is not None:
+        init_state = (frozenset({0}), frozenset({0}), 0)
+    else:
+        init_state = (frozenset({0}), frozenset({0}))
+    queue.append((init_state, 0))
+    # Q1, Q2 dict maps vertex names to index
+    Q1, Q2 = dict(), dict()
+    h1_pairs, h1_labels, h2_pairs, h2_labels = list(), list(), list(), list()
 
-    search_opt_with_att(
-        G, A, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, X_crit, adj_dict, debug
-    )
-    # print(adj_dict)
-    # print(Q1)
-    # print(len(Q2))
-    convert_to_graph_opt_with_att(arena, G, A, Q1, Q2, h1, h2, init_state, adj_dict)
+    Q1[init_state] = 0
 
+    # List of Q1 & Q2 states in order (to be used for naming)
+    state_list = list()
+    state_list.append(init_state)
+    if A is not None:
+        search_w_att(
+            G, A, Q1, Q2, h1_pairs, h1_labels, h2_pairs, h2_labels, queue, Ea, X_crit,
+        )
+    else:
+        X_crit_vert = search(
+            G,
+            Q1,
+            Q2,
+            state_list,
+            h1_pairs,
+            h1_labels,
+            h2_pairs,
+            h2_labels,
+            queue,
+            Ea,
+            X_crit,
+            reduced,
+        )
+
+    Qname = state2str(state_list, G, A)
+    arena.add_vertices(len(Q1) + len(Q2), Qname)
+    arena.add_edges(h1_pairs, h1_labels)
+    arena.add_edges(h2_pairs, h2_labels)
+
+    # arena.vs["out"] = adj_list
+    arena.generate_out()
+    arena.X_crit = {Qname[i] for i in X_crit_vert}
+    # The Euc for meta SCP = A2 U {Euc}
     Euc_new = Ea_e.union(E)
-    Euc_new.add(frozenset(Euc))
+    Euc_new.add(Event(frozenset(Euc)))
 
+    # Euo for meta SCP = Ea_e, i.e. set of modified events
     Euo_new = Ea_e.copy()
-
-    if debug:
-        print("-----")
-        print("Final Vcount: {0}".format(str(arena.vcount())))
-        print("Time elapsed: {0}".format(str(time.process_time() - start_time)))
-        print("-----")
 
     if arena_provided:
         return [Euc_new, Euo_new]
@@ -70,116 +93,94 @@ def construct_arena_opt_with_attacker(
         return [Euc_new, Euo_new, arena]
 
 
-def convert_to_graph_opt_with_att(arena, G, A, Q1, Q2, h1, h2, init_state, adj_dict):
-
-    # Convert Q1, Q2 states and h1, h2 edges to arena, an Automata
-    arena.add_vertices(len(Q1) + len(Q2))
-    Q1.remove(init_state)
-    V_names = list()
-    V_names.append("{" + G.vs["name"][0] + "," + A.vs["name"][0] + "}")
-    E_list = list()
-    E_events = list()
-    # Convert Q1 and Q2 into a dict with name : index
-    adj_list = list()
-    Q_dict = dict()
-    Q_dict[init_state] = 0
-    Q = list()
-    for i, q in enumerate(Q1, 1):
-        q0_names = (
-            "{"
-            + ",".join([G.vs["name"][l] for l in q[0]])
-            + ","
-            + A.vs["name"][q[1]]
-            + "}"
-        )
-        t = q0_names
-        V_names.append(t)
-        Q_dict[q] = i
-        Q.append(q)
-    for j, q in enumerate(Q2, i + 1):
-        q0_names = (
-            "{"
-            + ",".join([G.vs["name"][l] for l in q[0]])
-            + ","
-            + A.vs["name"][q[1]]
-            + "}"
-        )
-        q1 = "{" + ",".join({u for u in q[2]}) + "}"
-        t = "(" + ",".join([q0_names, q1, str(q[3])]) + ")"
-        V_names.append(t)
-        Q_dict[q] = j
-        Q.append(q)
-
-    adj_list.append([(Q_dict[v[0]], v[1]) for v in adj_dict[init_state]])
-    adj_list.extend(
-        [[(Q_dict[v[0]], v[1]) for v in adj_dict[Q[i]]] for i, x in enumerate(Q)]
-    )
-    # print(adj_list)
-    # [print(key, value) for key, value in Q_dict.items()]
-    # print(V_names)
-    # print(len(Q1)+len(Q2))
-
-    for h in h1:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-
-    for h in h2:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-
-    # print(V_names)
-    arena.vs["name"] = V_names
-    arena.add_edges(E_list)
-    arena.es["label"] = E_events
-    arena.vs["out"] = adj_list
-
-
-def search_opt_with_att(
-    G, A, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, X_crit, adj_dict, debug
+def search_w_att(
+    G,
+    A,
+    Q1,
+    Q2,
+    h1_pairs,
+    h1_labels,
+    h2_pairs,
+    h2_labels,
+    adj_list,
+    queue,
+    Euo,
+    Euc,
+    Ea,
+    A1,
+    A2,
+    X_crit,
 ):
     X_crit = set([v.index for v in G.vs.select(name_in=X_crit)])
 
+    vertex_counter = 1
+    A1 = set()
+    singleton_A1_set(A1, G, E, Euc)
+
+    Ea_e = find_Ea_e_events(G, E, Ea)
+    Eo = {e for e in G.events if e not in Euo}
+    # A2: set edited or observable events (sigma_m in paper)
+    A2 = Ea_e.union(Eo)
+
+    # cache UR computations
+    UR_dict = dict()
     while queue:
         # print(len(queue))
-        q = queue.pop(0)
+        adj = list()
+        q, source_index = queue.pop(0)
+
         if Q1_state(q):
             # Q1 to Q2 transitions
-            # events = gamma_feasible(G, q, Euc)
             events = A1
-            adj = list()
+
             for e in events:
-                next_state_set = UR(q[0], G, e, Euo)
-                target = (next_state_set, q[1], frozenset(e), None)
-                h1.append((q, e, target))
-                adj.append((target, e))
-                add_to_arena_opt_with_att(
-                    Q1, Q2, target, queue, X_crit, adj_dict, debug
+                next_S1 = UR(q[0], G, e, Euo, UR_dict)
+                next_S2 = UR(q[1], G, e, Euo, UR_dict)
+                target = (next_S1, next_S2, frozenset(e), None)
+
+                vertex_counter = add_Q2_state(
+                    Q2,
+                    target,
+                    e,
+                    queue,
+                    X_crit,
+                    adj,
+                    vertex_counter,
+                    source_ind,
+                    h1_pairs,
+                    h1_labels,
                 )
-            adj_dict[q] = adj
 
         elif Q2_state(q):
             # Various types of Q2 transitions
             # print(q)
-            adj = list()
+
+            G_out_labels = {t[1] for v in q[0] for t in G.vs[v]["out"]}
+
+            A_out_labels = {t[1] for v in A.vs[q[1]]["out"]}
             for e in A2:
                 if q[3] == e and e in Ea:
                     # 2nd type, Q2->Q1
-                    target = (q[0], q[1])
-                    h2.append((q, e, target))
-                    add_to_arena_opt_with_att(
-                        Q1, Q2, target, queue, X_crit, adj_dict, debug
+                    target = (q[0], NX(e, q[1], G))
+
+                    vertex_counter = add_Q1_state(
+                        Q1,
+                        target,
+                        e,
+                        queue,
+                        X_crit,
+                        adj,
+                        vertex_counter,
+                        source_ind,
+                        h2_pairs,
+                        h2_labels,
                     )
-                    adj.append((target, e))
 
                 if q[3] == None:
                     if (
-                        e in Eo
-                        and e in G.es(_source_in=q[0])["label"]
-                        and e in A.es(_source=q[1])["label"]
+                        e not in Euo
+                        and e in G_out_labels
+                        and e in A_out_labels
                         and e in q[2]
                     ):
                         # 1st type, Q2->Q1
@@ -189,435 +190,297 @@ def search_opt_with_att(
 
                         next_state_set = NX(e, q[0], G)
                         target = (next_state_set, stA)
-                        h2.append((q, e, target))
-                        add_to_arena_opt_with_att(
-                            Q1, Q2, target, queue, X_crit, adj_dict, debug
-                        )
-                        adj.append((target, e))
 
-                    if isinstance(e, Event) and e.inserted and e.label in q[2]:
-                        if (
-                            "(" + ", ".join(e.name()) + ")"
-                            in A.es(_source=q[1])["label"]
-                        ):
+                        vertex_counter = add_Q1_state(
+                            Q1,
+                            target,
+                            e,
+                            queue,
+                            X_crit,
+                            adj,
+                            vertex_counter,
+                            source_ind,
+                            h2_pairs,
+                            h2_labels,
+                        )
+
+                    if isinstance(e, Event) and is_inserted(e) and e.label in q[2]:
+                        # this str should really be an event; has to do with construction of attack??
+                        if e in A_out_labels:
                             # 3rd type, Q2->Q2
                             # print('_'.join(e.name()))
-                            stA = [
-                                ad[0]
-                                for ad in A.vs["out"][q[1]]
-                                if ad[1] == "(" + ", ".join(e.name()) + ")"
-                            ]
+                            stA = [ad[0] for ad in A.vs["out"][q[1]] if ad[1] == e]
                             if stA:
                                 stA = stA[0]
                             target = (q[0], stA, q[2], M(e))
-                            h2.append((q, e.name(), target))
-                            add_to_arena_opt_with_att(
-                                Q1, Q2, target, queue, X_crit, adj_dict, debug
+
+                            vertex_counter = add_Q2_state(
+                                Q2,
+                                target,
+                                e,
+                                queue,
+                                X_crit,
+                                adj,
+                                vertex_counter,
+                                source_ind,
+                                h2_pairs,
+                                h2_labels,
                             )
-                            adj.append((target, e.name()))
 
                     if (
                         isinstance(e, Event)
-                        and e.deleted
-                        and e.label in G.es(_source_in=q[0])["label"]
+                        and is_deleted(e)
+                        and e.label in G_out_labels
                         and e.label in q[2]
                     ):
-                        if (
-                            "(" + ", ".join(e.name()) + ")"
-                            in A.es(_source=q[1])["label"]
-                        ):
+                        if e in A_out_labels:
                             # 4th type, Q2->Q2
                             # proj is just M(e) since e is in Ead (not in Eai)
-                            stA = [
-                                ad[0]
-                                for ad in A.vs["out"][q[1]]
-                                if ad[1] == "(" + ", ".join(e.name()) + ")"
-                            ]
+                            stA = [ad[0] for ad in A.vs["out"][q[1]] if ad[1] == e]
                             if stA:
                                 stA = stA[0]
                             nx = NX(e.label, q[0], G)
-                            next_state_set = UR(nx, G, q[2], Euo)
+                            next_state_set = UR(nx, G, q[2], Euo, UR_dict)
                             target = (next_state_set, stA, q[2], None)
-                            # print(target)
-                            # if target[0] == frozenset():
-                            # print(q[1])
-                            # print(UR(frozenset({3}),G,q[1],Euo))
-                            # print(e.label)
-                            h2.append((q, e.name(), target))
-                            add_to_arena_opt_with_att(
-                                Q1, Q2, target, queue, X_crit, adj_dict, debug
+
+                            vertex_counter = add_Q2_state(
+                                Q2,
+                                target,
+                                e,
+                                queue,
+                                X_crit,
+                                adj,
+                                vertex_counter,
+                                source_ind,
+                                h2_pairs,
+                                h2_labels,
                             )
-                            adj.append((target, e.name()))
-            # print(q)
-            adj_dict[q] = adj
+
+        adj_list.append(adj)
 
 
-def construct_arena_opt(
-    G, Ea, Euo, Euc, X_crit, arena=None, reduced=False, debug=False
+def search(
+    G,
+    Q1,
+    Q2,
+    state_list,
+    h1_pairs,
+    h1_labels,
+    h2_pairs,
+    h2_labels,
+    queue,
+    Ea,
+    X_crit,
+    reduced,
 ):
-    # arena: igraph graph object where resulting arena will be stored, assumed to be empty
-    # G: input system automata, igraph graph object
-    # Ea: set of compromised events
-    # Euo:set of unobservable events
-    # Euc: set of uncontrollable events
-    # reduced: True: use reduced arena construction method (much faster, less states),
-    #          False: use full arena construction method (slower, more states)
-    #          default: False
-    # debug:   True: print updates for states & time to construct arena
-    #          False: no debug information
-    #          default: False
+    Euo = G.Euo
+    Euc = G.Euc
 
-    if arena is not None:
-        arena_provided = False
-        arena = DFA()
-    else:
-        arena_provided = True
-
-    if debug:
-        import time
-
-        start_time = time.process_time()
-    E = set(G.es["label"])
-    Eo = set([e for e in E if e not in Euo])
-    A1 = set()
-    # find_A1_sets(A1, G, Euc)
-    singleton_A1_set(A1, G, E, Euc)
-    print(A1)
-    Ea_e = find_Ea_e_events(G, E, Ea)
-    A2 = Ea_e | Eo
-    queue = list()
-    init_state = frozenset({0})
-    queue.append(init_state)
-    Q1, Q2, h1, h2 = set(), set(), list(), list()
-    Q1.add(init_state)
-    adj_dict = dict()
-
-    search_opt(
-        G, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, X_crit, adj_dict, debug
-    )
-    # print(adj_dict)
-    # print(Q1)
-    # print(len(Q2))
-    convert_to_graph_opt(arena, G, Q1, Q2, h1, h2, init_state, adj_dict)
-    Euc_new = {e.name() for e in Ea_e}
-    Euc_new = Euc_new.union(E)
-    Euc_new.add(frozenset(Euc))
-    Euo_new = {e.name() for e in Ea_e}
-    if debug:
-        print("-----")
-        print("Final Vcount: {0}".format(str(arena.vcount())))
-        print("Time elapsed: {0}".format(str(time.process_time() - start_time)))
-        print("-----")
-
-    if arena_provided:
-        return [Euc_new, Euo_new]
-    else:
-        return [Euc_new, Euo_new, arena]
-
-
-def search_opt(
-    G, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, X_crit, adj_dict, debug
-):
     X_crit = set([v.index for v in G.vs.select(name_in=X_crit)])
+
+    vertex_counter = 1
+
+    X_crit_vert = set()
+
+    A1 = set()
+    if not reduced:
+        find_A1_sets(A1, G, Euc)
+
+    Ea_e = find_Ea_e_events(G, G.events, Ea)
+    Eo = {e for e in G.events if e not in Euo}
+    # A2: set edited or observable events (sigma_m in paper)
+    A2 = Ea_e.union(Eo)
 
     while queue:
         # print(len(queue))
-        q = queue.pop(0)
-        if Q1_state_opt(q):
+        q, source_ind = queue.pop(0)
+        if Q1_state(q):
             # Q1 to Q2 transitions
-            # events = gamma_feasible(G, q, Euc)
-            events = A1
-            adj = list()
-            for e in events:
-                next_state_set = UR(q, G, e, Euo)
-                target = (next_state_set, frozenset(e), None)
-                h1.append((q, e, target))
-                adj.append((target, e))
-                add_to_arena_opt(Q1, Q2, target, queue, X_crit, adj_dict, debug)
-            adj_dict[q] = adj
+            if reduced:
+                control_decision_set = gamma_feasible(G, q, Euc)
+            else:
+                control_decision_set = A1
 
-        elif Q2_state_opt(q):
+            for ctr_dec in control_decision_set:
+                uo_ctr_dec = frozenset(Euo.intersection(ctr_dec.label))
+                next_S1 = G.UR.from_set(q[0], uo_ctr_dec, freeze_result=True)
+                next_S2 = G.UR.from_set(q[1], uo_ctr_dec, freeze_result=True)
+
+                target = (next_S1, next_S2, ctr_dec.label, None)
+
+                vertex_counter = add_Q2_state(
+                    Q2,
+                    target,
+                    ctr_dec,
+                    queue,
+                    X_crit,
+                    X_crit_vert,
+                    vertex_counter,
+                    source_ind,
+                    h1_pairs,
+                    h1_labels,
+                    state_list,
+                )
+
+        # if not Q1 state, q is a Q2 state:
+        else:
             # Various types of Q2 transitions
             # print(q)
             # print(type(q))
-            adj = list()
             for e in A2:
-                if q[2] == e and e in Ea:
-                    # 2nd type, Q2->Q1
-                    target = q[0]
-                    h2.append((q, e, target))
-                    add_to_arena_opt(Q1, Q2, target, queue, X_crit, adj_dict, debug)
-                    adj.append((target, e))
-
-                if q[2] == None:
-                    trans_set = {t[1]["label"] for v in q[0] for t in G.vs["out"][v]}
-                    # Why is this {e in trans_set} and then 13 lines down {e.label in trans_set} ?
-                    # Some e aren't Event objects?
-                    if e in Eo and e in trans_set and e in q[1]:
-                        # 1st type, Q2->Q1
-                        target = NX(e, q[0], G)
-                        h2.append((q, e, target))
-                        add_to_arena_opt(Q1, Q2, target, queue, X_crit, adj_dict, debug)
-                        adj.append((target, e))
-                    if isinstance(e, Event) and e.inserted and e.label in q[1]:
-                        # 3rd type, Q2->Q2
-                        # print('_'.join(e.name()))
-                        target = (q[0], q[1], M(e))
-                        h2.append((q, e.name(), target))
-                        add_to_arena_opt(Q1, Q2, target, queue, X_crit, adj_dict, debug)
-                        adj.append((target, e.name()))
-                    if (
-                        isinstance(e, Event)
-                        and e.deleted
-                        and e.label in trans_set
-                        and e.label in q[1]
-                    ):
-                        # 4th type, Q2->Q2
-                        # proj is just M(e) since e is in Ead (not in Eai)
-                        nx = NX(e.label, q[0], G)
-                        next_state_set = UR(nx, G, q[1], Euo)
-                        target = (next_state_set, q[1], None)
-                        # if target[0] == frozenset():
-                        # print(q[1])
-                        # print(UR(frozenset({3}),G,q[1],Euo))
-                        # print(e.label)
-                        h2.append((q, e.name(), target))
-                        add_to_arena_opt(Q1, Q2, target, queue, X_crit, adj_dict, debug)
-                        adj.append((target, e.name()))
-            # print(q)
-            adj_dict[q] = adj
-
-
-def convert_to_graph_opt(arena, G, Q1, Q2, h1, h2, init_state, adj_dict):
-    # Convert Q1, Q2 states and h1, h2 edges to arena, an igraph Graph
-    arena.add_vertices(len(Q1) + len(Q2))
-    # [print(key, value) for key, value in adj_dict.items()]
-    Q1.remove(init_state)
-    V_names = list()
-    V_names.append("{" + G.vs["name"][0] + "}")
-    E_list = list()
-    E_events = list()
-    # Convert Q1 and Q2 into a dict with name : index
-    adj_list = list()
-    Q_dict = dict()
-    Q_dict[init_state] = 0
-    Q = list()
-    for i, q in enumerate(Q1, 1):
-        q0_names = "{" + ",".join([G.vs["name"][l] for l in q]) + "}"
-        t = q0_names
-        V_names.append(t)
-        Q_dict[q] = i
-        Q.append(q)
-    for j, q in enumerate(Q2, i + 1):
-        q0_names = "{" + ",".join([G.vs["name"][l] for l in q[0]]) + "}"
-        q1 = "{" + ",".join({u for u in q[1]}) + "}"
-        t = "(" + ",".join([q0_names, q1, str(q[2])]) + ")"
-        V_names.append(t)
-        Q_dict[q] = j
-        Q.append(q)
-
-    adj_list.append([(Q_dict[v[0]], v[1]) for v in adj_dict[init_state]])
-    adj_list.extend(
-        [[(Q_dict[v[0]], v[1]) for v in adj_dict[Q[i]]] for i, x in enumerate(Q)]
-    )
-    # print(adj_list)
-    # [print(key, value) for key, value in Q_dict.items()]
-    # print(V_names)
-    # print(len(Q1)+len(Q2))
-
-    for h in h1:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-    for h in h2:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-
-    # print(V_names)
-    arena.vs["name"] = V_names
-    arena.add_edges(E_list)
-    arena.es["label"] = E_events
-    arena.vs["out"] = adj_list
-
-
-def construct_arena(arena, G, Ea, Euo, Euc, reduced=False, debug=False):
-    """
-    Need this still?
-    Or will be deleted
-
-    """
-    # arena: igraph graph object where resulting arena will be stored, assumed to be empty
-    # G: input system automata, igraph graph object
-    # Ea: set of compromised events
-    # Euo:set of unobservable events
-    # Euc: set of uncontrollable events
-    # reduced: True: use reduced arena construction method (much faster, less states),
-    #          False: use full arena construction method (slower, more states)
-    #          default: False
-    # debug:   True: print updates for states & time to construct arena
-    #          False: no debug information
-    #          default: False
-    if debug:
-        import time
-
-        start_time = time.process_time()
-    E = set(G.es["label"])
-    Eo = set([e for e in E if e not in Euo])
-    A1 = set()
-    find_A1_sets(A1, G, Euc)
-    Ea_e = find_Ea_e_events(G, E, Ea)
-    A2 = Ea_e | Eo
-    queue = list()
-    init_state = (frozenset({0}), frozenset({0}))
-    queue.append(init_state)
-    Q1, Q2, h1, h2 = set(), set(), list(), list()
-    Q1.add(init_state)
-
-    search(G, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, reduced, debug)
-
-    convert_to_graph(arena, G, Q1, Q2, h1, h2, init_state)
-    Euc_new = Ea_e.union(Euc)
-    Euo_new = Ea_e
-    if debug:
-        print("-----")
-        print("Final Vcount: {0}".format(str(arena.vcount())))
-        print("Time elapsed: {0}".format(str(time.process_time() - start_time)))
-        print("-----")
-
-    return [Euc_new, Euo_new]
-
-
-def search(G, Q1, Q2, h1, h2, queue, Eo, Euo, Euc, Ea, A1, A2, reduced, debug):
-    """
-    Need this still?
-    Or will be deleted
-
-    """
-    while queue:
-        q = queue.pop(0)
-        if Q1_state(q):
-            # Q1 to Q2 transitions
-            if not reduced:
-                events = A1
-            if reduced:
-                events = gamma_feasible(G, q, Euc)
-            for e in events:
-                target = (UR(q[0], G, e, Euo), UR(q[1], G, e, Euo), frozenset(e), None)
-                h1.append((q, e, target))
-                add_to_arena(Q1, Q2, target, queue, debug)
-        elif Q2_state(q):
-            # Various types of Q2 transitions
-            for e in A2:
-                if M(e) not in q[2]:
-                    continue
                 if q[3] == e and e in Ea:
                     # 2nd type, Q2->Q1
-                    target = (q[0], NX(e, q[1], G))
-                    h2.append((q, e, target))
-                    add_to_arena(Q1, Q2, target, queue, debug)
-                if q[3] == None:
-                    if e in Eo and e in G.es(_source_in=q[0])["label"]:
+                    next_S2 = NX(e, q[1], G)
+                    target = (q[0], next_S2)
+                    vertex_counter = add_Q1_state(
+                        Q1,
+                        target,
+                        e,
+                        queue,
+                        X_crit,
+                        X_crit_vert,
+                        vertex_counter,
+                        source_ind,
+                        h2_pairs,
+                        h2_labels,
+                        state_list,
+                    )
+
+                elif q[3] is None:
+                    trans_set = {t[1] for v in q[0] for t in G.vs["out"][v]}
+                    if e not in Euo and e in trans_set and e in q[2]:
                         # 1st type, Q2->Q1
-                        target = (NX(e, q[0], G), NX(e, q[1], G))
-                        h2.append((q, e, target))
-                        add_to_arena(Q1, Q2, target, queue, debug)
-                    if isinstance(e, Event) and e.inserted:
+                        next_S1 = NX(e, q[0], G)
+                        next_S2 = NX(e, q[1], G)
+                        target = (next_S1, next_S2)
+                        vertex_counter = add_Q1_state(
+                            Q1,
+                            target,
+                            e,
+                            queue,
+                            X_crit,
+                            X_crit_vert,
+                            vertex_counter,
+                            source_ind,
+                            h2_pairs,
+                            h2_labels,
+                            state_list,
+                        )
+
+                    elif is_inserted(e) and unedited_event(e) in q[2]:
                         # 3rd type, Q2->Q2
-                        target = (q[0], q[1], q[2], M(e))
-                        h2.append((q, e, target))
-                        add_to_arena(Q1, Q2, target, queue, debug)
-                    if (
-                        isinstance(e, Event)
-                        and e.deleted
-                        and e.label in G.es(_source_in=q[0])["label"]
+                        # print('_'.join(e.name()))
+                        target = (q[0], q[1], q[2], unedited_event(e))
+                        vertex_counter = add_Q2_state(
+                            Q2,
+                            target,
+                            e,
+                            queue,
+                            X_crit,
+                            X_crit_vert,
+                            vertex_counter,
+                            source_ind,
+                            h2_pairs,
+                            h2_labels,
+                            state_list,
+                        )
+
+                    elif (
+                        is_deleted(e)
+                        and unedited_event(e) in trans_set
+                        and unedited_event(e) in q[2]
                     ):
                         # 4th type, Q2->Q2
                         # proj is just M(e) since e is in Ead (not in Eai)
-                        target = (
-                            UR(NX(e.label, q[0], G), G, q[2], Euo),
-                            q[1],
-                            q[2],
-                            None,
+                        nx = NX(unedited_event(e), q[0], G)
+                        uo_q2 = frozenset(Euo.intersection(q[2]))
+                        next_state_set = G.UR.from_set(nx, uo_q2, freeze_result=True)
+                        target = (next_state_set, q[1], q[2], None)
+
+                        vertex_counter = add_Q2_state(
+                            Q2,
+                            target,
+                            e,
+                            queue,
+                            X_crit,
+                            X_crit_vert,
+                            vertex_counter,
+                            source_ind,
+                            h2_pairs,
+                            h2_labels,
+                            state_list,
                         )
-                        h2.append((q, e, target))
-                        add_to_arena(Q1, Q2, target, queue, debug)
+
+    return X_crit_vert
 
 
-def add_to_arena(Q1, Q2, x, queue, debug):
-    if Q1_state(x):
-        if x not in Q1:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
-            Q1.add(x)
-            queue.append(x)
-    if Q2_state(x):
-        if x not in Q2:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
-            Q2.add(x)
-            queue.append(x)
+def add_Q1_state(
+    Q1,
+    x,
+    e,
+    queue,
+    X_crit,
+    X_crit_vert,
+    vertex_counter,
+    source_ind,
+    h_pairs,
+    h_labels,
+    state_list,
+):
+    if x not in Q1:
+        Q1[x] = vertex_counter
+
+        if not X_crit.intersection(x[0]):
+            queue.append((x, vertex_counter))
+        else:
+            X_crit_vert.add(vertex_counter)
+
+        state_list.append(x)
+
+        h_pairs.append((source_ind, vertex_counter))
+        h_labels.append(e)
+
+        return vertex_counter + 1
+
+    target_ind = Q1[x]
+    h_pairs.append((source_ind, target_ind))
+    h_labels.append(e)
+
+    return vertex_counter
 
 
-def add_to_arena_opt(Q1, Q2, x, queue, X_crit, adj_list, debug):
-    if Q1_state_opt(x):
-        if x not in Q1:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
+def add_Q2_state(
+    Q2,
+    x,
+    e,
+    queue,
+    X_crit,
+    X_crit_vert,
+    vertex_counter,
+    source_ind,
+    h_pairs,
+    h_labels,
+    state_list,
+):
+    if x not in Q2:
+        Q2[x] = vertex_counter
 
-            Q1.add(x)
-            # print(set(x).intersection(X_crit))
-            if X_crit.intersection(x):
-                # print(set(x),X_crit)
-                queue.append(x)
-            else:
-                adj_list[x] = list()
+        if not X_crit.intersection(x[0]):
+            queue.append((x, vertex_counter))
+        else:
+            X_crit_vert.add(vertex_counter)
 
-    if Q2_state_opt(x):
-        if x not in Q2:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
+        h_pairs.append((source_ind, vertex_counter))
+        h_labels.append(e)
 
-            Q2.add(x)
+        state_list.append(x)
 
-            if not X_crit.intersection(x[0]):
-                # print(set(x[0]),X_crit)
-                queue.append(x)
-            else:
-                adj_list[x] = list()
+        return vertex_counter + 1
 
-
-def add_to_arena_opt_with_att(Q1, Q2, x, queue, X_crit, adj_list, debug):
-    """
-    This appears to be redundant, identical to add_to_arena_opt
-    """
-    if Q1_state(x):
-        if x not in Q1:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
-
-            Q1.add(x)
-            # print(set(x).intersection(X_crit))
-            if not X_crit.intersection(x):
-                # print(set(x),X_crit)
-                queue.append(x)
-            else:
-                adj_list[x] = list()
-
-    if Q2_state(x):
-        if x not in Q2:
-            if debug and ((len(Q1) + len(Q2)) % 10000 == 0):
-                print("Vcount: {0}".format(len(Q1) + len(Q2)))
-
-            Q2.add(x)
-
-            if not X_crit.intersection(x[0]):
-                # print(set(x[0]),X_crit)
-                queue.append(x)
-            else:
-                adj_list[x] = list()
+    target_ind = Q2[x]
+    h_pairs.append((source_ind, target_ind))
+    h_labels.append(e)
+    return vertex_counter
 
 
 def NX(event, S, G):
@@ -631,53 +494,13 @@ def NX(event, S, G):
         # TODO: test this with a set for performance.
         #   Less construction time for list but also longer
         #   search for event in event_list
-        event_list = [e[1] for e in G.vs[u]["out"]]
-        if event in event_list:
-            next_states.add(edges[0].target)
+        out_dict = {e[1]: e[0] for e in G.vs[u]["out"]}
+        if event in out_dict:
+            next_states.add(out_dict[event])
     if not next_states:
         # If event is infeasible at all states in S, set NX to X (all states in G)
         return frozenset(i for i in range(G.vcount()))
     return frozenset(next_states)
-
-
-def convert_to_graph(arena, G, Q1, Q2, h1, h2, init_state):
-    # Convert Q1, Q2 states and h1, h2 edges to arena, an igraph Graph
-    arena.add_vertices(len(Q1) + len(Q2))
-    Q1.remove(init_state)
-    V_names = list()
-    V_names.append(([G.vs["name"][0]], [G.vs["name"][0]]))
-    E_list = list()
-    E_events = list()
-    # Convert Q1 and Q2 into a dict with name : index
-    Q_dict = dict()
-    Q_dict[init_state] = 0
-    for i, q in enumerate(Q1, 1):
-        q0_names = [G.vs["name"][l] for l in q[0]]
-        q1_names = [G.vs["name"][l] for l in q[1]]
-        t = (q0_names, q1_names)
-        V_names.append(t)
-        Q_dict[q] = i
-    for j, q in enumerate(Q2, i + 1):
-        q0_names = [G.vs["name"][l] for l in q[0]]
-        q1_names = [G.vs["name"][l] for l in q[1]]
-        q2 = {u for u in q[2]}
-        t = (q0_names, q1_names, q2, q[3])
-        V_names.append(t)
-        Q_dict[q] = j
-    for h in h1:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-    for h in h2:
-        source = Q_dict[h[0]]
-        target = Q_dict[h[2]]
-        E_list.append((source, target))
-        E_events.append(h[1])
-
-    arena.vs["name"] = V_names
-    arena.add_edges(E_list)
-    arena.es["label"] = E_events
 
 
 def Q1_state(c):
@@ -685,36 +508,43 @@ def Q1_state(c):
 
 
 def Q2_state(c):
-    return len(c) > 2
+    return len(c) == 4
 
 
-def Q1_state_opt(c):
-    return isinstance(c, frozenset)
+def state2str(state_list, G, A=None):
+    Qname = list()
 
-
-def Q2_state_opt(c):
-    return isinstance(c, tuple)
-
-
-def UR(set_of_states, graph, event, Euo):
-    Euo_inter = event.intersection(Euo)
-    return frozenset(ureach_from_set_adj(set_of_states, graph, Euo_inter))
+    unpack_names_G = lambda x: "{" + ",".join(G.vs["name"][i] for i in x) + "}"
+    unpack_events = lambda x: "{" + ",".join(str(i) for i in x) + "}"
+    pack_names = lambda x: "(" + ",".join(i for i in x) + ")"
+    if A:
+        pass
+    else:
+        for v in state_list:
+            name_s1 = unpack_names_G(v[0])
+            name_s2 = unpack_names_G(v[1])
+            if Q1_state(v):
+                Qname.append("Q1" + pack_names((name_s1, name_s2)))
+            elif Q2_state(v):
+                name_g = unpack_events(v[2])
+                Qname.append("Q2" + pack_names((name_s1, name_s2, name_g, str(v[3]))))
+    return Qname
 
 
 def find_A1_sets(A1, G, Euc):
     # A1 is the set of admissable control decisions
     E = set(G.es["label"])
     for l in range(len(E) + 1):
-        A1.update(frozenset(Euc.union(comb)) for comb in itertools.combinations(E, l))
+        A1.update(
+            Event(frozenset(Euc.union(comb))) for comb in itertools.combinations(E, l)
+        )
 
 
 def singleton_A1_set(A1, G, E, Euc):
 
-    A1.add(frozenset())
-    print(A1)
+    A1.add(Event(frozenset()))
     for l in E.difference(Euc):
-        # print(l)
-        A1.add(frozenset(Euc.union({l})))
+        A1.add(Event(frozenset(Euc.union({l}))))
 
 
 def find_Ea_e_events(G, E, Ea):
@@ -730,12 +560,100 @@ def M(e):
 
 
 def gamma_feasible(G, q, Euc):
-    # possible_events = set(G.es(_source_in = q[1])["label"])
-    possible_events = set(G.es(_source_in=q)["label"])
+    # possible_events = set(G.es(_source_in=q)["label"])
+    possible_events = set()
+    for v in q[1]:
+        possible_events.update(t[1] for t in G.vs["out"][v])
     all_sets = set()
     for l in range(len(possible_events) + 1):
         all_sets.update(
-            frozenset(Euc.union(comb))
+            Event(frozenset(Euc.union(comb)))
             for comb in itertools.combinations(possible_events, l)
         )
     return all_sets
+
+
+def select_robust_supervisor(arena):
+    # Selects a supervisor from the arena (with safety violations pruned)
+    # Use this after solving the meta-supervisory control problem, i.e.
+    #   >>> Euc, Euo, arena = d.SDA.construct_robust_arena(...)
+    #   >>> arena.Euc = Euc # use Euc, Euo for meta-SCP
+    #   >>> arena.Euo = Euo
+    #   >>> arena_sup = d.supervisor.supremal_sublanguage(arena, mode"controllable-normal")
+    #   >>> robust_sup = d.SDA.select_supervisor(arena_sup)
+
+    # TODO: not done yet, still a WIP
+    ttt = arena.vs["out"]
+    S = DFA()
+
+    # cd_dict: maps from arena Q1 vertex indices to the set of
+    # control decisions searched from this index, where control
+    # decisions are vertices of adjacent Q2 states
+    cd_dict = [set() for _ in range(arena.vcount())]
+
+    Q = list()
+    Q2_visited = set()
+    trans = list()
+    trans_labels = list()
+    vertex_dict = dict()
+    Q.append((0, 0))
+    vertex_counter = 0
+    vertex_dict[0] = vertex_counter
+    while Q:
+        source_ind, q = Q.pop(0)
+        # arena state names are strings of the form: "([arena-vert-name], [int])"
+        # and arena-vert-name is of the form: "Q#(...)" where # is 1 or 2 for Q1 or Q2 state.
+        # so this checks if q is a Q1 state:
+        if arena.vs["name"][q][0][1] == "1":
+            # this is Q1 state: choose largest control action
+            transitions = [
+                e[1].label if e[0] not in cd_dict[q] else frozenset()
+                for e in arena.vs["out"][q]
+            ]
+
+            index_max_ctr_dec = max(
+                range(len(transitions)), key=transitions.__getitem__
+            )
+
+            max_cntr_vert = arena.vs["out"][q][index_max_ctr_dec][0]
+            cd_dict[q].add(max_cntr_vert)
+            next_q2 = arena.vs["out"][max_cntr_vert]
+
+        else:
+            # this is Q2 state: search all adjacent Q2 states
+            next_q2 = arena.vs["out"][q]
+
+        for q2 in next_q2:
+            e = q2[1]
+            if e in arena.Euo:
+                if q2[0] not in Q2_visited:
+                    Q2_visited.add(q2[0])
+                    Q.append((source_ind, q2[0]))
+                # trans_labels.append(e)
+                # self loop for unobservable:
+                # trans.append((vertex_dict[q], vertex_dict[q]))
+            else:
+                # if trans
+                transq2 = q2[0]
+                vertex_counter = add_vertex(
+                    arena, cd_dict, vertex_dict, Q, transq2, vertex_counter
+                )
+                trans_labels.append(e)
+                trans.append((source_ind, vertex_dict[transq2]))
+
+    S.add_vertices(len(vertex_dict))
+    S.add_edges(trans, trans_labels)
+    S.generate_out()
+    return S
+
+
+def add_vertex(arena, cd_dict, vertex_dict, Q, v, vertex_counter):
+    if v not in vertex_dict:
+        vertex_dict[v] = vertex_counter + 1
+        Q.append((vertex_counter + 1, v))
+        return vertex_counter + 1
+
+    # have already explored this Q1 state, but this time take a different control decision:
+    # if len(cd_dict[v]) < len(arena.vs["out"][v]):
+    #    Q.append((vertex_dict[v], v))
+    return vertex_counter

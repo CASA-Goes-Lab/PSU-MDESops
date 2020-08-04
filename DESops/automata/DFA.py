@@ -3,7 +3,7 @@ import sys
 import igraph as ig
 
 from DESops.automata.automata import _Automata
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.error import IncongruencyError
 
 # MUST HAVE A DEFINITION NFA TO DFA
@@ -59,7 +59,7 @@ class DFA(_Automata):
         # AVOID MULTIPLE TESTS. IF IT IS A DFA COPY, DEFINED BASED ON OPERATIONS ON DFAS THEN NO NEED TO CHECK
         # ONLY CHECK IF init IS A FRESH IGRAPH INSTANCE
 
-    def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True):
+    def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         """
         Add an iterable of edges to the DFA instance.
         Calls the igraph Graph add_edges() method on the underlying graph
@@ -99,6 +99,10 @@ class DFA(_Automata):
         self.events.update(labels)
         self._graph.add_edges(pair_list)
         self._graph.es["label"] = new_labels
+
+        if kwargs:
+            for key, value in kwargs.items():
+                self.es[key] = value
 
         if fill_out:
             self.generate_out()

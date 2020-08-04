@@ -8,8 +8,7 @@ import igraph as ig
 import pydash
 
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
-from DESops.basic_operations.ureach import ureach_from_set_adj, ureach_from_set_adjdict
+from DESops.automata.event import Event
 from DESops.supervisory_control import supr_contr
 
 
@@ -32,14 +31,12 @@ def construct_AES(G, X_crit, compact=False):
 
     # get infinite cost states:
     # TODO: clean this up; could be slightly faster
-    X_crit_vs = compute_state_costs(G, X_crit_vs, G.Euc)
+    X_crit_vs = G.compute_state_costs(starting_states=X_crit_vs)
 
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
     Q1, Q2 = dict(), dict()
-    Qname, Qcrit = (
-        list(),
-        list(),
-    )  # holds the names of each state in order of their vertex index
+    Qname, Qcrit = list(), list()
+    # holds the names of each state in order of their vertex index
     # transitions for igraph constructed using vertex index
     h1, h2 = list(), list()
 
@@ -115,6 +112,8 @@ def construct_T(
             # print(len(ctr))
 
             for gamma in Gamma:
+                q2_state = G.UR.from_set(qvs, frozenset(G.Euo.intersection(gamma)))
+                """
                 if (qvs, frozenset(G.Euo.intersection(gamma))) in UR_state_classes:
 
                     q2_state = UR_state_classes[
@@ -128,6 +127,7 @@ def construct_T(
                     UR_state_classes[
                         (qvs, frozenset(G.Euo.intersection(gamma)))
                     ] = q2_state
+                    """
                 q2 = (q2_state, gamma)
                 vertex_counter = Q2_add_state(
                     Q1[qvs],
@@ -337,10 +337,10 @@ def ctr2str(gamma):
     first = True
     for e in gamma:
         if first:
-            name = "".join(["{", e.label])
+            name = "".join(["{", str(e.label)])
             first = False
         else:
-            name = ",".join([name, e.label])
+            name = ",".join([name, str(e.label)])
     return "".join([name, "}"])
 
 
@@ -420,21 +420,3 @@ def extract_AES_super(AES):
 
     sup.events = AES.events.copy()
     return sup
-
-
-def compute_state_costs(G, states_removed, Euc):
-    # updates states_removed with infinite cost states
-
-    # can make this a queue?
-    bad_states = set()
-    states_to_check = states_removed
-    while states_to_check:
-        bad_states.update(states_to_check)
-        # Back out the next potentially infinite-cost states as those with uncontrollable transitions
-        # to the most recent set of infinite cost states (states_to_check on the RHS).
-        states_to_check = {
-            e.source
-            for e in G.es(_target_in=states_to_check)
-            if e["label"] in Euc and e.source not in bad_states
-        }
-    return bad_states

@@ -5,6 +5,9 @@ Automata class & methods:
 Used to represent finite-state automata, by means of a directed
 graph object (from the igraph library) with labelled transitions.
 
+Implemented here is the abstract base class _Automata. Use DFA, NFA or PFA
+classes instead.
+
 Provides access to many useful methods in discrete event systems,
 e.g. parallel & product compositions or observer construction.
 
@@ -18,10 +21,9 @@ interface with DESUMA.
 Alternatively, Automata can be created starting from an underlying
 igraph Graph object.
 
-The Automata structure is a directed graph with labelled transitions.
-An igraph Graph object (member var '_graph') is used to represent this
-structure. The graph is composed of edges and vertices, annotated respectively
-with labels and names. These attributes can be accessed via the igraph Graph
+The Automata structure is a directed graph with labelled transitions,
+implemented as an igraph Graph object (member var '_graph').
+Vertex names and edge labels can be accessed via the igraph Graph
 EdgeSeq and VertSeq methods, accessed for an Automata G as follows:
 >>> vert_seq = G.vs()
 >>> edge_seq = G.es()
@@ -95,25 +97,16 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
     files. For example, the observer() method in the Automata class merely does a call to
     the function 'observer_comp' in '..basic.observer_comp'
 
-Methods:?
-
-Additional functions in this file:
-parallel_comp
-product_comp
-supremal_controllable_supervisor
-supremal_cn_supervisor
-offline_VLPPO
-str2
-copy_event_sets
 
 """
 
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Iterable
+from copy import deepcopy
 from typing import Set, Union
 
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.basic_operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
     ConversionError,
@@ -121,9 +114,6 @@ from DESops.error import (
     IncongruencyError,
     MissingAttributeError,
 )
-
-State_or_StateSet = Union[int, Set[int]]
-
 
 try:
     import igraph as ig
@@ -167,13 +157,15 @@ class _Automata:
         if isinstance(init, ig.Graph):
             # Create Automata from igraph Graph
             graph = init
-            self._graph = graph.copy()
+            # deepcopy copies attributes
+            self._graph = deepcopy(graph)
             self.events = E
             # find_obs_contr(self._graph, self.Euc, self.Euo, self.events)
 
         elif isinstance(init, _Automata):
             # Create Automata from another Automata
-            self._graph = init._graph.copy()
+            # deepcopy copies attributes
+            self._graph = deepcopy(init._graph)
             self.events = init.events.copy()
             self.states = init.states.copy()
             self.type = init.type
@@ -204,6 +196,9 @@ class _Automata:
 
         self.__bool__ = self._graph.__bool__()
 
+        # Attach UR class object (defined below)
+        self.UR = UnobservableReach(self.Euo, self.vs)
+
     def delete_vertices(self, vs):
         # initial state in vs
         if 0 in vs:
@@ -217,6 +212,14 @@ class _Automata:
             for state in self.vs:
                 new_out = [(e.target, e["label"]) for e in state.out_edges()]
                 self.vs[state.index].update_attributes({"out": new_out})
+
+    def delete_edges(self, es):
+        """
+        Proxy to igraph delete_edges.
+        Might invalidate reachability, this function will not compute trim after deleting edges.
+        """
+        self._graph.delete_edges(es)
+        self.generate_out()
 
     def add_edge(self, source, target, label, prob=None, fill_out=False):
         """
@@ -236,6 +239,9 @@ class _Automata:
 
         self._graph.add_edge(source, target)
         if label:
+            if isinstance(label, str):
+                # convert labels from str to Event
+                label = Event(label)
             self.es[self.ecount() - 1].update_attributes({"label": label})
         if prob:
             self.es[self.ecount() - 1].update_attributes({"prob": prob})
@@ -249,7 +255,7 @@ class _Automata:
 
             self.vs[source].update_attributes({"out": out})
 
-    def add_edges(self, pair_list, labels, probs=None, fill_out=False):
+    def add_edges(self, pair_list, labels, probs=None, fill_out=False, **kwargs):
         """
         Add an iterable of edges to the Automata instance.
         Calls the igraph Graph add_edges() method on the underlying graph
@@ -300,6 +306,14 @@ class _Automata:
 
         if probs is not None:
             self.es["prob"] = new_probs
+
+        if kwargs:
+            for key, value in kwargs.items():
+                if len(pair_list) != len(value):
+                    raise IncongruencyError(
+                        "Length fo pairs != length of kwarg {}".format(key)
+                    )
+                self.es[key] = value
 
         if fill_out:
             out_list = self.vs["out"]
@@ -387,17 +401,6 @@ class _Automata:
         A = _Automata(self)
         return A
 
-    # Methods to store event info in an Automata instance
-    def add_attackable_event(self, event):
-        """
-        Add event to the Ea attribute.
-        Alternative to directly adding to the attribute:
-        >>> this_graph.Ea.add(event)
-        instead of:
-        >>> this_graph.add_attackable_event(event)
-        """
-        self.Ea.add(event)
-
     def add_critical_state(self, X_crit_state):
         """
         Alternative to adding a critical state, e.g.
@@ -443,27 +446,42 @@ class _Automata:
             else:
                 print("{}  :  {}".format(v, self.vs["out"][v]))
 
-    # Methods to interface w/ functions from automata_operations/basic/generic_functions
-    # E.g. find_Euc_Euo finds the sets of uncontr. and unobs. events in the given automata.
-    # Results are stored within the the Euc & Euo objects in the current automata.
-    def find_Euc_Euo(self):
+    def compute_state_costs(self, starting_states=None, Euc=None):
         """
-        Extract uncontrollable & unoberservable events
-        from igraph Graph instance.
-        """
-        find_obs_contr(self._graph, self.Euc, self.Euo, self.E)
+        Computes the uncontrollable traces preceding states in starting_states.
+        Used to find invalid states, e.g. those which transition uncontrollably to critical states.
 
-    def find_Euc(self):
-        """
-        Extract uncontrollable events from igraph Graph instance.
-        """
-        find_Euc_i(self._graph, self.Euc)
+        starting_states: set of vertex indices to search from, default behavior is to convert
+            states in automata attr X_crit to vertex indices and uses these.
 
-    def find_Euo(self):
+        Euc: optionally specify uncontrollable event set. If unspecified, uses automata Euc attr.
+
+        Returns vertex indice set, which includes states in starting_states.
+
+        TODO: check if this particular automata has an ingoing adjacency list generated already
+        and if so, use that.
         """
-        Extract unobservable events from igraph Graph instance.
-        """
-        find_Euo_i(self._graph, self.Euo)
+
+        if not Euc:
+            Euc = self.Euc
+
+        if not starting_states:
+            starting_states = [v.index for v in self.vs.select(name_in=self.X_crit)]
+
+        # updates starting_states with infinite cost states
+        bad_states = set()
+        states_to_check = starting_states
+        while states_to_check:
+            bad_states.update(states_to_check)
+            # Back out the next potentially infinite-cost states as those with uncontrollable transitions
+            # to the most recent set of infinite cost states (states_to_check on the RHS).
+            states_to_check = {
+                self.es[e].source
+                for v in states_to_check
+                for e in self._graph.incident(v, mode="IN")
+                if self.es[e]["label"] in Euc and self.es[e].source not in bad_states
+            }
+        return bad_states
 
     # Methods to interface with graph variables & methods
     def vcount(self):
@@ -481,31 +499,6 @@ class _Automata:
         This is the preferred method to find edge count.
         """
         return self._graph.ecount()
-
-    def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
-        """
-        Finds the set of states in the unobservable reach from the given state.
-        """
-        if isinstance(from_state, set):
-            states = set()
-            for x in from_state:
-                states |= self.unobservable_reach(x)
-
-            return states
-
-        visited = {from_state}
-        states_stack = deque(visited)
-        while len(states_stack) > 0:
-            state = states_stack.pop()
-            dests_by_unobs = {
-                out[0]
-                for out in self.vs[state]["out"]
-                if out[1] in self.Euo and out[0] not in visited
-            }
-            visited |= dests_by_unobs
-            states_stack.extend(dests_by_unobs)
-
-        return visited
 
 
 def str2(label):
@@ -530,55 +523,6 @@ def str2(label):
     return str(label)
 
 
-# def supremal_contr_supervisor(system, specification):
-#     """
-#     Computes the supremal controllable supervisor for the given plant
-#     and specficiation Automata.
-
-#     Returns the supremal controllable supervisor as an Automata.
-
-#     Parameters:
-#     system: Automata representing the plant/system.
-#     specification: Automata representing the desired specification.
-
-#     The set of uncontrollable events, Euc, is found as the union
-#     of the Euc sets in the plant & specification.
-
-#     Assumes K is a sublanguage of M, where L(plant) = M & L(spec) = K
-
-#     Depends on supremal_controllable_supervisor, implemented in
-#     automata_operations/supremal/supremal_controllable_supervisor
-#     """
-#     Euc_u = system.Euc.union(specification.Euc)
-#     A = Automata(scs_i(system, specification, Euc_u))
-#     copy_event_sets([system, specification], A)
-#     return A
-
-
-# def supremal_cn_supervisor(system, specification):
-#     """
-#     Computes the supremal controllable-normal supervisor for the given
-#     plant and specification Automata.
-
-#     Returns the supremal CN supervisor as an Automata.
-
-#     Parameters:
-#     system: Automata representing the plant/system.
-#     specification: Automata representing the desired specification.
-
-#     The sets of uncontrollable and unobservable events, Euc and Euo,
-#     are found as the unions of their respective sets in the plant & specification.
-
-#     Depends on supremal_cn_supervisor, implemented in
-#     automata_operations/supremal/supremal_cn_supervisor
-#     """
-#     Euc_u = system.Euc | specification.Euc
-#     Euo_u = system.Euo | specification.Euo
-#     A = Automata(supremal_cn_supervisor_i(specification, system, Euc_u, Euo_u))
-#     copy_event_sets([system, specification], A)
-#     return A
-
-
 def copy_event_sets(this, other):
     """
     Useful function to copy event sets from 'this' to 'other'.
@@ -599,10 +543,116 @@ def copy_event_sets(this, other):
 
     """
     if isinstance(this, _Automata):
-        other.Euo = this.Euo
-        other.Euc = this.Euc
-        other.Ea = this.Ea
+        other.Euo = this.Euo.copy()
+        other.Euc = this.Euc.copy()
     else:
-        other.Euo = set.union(*[a.Euo for a in this])
-        other.Euc = set.union(*[a.Euc for a in this])
-        other.Ea = set.union(*[a.Ea for a in this])
+        other.Euo = set.union(a.Euo for a in this)
+        other.Euc = set.union(a.Euc for a in this)
+
+
+class UnobservableReach:
+    """
+    Class for saving unobservable reach computations
+    """
+
+    def __init__(self, Euo, vs):
+        self.use_cache = True
+        self.set_of_states_dict = dict()
+        self.single_state_dict = dict()
+        self.Euo = Euo
+        self.vs = vs
+
+    def empty_cache(self):
+        self.set_of_states_dict = dict()
+        self.single_state_dict = dict()
+
+    def from_set(self, set_of_states, events=None, freeze_result=False):
+        """
+        Compute the unobersvable reach from a set of starting states, considering unobservable events
+
+        set_of_states: collection of state indices to start from
+        events: set of events to consider as unobservable.
+            Default 'None': uses parent Automata Euo attribute
+
+        If using cache and set_of_states and events are NOT hashable types, this function will construct frozensets
+        from each in order to use hashing.
+
+
+        If a key has already been cached, but a not-frozenset was stored and key is now accessed with freeze_result=True:
+            Return a frozenset of the previously stored result, so as to return what's expected.
+            Currently overwrites the val (where dict[key]=val) with it's frozenset, although this behavior could be removed.
+        """
+        if events is None:
+            events = self.Euo
+
+        if not self.use_cache:
+            if freeze_result:
+                return frozenset(self.__ureach_from_set(set_of_states, events))
+            return self.__ureach_from_set(set_of_states, events)
+
+        try:
+            key = (set_of_states, events)
+            if key in self.set_of_states_dict:
+                result = self.set_of_states_dict[key]
+                if freeze_result and not isinstance(result, frozenset):
+                    result = frozenset(result)
+                    self.set_of_states_dict[key] = result
+
+                return result
+            else:
+                ur_set = self.__ureach_from_set(set_of_states, events)
+                if freeze_result:
+                    ur_set = frozenset(ur_set)
+                self.set_of_states_dict[key] = ur_set
+                return ur_set
+
+        except TypeError:
+            # Trying to hash an 'unhashable type'
+            try:
+                key = (frozenset(set_of_states), frozenset(events))
+                if key in self.set_of_states_dict:
+                    result = self.set_of_states_dict[key]
+                    if freeze_result and not isinstance(result, frozenset):
+                        result = frozenset(result)
+                        self.set_of_states_dict[key] = result
+
+                    return result
+                else:
+                    ur_set = self.__ureach_from_set(set_of_states, events)
+                    if freeze_result:
+                        ur_set = frozenset(ur_set)
+                    self.set_of_states_dict[key] = ur_set
+                    return ur_set
+            except:
+                # Couldn't convert to frozenset?
+                print("Entry unhashble, error converting to frozenset().")
+                raise
+
+    def __ureach_from_set(self, set_of_states, events):
+        """
+        Find the collected unobservable reach for all states in S
+        set_of_states: set of states to search from (graph indicies)
+        events: set of unobservable events to consider
+        """
+        x_set = set()
+        x_set.update(set_of_states)
+
+        if not events:
+            return x_set
+
+        uc_neighbors = {
+            t[0]
+            for s in set_of_states
+            for t in self.vs["out"][s]
+            if t[1] in events and t[0] not in x_set
+        }
+
+        while uc_neighbors:
+            x_set.update(uc_neighbors)
+            uc_neighbors = {
+                t[0]
+                for s in uc_neighbors
+                for t in self.vs["out"][s]
+                if t[1] in events and t[0] not in x_set
+            }
+        return x_set

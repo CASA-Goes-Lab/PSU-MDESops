@@ -3,7 +3,7 @@
 
 from DESops import SDA, random_DFA
 from DESops.automata.DFA import DFA
-from DESops.automata.event.event import Event
+from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.automata.PFA import PFA
 from DESops.basic_operations import composition, generic_functions, unary
