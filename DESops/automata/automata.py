@@ -121,6 +121,10 @@ except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
 
 
+# TODO: Legacy, to be removed with unobservable_reach method
+State_or_StateSet = Union[int, Set[int]]
+
+
 class _Automata:
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         """
@@ -502,6 +506,34 @@ class _Automata:
         This is the preferred method to find edge count.
         """
         return self._graph.ecount()
+
+    # TODO: this is legacy, should replace instances of this
+    # with the UR class method
+    def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
+        """
+            Finds the set of states in the unobservable reach from the given state.
+            """
+
+        if isinstance(from_state, set):
+            states = set()
+            for x in from_state:
+                states |= self.unobservable_reach(x)
+
+            return states
+
+        visited = {from_state}
+        states_stack = deque(visited)
+        while len(states_stack) > 0:
+            state = states_stack.pop()
+            dests_by_unobs = {
+                out[0]
+                for out in self.vs[state]["out"]
+                if out[1] in self.Euo and out[0] not in visited
+            }
+            visited |= dests_by_unobs
+            states_stack.extend(dests_by_unobs)
+
+        return visited
 
 
 def str2(label):
