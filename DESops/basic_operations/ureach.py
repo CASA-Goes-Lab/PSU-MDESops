@@ -9,6 +9,12 @@ from collections.abc import Iterable
 from typing import Set, Union
 
 
+### TODO: remove these
+# replace with UR class functionality instead?
+# Benefits being caching results, which is repetititve code
+# and readability (G.UR.from_set instead of G.ureach_from_set, etc.)
+# Extended_ureach and ureach_ignore_states might be exceptions,
+# but for the sake of readability might be better to move all these to a UR class
 def unobservable_reach(x_set, state, g, e):
     """
     x_set: set of states to be expanded upon

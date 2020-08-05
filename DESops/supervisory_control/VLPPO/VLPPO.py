@@ -13,7 +13,6 @@ import igraph as ig
 from DESops.automata.DFA import DFA
 from DESops.basic_operations.construct_subautomata import construct_subautomata
 from DESops.basic_operations.parallel_comp import parallel_comp
-from DESops.basic_operations.refine_product import refine_product_SCS
 
 
 def offline_VLPPO(

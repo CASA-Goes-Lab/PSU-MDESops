@@ -1,19 +1,5 @@
 import DESops as d
-from DESops.supervisory_control.cn_pp import cn_preprocessing
 from tests.util import load_cn_models, same_size
-
-
-"""
-def test_preprocessing_mark():
-    H_given, G_given, _ = load_cn_models()
-
-    Euc = H_given.Euc | G_given.Euc
-    Euo = H_given.Euo | G_given.Euo
-
-    H, G, deleted = cn_preprocessing(H_given, G_given, Euc, Euo)
-    assert len(G.vs.select(marked_eq=True)) == 3
-    assert len(H.vs.select(marked_eq=True)) == 2
-"""
 
 
 def test_scn_all():
@@ -27,9 +13,10 @@ def test_scn_all():
 
     Euc = g1.Euc | h1.Euc
     Euo = g1.Euo | h1.Euo
-    h1_pp_test, g1_pp_test, _ = cn_preprocessing(h1, g1, Euc, Euo)
+    # preprocessing no longer outside of scn
+    # h1_pp_test, g1_pp_test, _ = cn_preprocessing(h1, g1, Euc, Euo)
 
-    assert same_size(g1_pp, g1_pp_test)
+    # assert same_size(g1_pp, g1_pp_test)
 
     h1 = d.DFA()
     d.read_fsm("tests/models/scn_tests/cn_test1_h.fsm", h1)

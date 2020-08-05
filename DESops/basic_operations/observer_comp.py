@@ -1,11 +1,4 @@
 # pylint: disable=C0103
-"""
-Functions relevant to constructing an observer automaton from a partially-observed automaton.
-
-Only observer_comp is used outside this module; the rest are included as helper functions
-only used by observer_comp.
-"""
-
 
 import warnings
 from collections import OrderedDict
@@ -17,6 +10,12 @@ from DESops.automata.NFA import NFA
 
 
 def observer_comp(G) -> DFA:
+    """
+    Compute the observer automata of the input G
+    G should be a DFA, NFA or PFA
+
+    Returns the observer as a DFA
+    """
     observer = DFA()
     if not G.vcount() or G is None:
         warnings.warn(

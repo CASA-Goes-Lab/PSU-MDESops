@@ -152,6 +152,9 @@ class _Automata:
             self.Euo = set()
         else:
             self.Euo = Euo.copy()
+
+        self.X_crit = set()
+
         self.type = None
 
         if isinstance(init, ig.Graph):

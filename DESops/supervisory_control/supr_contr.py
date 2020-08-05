@@ -1,3 +1,5 @@
+# TODO: this is getting deleted in favor of supervisor.py
+
 """
 Functions relevant to computing the supremal controllable supervisor of given
 system and specification automata.
@@ -23,7 +25,6 @@ from DESops.automata.DFA import DFA
 
 from ..basic_operations.construct_subautomata import strict_subautomata
 from ..basic_operations.product_comp import product_comp
-from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 
 
@@ -42,12 +43,7 @@ def supr_contr(G, H, Euc=None, mark_states=True, preprocess=True):
 
     if preprocess:
         (preH, preG) = strict_subautomata(H, G)
-        # print(len(preH.vs))
-        # print(preG.vs["out"])
 
-        # H_pp = a.automata_ctor.construct_automata(H)
-        # refine_product_SCS(H_pp, H, G)
-        # H = H_pp
     else:
         import warnings
 

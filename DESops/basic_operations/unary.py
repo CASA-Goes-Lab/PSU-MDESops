@@ -7,6 +7,9 @@ from collections import deque
 
 from DESops.automata.automata import _Automata
 
+### This is just functions related to trim/accessibility
+# Rename to trim.py?
+
 
 def trim(G: _Automata) -> set:
     """

@@ -18,6 +18,8 @@ preprocessing and calls supremal_cn_supervisor(), which performs
 no preprocessing (similar to how the SCS is handled).
 """
 
+# TODO: this is getting deleted in favor of supervisor.py
+
 
 from DESops.automata.DFA import DFA
 from DESops.basic_operations import composition
@@ -26,7 +28,6 @@ from ..basic_operations.construct_subautomata import strict_subautomata
 from ..basic_operations.observer_comp import observer_comp
 from ..basic_operations.parallel_comp import parallel_comp
 from ..basic_operations.product_comp import product_comp
-from ..basic_operations.refine_product import refine_product_SCS
 from ..basic_operations.unary import find_inacc
 from ..visualization.plot import plot
 
@@ -67,11 +68,7 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
         (preH, preG) = strict_subautomata(H, G)
         # print(preG.vs["name"])
         obsG = observer_comp(preG)
-        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
-        # obsG = composition.observer(preG)
-        # plot(obsG,bbox_i=(0, 0, 4000, 4000))
         preG = parallel_comp([preG, obsG])
-        # plot(preG,bbox_i=(0, 0, 4000, 4000))
         preH = find_H(preG)
 
         # print(preG.vs["name"])
@@ -111,17 +108,9 @@ def supr_contr_norm(G, H=None, preprocess=True, X_crit=None):
     ]
     # # G_obs names are sets of states as strings. int(s) are indices in G, where s are those strings
     obsG = observer_comp(preG)
-    # plot(preG,bbox_i=(0, 0, 4000, 4000))
-    # plot(preH,bbox_i=(0, 0, 4000, 4000))
-    # plot(obsG,bbox_i=(0, 0, 4000, 4000))
     obsG_names = obsG.vs["name"]
     dict_Gstate_obsGstate = {st: n for n in obsG_names for st in n}
 
-    # if "in" not in preH.vs.attributes():
-    #     incoming_adj = [[] for _ in range(preH.vcount())]
-    #     for e in preH.es():
-    #         incoming_adj[e.target].append((e.source, e["label"]))
-    #     preH.vs["in"] = incoming_adj
     if "in" not in preG.vs.attributes():
         incoming_adj = [[] for _ in range(preG.vcount())]
         for e in preG.es():

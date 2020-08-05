@@ -15,6 +15,7 @@ def test_type():
     # like parallel_comp
 
 
+"""
 def test_parallel_comp():
     g1, g2, g3 = util.load_basic_models()
 
@@ -52,14 +53,12 @@ def test_product_comp():
     g_ind = d.product_comp([g2, g3], save_marked_states=True, save_names_as="int")
 
     assert g_ind.vs.find(marked=True)["name"] == [2, 2]
+"""
 
 
 def test_observer():
     G_t = util.load_model("models/G_t.fsm")
-    obs = d.observer_comp(G_t, save_state_names=True)
-    # G_t_obs = util.load_model("models/G_t_obs.fsm")
-    t = obs.vs["name"]
-    tt = obs.vs["out"]
+    obs = d.observer_comp(G_t)
     assert obs.vcount() == 5
     assert obs.ecount() == 6
     assert d.Event("a") in (v[1] for v in obs.vs["out"][0])
