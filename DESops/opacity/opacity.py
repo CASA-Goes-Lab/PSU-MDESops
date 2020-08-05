@@ -1,6 +1,7 @@
 """
 Methods for opacity verification of automata
 """
+from DESops.basic_operations.construct_reverse import reverse
 from DESops.basic_operations.observer_comp import observer_comp
 from DESops.opacity.k_step_language_comparison import (
     verify_k_step_opacity_language_comparison,
@@ -31,6 +32,7 @@ def verify_current_state_opacity(
     g_det = observer_comp(g)
 
     opaque = True
+    # opacity violated if all states in any estimate are secret
     for estimate in g_det.vs:
         if all([g.vs[i]["secret"] for i in estimate["name"]]):
             opaque = False
@@ -50,6 +52,27 @@ def verify_current_state_opacity(
         return return_list[0]
     else:
         return tuple(return_list)
+
+
+def verify_initial_state_opacity(g):
+    """
+    Returns whether the given automaton with unobservable events and secret states is inital-state opaque
+
+    g: the automaton
+    """
+    g_r = reverse(g, use_marked_states=False)
+    # names need to be indices so we can find them from observer
+    g_r.vs["name"] = g.vs.indices
+    g_r_obs = observer_comp(g_r)
+
+    opaque = True
+    # opacity violated if all initial states in any estimate are secret
+    for estimate in g_r_obs.vs["name"]:
+        if all([g.vs[i]["secret"] for i in estimate if g.vs[i]["init"]]):
+            opaque = False
+            break
+
+    return opaque
 
 
 def verify_k_step_opacity(

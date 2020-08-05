@@ -12,18 +12,29 @@ infinite_separate_methods = ["TWO"]
 
 def test_current_state_opacity():
     g = load_model("models/opacity1.fsm")
-
     g.vs["init"] = False
     g.vs[0]["init"] = True
+
     g.vs["secret"] = False
     g.vs[2, 4]["secret"] = True
-
     assert d.opacity.verify_current_state_opacity(g) is True
 
     g.vs["secret"] = False
     g.vs[3]["secret"] = True
-
     assert d.opacity.verify_current_state_opacity(g) is False
+
+
+def test_initial_state_opacity():
+    g = load_model("models/textbook/fig_2-42.fsm")
+    g.vs["init"] = True
+
+    g.vs["secret"] = False
+    g.vs[3, 4]["secret"] = True
+    assert d.opacity.verify_initial_state_opacity(g) is True
+
+    g.vs["secret"] = False
+    g.vs[1, 2]["secret"] = True
+    assert d.opacity.verify_initial_state_opacity(g) is False
 
 
 def test_k_step_opacity_1():
