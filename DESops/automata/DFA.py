@@ -104,9 +104,6 @@ class DFA(_Automata):
             for key, value in kwargs.items():
                 self.es[key] = value
 
-        if fill_out:
-            self.generate_out()
-
         if check_DFA:
             dict_out = dict()
             for (i, p) in enumerate(pair_list):
@@ -121,6 +118,17 @@ class DFA(_Automata):
             if not all(out_event):
                 # TODO: THIS NEEDS TO BE TESTED
                 sys.exit("ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA")
+
+        if fill_out:
+            out_list = self.vs["out"]
+            for label, pair in zip(labels, pair_list):
+                out = out_list[pair[0]]
+                if out is not None:
+                    out.append(self.Out(pair[1], label))
+                else:
+                    out = [self.Out(pair[1], label)]
+                out_list[pair[0]] = out
+            self.vs["out"] = out_list
 
     def check_DFA(self):
         out_event = lambda v: {el[1] for el in v}

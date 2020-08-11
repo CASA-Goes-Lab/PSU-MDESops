@@ -1,6 +1,7 @@
 import sys
 
 from DESops.automata.automata import _Automata
+from DESops.automata.event import Event
 
 
 class PFA(_Automata):
@@ -30,6 +31,8 @@ class PFA(_Automata):
         else:
             self._graph.es["prob"] = []
 
+        self.Out = namedtuple("Out", ["target", "event", "prob"])
+
     def add_edges(self, pair_list, labels, probs, fill_out=False, **kwargs):
 
         if len(pair_list) != len(labels):
@@ -52,7 +55,7 @@ class PFA(_Automata):
             for key, value in kwargs.items():
                 if len(pair_list) != len(value):
                     raise IncongruencyError(
-                        "Length fo pairs != length of kwarg {}".format(key)
+                        "Length of pairs != length of kwarg {}".format(key)
                     )
                 self.es[key] = value
 
@@ -61,9 +64,9 @@ class PFA(_Automata):
             for label, pair, prob in zip(labels, pair_list, probs):
                 out = out_list[pair[0]]
                 if out is not None:
-                    out.append((pair[1], label, prob))
+                    out.append(self.Out(pair[1], label, prob))
                 else:
-                    out = [(pair[1], label, prob)]
+                    out = [self.Out(pair[1], label, prob)]
             self.vs["out"] = out_list
 
     def generate_out(self):

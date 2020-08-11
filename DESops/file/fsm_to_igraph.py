@@ -229,12 +229,13 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
 
     if type_aut == "PFA":
         neighbors_list = [
-            [(state_names.index(adj[0]), adj[1], adj[2]) for adj in l]
+            [g.Out(state_names.index(adj[0]), adj[1], adj[2]) for adj in l]
             for l in neighbors_list
         ]
     else:
         neighbors_list = [
-            [(state_names.index(adj[0]), adj[1]) for adj in l] for l in neighbors_list
+            [g.Out(state_names.index(adj[0]), adj[1]) for adj in l]
+            for l in neighbors_list
         ]
 
     g.vs["out"] = neighbors_list

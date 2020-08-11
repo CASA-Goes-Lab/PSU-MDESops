@@ -100,8 +100,7 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
 
 """
 
-from abc import ABC, abstractmethod
-from collections import deque
+from collections import deque, namedtuple
 from collections.abc import Iterable
 from copy import deepcopy
 from typing import Set, Union
@@ -202,6 +201,11 @@ class _Automata:
 
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
+
+        self.UR2 = UnobservableReach2(self.Euo, self.vs)
+
+        # Using namedtuple to represent 'out' tuple
+        self.Out = namedtuple("Out", ["target", "event"])
 
     def delete_vertices(self, vs):
         # initial state in vs
@@ -324,9 +328,9 @@ class _Automata:
             for label, pair in zip(labels, pair_list):
                 out = out_list[pair[0]]
                 if out is not None:
-                    out.append((pair[1], label))
+                    out.append(self.Out(pair[1], label))
                 else:
-                    out = [(pair[1], label)]
+                    out = [self.Out(pair[1], label)]
                 out_list[pair[0]] = out
             self.vs["out"] = out_list
 
@@ -430,7 +434,10 @@ class _Automata:
         """
         adj_list = self._graph.get_inclist()
         self.vs["out"] = [
-            [(self._graph.es[e].target, self._graph.es[e]["label"]) for e in row]
+            [
+                self.Out(self._graph.es[e].target, self._graph.es[e]["label"])
+                for e in row
+            ]
             for row in adj_list
         ]
 

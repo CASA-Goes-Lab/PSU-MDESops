@@ -170,7 +170,8 @@ def first_k_observer(G, k) -> DFA:
                     vertice_names.insert(index, name_next_state)
                     next_queue.append(next_state)
                     index = index + 1
-                outgoing_v1v2.append((vertice_number[next_state], ev))
+                # (use observer.Out namedtuple)
+                outgoing_v1v2.append(observer.Out(vertice_number[next_state], ev))
             outgoing_list.insert(vertice_number[v], outgoing_v1v2)
 
     # constructing DFA: igraph and events sets

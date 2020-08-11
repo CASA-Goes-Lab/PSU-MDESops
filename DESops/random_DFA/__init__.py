@@ -136,7 +136,7 @@ def generate(
             # convert info to graph-ready lists:
             labels.extend(e)
             transitions.extend((src, trg) for _ in e)
-            out_attr_row.extend((trg, event) for event in e)
+            out_attr_row.extend(g.Out(trg, event) for event in e)
 
         out_attr.append(out_attr_row)
 
