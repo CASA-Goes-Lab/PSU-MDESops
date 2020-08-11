@@ -30,7 +30,7 @@ class PFA(_Automata):
         else:
             self._graph.es["prob"] = []
 
-    def add_edges(self, pair_list, labels, probs):
+    def add_edges(self, pair_list, labels, probs, fill_out=False, **kwargs):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
@@ -47,3 +47,40 @@ class PFA(_Automata):
         new_probs.extend(probs)
 
         self._graph.es["prob"] = new_probs
+
+        if kwargs:
+            for key, value in kwargs.items():
+                if len(pair_list) != len(value):
+                    raise IncongruencyError(
+                        "Length fo pairs != length of kwarg {}".format(key)
+                    )
+                self.es[key] = value
+
+        if fill_out:
+            out_list = self.vs["out"]
+            for label, pair, prob in zip(labels, pair_list, probs):
+                out = out_list[pair[0]]
+                if out is not None:
+                    out.append((pair[1], label, prob))
+                else:
+                    out = [(pair[1], label, prob)]
+            self.vs["out"] = out_list
+
+    def generate_out(self):
+        """
+        PFA version of generate_out:
+        Generates the "out" attribute for a graph
+        >>> automata.vs["out"][v] // -> [(target vert, event transition), (...), ...]
+        """
+        adj_list = self._graph.get_inclist()
+        self.vs["out"] = [
+            [
+                (
+                    self._graph.es[e].target,
+                    self._graph.es[e]["label"],
+                    self._graph.es[e]["prob"],
+                )
+                for e in row
+            ]
+            for row in adj_list
+        ]
