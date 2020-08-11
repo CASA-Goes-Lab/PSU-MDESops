@@ -144,9 +144,6 @@ class _Automata:
         # Default case; create Automata from scratch.
         self._graph = ig.Graph(directed=True)
         self.events = set()  # IT SHOULD BE A SET OF EVENTS
-        self.states = (
-            list()
-        )  # A SET OF STATES. I AM GOING BACK TO JUST USE VS OF IGRAPH TO BE THE SET OF STATES
 
         if not Euc:
             self.Euc = set()
