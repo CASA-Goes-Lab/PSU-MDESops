@@ -169,6 +169,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                         )
                     trans_prob.append(trans_tuple[4])
                     total = total + float(trans_tuple[4])
+
+                    # PFA out attr is of form (target, event, prob)
                     neigh.append(
                         (trans_tuple[1], Event(trans_tuple[0]), float(trans_tuple[4]))
                     )
@@ -225,9 +227,15 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     trans_controllable_bool = [x == "c" for x in trans_controllable]
     g.es["contr"] = trans_controllable_bool
 
-    neighbors_list = [
-        [(state_names.index(adj[0]), adj[1]) for adj in l] for l in neighbors_list
-    ]
+    if type_aut == "PFA":
+        neighbors_list = [
+            [(state_names.index(adj[0]), adj[1], adj[2]) for adj in l]
+            for l in neighbors_list
+        ]
+    else:
+        neighbors_list = [
+            [(state_names.index(adj[0]), adj[1]) for adj in l] for l in neighbors_list
+        ]
 
     g.vs["out"] = neighbors_list
 
