@@ -2,6 +2,10 @@ class InvalidGraphTypeError(Exception):
     pass
 
 
+class InvalidAutomataTypeError(Exception):
+    pass
+
+
 class DependencyNotInstalledError(Exception):
     pass
 
