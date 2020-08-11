@@ -3,13 +3,45 @@ finite state automata. Additionally, some useful functions and operations on aut
 implemented, including parallel/product compositions and observer computation. The goal is to provide a simple way to combine these operations in a modular environment, with the usability of Python which makes extending the functionalities provided here very straightforward.
 
 ## Installation
-Currently can be installed by moving the `DESops` folder into a preexisting environment (e.g. default site-packages folder for Anaconda). There are also some dependencies required by the package:
 
-* `igraph` must be installed. The installation process may be slightly more involved than simply using `pip`. Their [website](https://igraph.org/python/) has more information on how to install.
-* `cairo` is required by `igraph` to handle plotting & visualization. Not required if not using `plot()` method.
+### Poetry Installation:
+
+The package can be installed using [poetry](https://python-poetry.org/) and running the command:
+
+    $ poetry install
+
+(TODO: add to PyPi?)
+
+When using Windows: (I think) pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
+https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
+
+Then install using `pip install <path_to>\pycairo‑1.19.1‑cp38‑cp38‑<win_version>.whl`
+
+
+
+### Manual Installation:
+
+Download/clone the DESops repository. The following dependencies must also be installed:
+
+* `python-igraph` must be installed. The installation process may be slightly more involved than simply using `pip`. Their [website](https://igraph.org/python/) has more information on how to install.
+* `cairo` is required by `igraph` to handle plotting & visualization. Only required if using `plot()` method.
+
+* `pydash`, `requests`, `dd`, `tqdm`
+(There may be a lot more than just this. Do we need a manual installation section, or just use poetry/pypi?)
+
+
+#### Random Automata Generation
+
+Generating random automata using the `random_DFA` submodule requires the REGAL software package, with source code bundled in this repository.
+The following is only relevant for using the `random_DFA` submodule.
+(Might need some copyright notice here? I'm not sure) Some of the files in the library have been modified, so an external installation of the software won't work.
+
+There are detailed instructions for compiling the source code in the file `random_DFA/regal-1.08.0929/regal_readme.txt`
+There are several required libraries, and a g++ compiler is needed to build the REGAL executables. The script `build.py` will also work for compiling REGAL
+after the preqrequisite libraries are installed (build.py doesn't install those, right?)
+
 
 ## Automata Classes
-
 Automata are stored as class instances DFA, NFA and PFA. The Python library igraph is used to store the graphs. igraph's core is imlemented in C, so large networks can be stored efficiently.
 
 There are multiple methods for interfacing automata and Automata objects, including reading/writing to `.fsm` filetypes, used in the DESUMA software package, as well as reading/writing from igraph Graphs. The igraph library has further functions to convert between Graphs and various graph file types (see the igraph documentation for more details).
