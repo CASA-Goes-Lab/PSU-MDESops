@@ -96,7 +96,7 @@ def parallel_comp(input_list):
                 # updating all the lists
                 transition_list.append(t)
                 transition_label.append(e)
-                outgoing_v1v2.append((vertice_number[n], e))
+                outgoing_v1v2.append(output.Out(vertice_number[n], e))
                 # if it is a new state update vertices list
                 if q:
                     vertice_names.insert(vertice_number[n], n)
@@ -113,7 +113,7 @@ def parallel_comp(input_list):
         output.Euo = g1.Euo.union(g2.Euo)
         output.vs["out"] = outgoing_list
         output.vs["marked"] = marked_list
-        output.add_edges(transition_list, transition_label)
+        output.add_edges(transition_list, transition_label, fill_out=False)
 
     return output
 

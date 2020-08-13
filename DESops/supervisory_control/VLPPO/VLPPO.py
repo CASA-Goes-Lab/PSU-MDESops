@@ -375,7 +375,7 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
         source = states_dict[p[0]]
         target = states_dict[p[1]]
         new_edge_pairs.append((source, target))
-        out[source].append((target, l))
+        out[source].append(P.Out(target, l))
 
     P.vs["out"] = out
     P.add_edges(new_edge_pairs, edge_labels, fill_out=False)

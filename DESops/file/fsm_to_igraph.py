@@ -214,12 +214,12 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     elif type_aut == "PFA" or isinstance(g, PFA):
         if not g_defined:
             g = PFA(g, events_unctr, events_unobs, events)
-        g.add_edges(trans_list_int_names, trans_labels, trans_prob)
+        g.add_edges(trans_list_int_names, trans_labels, trans_prob, fill_out=False)
 
     elif type_aut == "NFA" or isinstance(g, NFA):
         if not g_defined:
             g = NFA(g, events_unctr, events_unobs, events)
-        g.add_edges(trans_list_int_names, trans_labels)
+        g.add_edges(trans_list_int_names, trans_labels, fill_out=False)
 
     # print(events)
     trans_observable_bool = [x == "o" for x in trans_observable]
