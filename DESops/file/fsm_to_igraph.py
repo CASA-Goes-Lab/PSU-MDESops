@@ -209,7 +209,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
     if type_aut == "DFA" or isinstance(g, DFA):
         if not g_defined:
             g = DFA(g, events_unctr, events_unobs, events, False)
-        g.add_edges(trans_list_int_names, trans_labels)
+        g.add_edges(trans_list_int_names, trans_labels, fill_out=False)
 
     elif type_aut == "PFA" or isinstance(g, PFA):
         if not g_defined:

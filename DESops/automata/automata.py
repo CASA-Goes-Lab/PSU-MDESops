@@ -202,8 +202,6 @@ class _Automata:
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
 
-        self.UR2 = UnobservableReach2(self.Euo, self.vs)
-
         # Using namedtuple to represent 'out' tuple
         self.Out = namedtuple("Out", ["target", "event"])
 
