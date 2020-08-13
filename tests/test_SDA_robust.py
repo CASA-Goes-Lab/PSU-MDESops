@@ -1,3 +1,5 @@
+import time
+
 import DESops as d
 from tests.util import load_model
 
@@ -16,14 +18,67 @@ def test_robust_2x2():
     # A.add_edges([(0,0),(0,0),(0,0),(0,0)], [d.Event("a"), d.Event("b"), d.SDA.inserted_event("b"), d.SDA.deleted_event("b")])
 
     arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
-
     assert arena.vcount() == 26
     arena_spec = d.offline_VLPPO(arena, X_crit=arena.X_crit)
-    arena_sup = d.parallel_comp([arena, arena_spec])
+
+    arena_sup = d.composition.parallel_bfs(arena, arena_spec)
 
     assert arena_sup.vcount() == 13
-    super = d.SDA.select_robust_supervisor(arena_sup)
-    assert super.vcount() == 2 or super.vcount() == 3
+    sup = d.SDA.select_robust_supervisor(arena_sup)
+    assert sup.vcount() == 2 or sup.vcount() == 3
+
+
+def test_robust_4x3_2r():
+    G = load_model("models/SDA_tests/robust/ex_4_by_3_2r_g.fsm")
+    X_crit = set()
+    X_crit.update(
+        str(i) + "," + str(i) for i in (11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43)
+    )
+    Ea = set()
+    Ea.add(d.Event("rE"))
+    Ea.add(d.Event("rW"))
+    Ea.add(d.Event("rS"))
+    Ea.add(d.Event("rN"))
+
+    print(Ea)
+    print(X_crit)
+
+    start_time = time.process_time()
+    arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
+    arena_time = time.process_time() - start_time
+    total_time = arena_time
+    print(
+        "arena construction: {} V --- Segment time: {} --- Total time: {}".format(
+            arena.vcount(), arena_time, total_time
+        )
+    )
+
+    arena_spec = d.offline_VLPPO(arena, X_crit=arena.X_crit)
+    arena_spec_time = time.process_time() - arena_time
+    total_time = time.process_time() - start_time
+    print(
+        "VLPPO:              {} V --- Segment time: {} --- Total time: {}".format(
+            arena_spec.vcount(), arena_spec_time, total_time
+        )
+    )
+
+    arena_sup = d.parallel_comp([arena, arena_spec])
+    arena_sup_time = time.process_time() - arena_spec_time
+    total_time = time.process_time() - start_time
+    print(
+        "Pcomp:              {} V --- Segment time: {} --- Total time: {}".format(
+            arena_sup.vcount(), arena_sup_time, total_time
+        )
+    )
+
+    sup = d.SDA.select_robust_supervisor(arena_sup)
+    sup_time = time.process_time() - arena_sup_time
+    total_time = time.process_time() - start_time
+    print(
+        "sup extraction:     {} V --- Segment time: {} --- Total time: {}".format(
+            sup.vcount(), sup_time, total_time
+        )
+    )
 
 
 def test_maxrobust():
