@@ -85,10 +85,10 @@ def verify_k_step_opacity_state_observer(
         else:
             path = find_path_between(state_observer, 0, violating_id)
 
-            while e_init in path:
-                path.remove(e_init)
-            while e_ext in path:
-                path.remove(e_ext)
+            while "e_init" in path:
+                path.remove("e_init")
+            while "e_ext" in path:
+                path.remove("e_ext")
 
             return_list.append(path)
 
