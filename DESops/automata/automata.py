@@ -170,7 +170,6 @@ class _Automata:
             # deepcopy copies attributes
             self._graph = deepcopy(init._graph)
             self.events = init.events.copy()
-            self.states = init.states.copy()
             self.type = init.type
             self.Euo = init.Euo.copy()
             self.Euc = init.Euc.copy()
