@@ -51,7 +51,6 @@ def supremal_sublanguage(
     if isinstance(spec, set):
         G_given = plant.copy()
         G_given.vs["name"] = ["dead" if v in spec else v for v in plant.vs["name"]]
-        ttt = G_given.vs["name"]
         H_given = None
         skip_SA = True
 
