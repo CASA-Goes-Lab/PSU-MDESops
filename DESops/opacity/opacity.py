@@ -222,7 +222,7 @@ def verify_infinite_step_opacity(
     if method == "TWO":
         if not joint:
             return verify_separate_k_step_opacity_TWO(
-                g, "infinite", secret_type, return_num_states
+                g, "infinite", secret_type, return_num_states, return_violating_path
             )
         raise ValueError(
             "Two-way observer method is only implemented for separate opacity"

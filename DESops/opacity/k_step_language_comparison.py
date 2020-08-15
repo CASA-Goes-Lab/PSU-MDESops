@@ -84,9 +84,9 @@ def verify_k_step_opacity_language_comparison(
     if return_violating_path:
         path = return_tuple[-1]
         if path:
-            while e_init in path:
-                path.remove(e_init)
-            while e_ext in path:
-                path.remove(e_ext)
+            while "e_init" in path:
+                path.remove("e_init")
+            while "e_ext" in path:
+                path.remove("e_ext")
 
     return return_tuple
