@@ -11,17 +11,15 @@ import copy
 import igraph as ig
 
 from DESops.automata.DFA import DFA
-from DESops.basic_operations.construct_subautomata import construct_subautomata
-from DESops.basic_operations.parallel_comp import parallel_comp
+from DESops.basic_operations import composition
 
 
 def offline_VLPPO(
     plant,
-    spec=None,
+    spec,
     Euc=None,
     Euo=None,
     event_ordering=None,
-    X_crit=None,
     construct_SA=False,
     supervisor=None,
 ):
@@ -31,8 +29,8 @@ def offline_VLPPO(
 
     Parameters:
     system (G): Automata representing the plant/system.
-    specification (H): Automata representing the desired specification. Optional; must provide
-        either X_crit or specification
+    specification (H): Either an automata representing the specification or a set of critical states
+        (names of states in G)
 
     event_ordering: optionally provide a priority list of controllable events;
         if not provided, an arbitrary ordering will be used (the set of controllable
@@ -55,7 +53,7 @@ def offline_VLPPO(
 
     # TODO: Find uncontrollable events (if not provided)
     if not Euo:
-        if spec:
+        if isinstance(spec, DFA):
             Euo = plant.Euo.union(spec.Euo)
         else:
             Euo = plant.Euo
@@ -64,7 +62,7 @@ def offline_VLPPO(
         Euo = frozenset(Euo)
 
     if not Euc:
-        if spec:
+        if isinstance(spec, DFA):
             Euc = plant.Euc.union(spec.Euc)
         else:
             Euc = plant.Euc
@@ -72,21 +70,23 @@ def offline_VLPPO(
     elif isinstance(Euc, list):
         Euc = set(Euc)
 
-    if not spec and not X_crit:
+    if not isinstance(spec, DFA) and not isinstance(spec, set):
         sys.exit(
-            "Both spec and X_crit unspecified. At least one is required to be defined."
+            "Expected spec to be type DFA or set (of names of critical states). Got {}".format(
+                type(spec)
+            )
         )
 
     # Accumlate sets of states for final control policy in sets_of_states var
     sets_of_states = set()
 
-    if spec:
+    if isinstance(spec, DFA):
         # TODO: test this, I think most of the time X_crit is specified so this hasn't been used a lot
         # Need to construct H_o as refined product of GxH to determine infinite-cost states
         if construct_SA:
             G_pp = DFA()
             H_pp = DFA()
-            construct_subautomata(spec, plant, H_pp, G_pp)
+            strict_subautomata(spec, plant, H_pp, G_pp)
             # To keep names simple, reassign H, G to their pre-processed counterparts.
             spec_pp = H_pp
             plant_pp = G_pp
@@ -96,7 +96,7 @@ def offline_VLPPO(
             plant_pp = plant
 
         # probably don't need this:
-        H_o = parallel_comp([plant_pp, spec_pp])
+        H_o = composition.parallel(plant_pp, spec_pp)
         X_crit = [
             v["name"][0]
             for v in H_o.vs
@@ -109,11 +109,9 @@ def offline_VLPPO(
     else:
         # X_crit provided; specification is plant w/o X_crit states
         plant_pp = plant
+        X_crit = [i.index for i in plant.vs if i["name"] in spec]
 
-    X_crit_vs = plant_pp.vs.select(name_in=X_crit)
-    X_crit_ind = [v.index for v in X_crit_vs]
-
-    bad_states = plant_pp.compute_state_costs(X_crit_ind, Euc)
+    bad_states = plant_pp.compute_state_costs(X_crit, Euc)
     # State is illegal if in bad_states
 
     # if initial state is in bad_states, there is no solution:

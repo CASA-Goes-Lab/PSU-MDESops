@@ -1,10 +1,10 @@
 from typing import Set
 
-from DESops.automata.automata import _Automata
+from DESops.automata import automata
 from DESops.automata.event import Event
 
 
-class NFA(_Automata):
+class NFA(automata._Automata):
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         super(NFA, self).__init__(init, Euc, Euo, E)
 
@@ -14,6 +14,14 @@ class NFA(_Automata):
         elif not isinstance(init, NFA):
             self.vs["init"] = False
             self.vs[0]["init"] = True
+
+    def copy(self):
+        """
+        Copy from self to other, as in:
+        >>> other = self.copy()
+        """
+        A = PFA(self)
+        return A
 
     def delete_vertices(self, vs):
         self._graph.delete_vertices(vs)
@@ -26,7 +34,9 @@ class NFA(_Automata):
             return
 
         for state in self.vs:
-            new_out = [(e.target, e["label"]) for e in state.out_edges()]
+            new_out = [
+                automata.Out_Tuple(e.target, e["label"]) for e in state.out_edges()
+            ]
             self.vs[state.index].update_attributes({"out": new_out})
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:

@@ -59,6 +59,38 @@ class DFA(_Automata):
         # AVOID MULTIPLE TESTS. IF IT IS A DFA COPY, DEFINED BASED ON OPERATIONS ON DFAS THEN NO NEED TO CHECK
         # ONLY CHECK IF init IS A FRESH IGRAPH INSTANCE
 
+    def copy(self):
+        """
+        Copy from self to other, as in:
+        >>> other = self.copy()
+        """
+        A = DFA(self)
+        return A
+
+    def add_edge(self, source, target, label, check_DFA=True, fill_out=True, **kwargs):
+        if check_DFA:
+            out_events = [e[1] for e in self.vs["out"][source]]
+            if label in out_events:
+                # Passive check: if adding this edge would create nondeterminism,
+                # do nothing. No exit (although possibly issue a warning?)
+                sys.exit("ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA")
+
+        self._graph.add_edge(source, target)
+        if label:
+            if isinstance(label, str):
+                # convert labels from str to Event
+                label = Event(label)
+            self.es[self.ecount() - 1].update_attributes({"label": label})
+
+        if fill_out:
+            out = self.vs[source]["out"]
+            if out is not None:
+                out.append(self.Out(target, label))
+            else:
+                out = [self.Out(target, label)]
+
+            self.vs[source].update_attributes({"out": out})
+
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         """
         Add an iterable of edges to the DFA instance.

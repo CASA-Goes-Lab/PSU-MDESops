@@ -1,4 +1,5 @@
 import sys
+from collections import namedtuple
 
 from DESops.automata.automata import _Automata
 from DESops.automata.event import Event
@@ -32,6 +33,14 @@ class PFA(_Automata):
             self._graph.es["prob"] = []
 
         self.Out = namedtuple("Out", ["target", "event", "prob"])
+
+    def copy(self):
+        """
+        Copy from self to other, as in:
+        >>> other = self.copy()
+        """
+        A = PFA(self)
+        return A
 
     def add_edges(self, pair_list, labels, probs, fill_out=False, **kwargs):
 

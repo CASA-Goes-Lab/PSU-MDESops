@@ -170,7 +170,6 @@ class _Automata:
             # deepcopy copies attributes
             self._graph = deepcopy(init._graph)
             self.events = init.events.copy()
-            self.states = init.states.copy()
             self.type = init.type
             self.Euo = init.Euo.copy()
             self.Euc = init.Euc.copy()
@@ -202,7 +201,6 @@ class _Automata:
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
 
-        # Using namedtuple to represent 'out' tuple
         self.Out = namedtuple("Out", ["target", "event"])
 
     def delete_vertices(self, vs):
@@ -212,11 +210,13 @@ class _Automata:
 
             warnings.warn("Initial state deleted.")
             self._graph.delete_vertices([v.index for v in self.vs])
-            return
+
         else:
+            if len(vs) == 0:
+                return
             self._graph.delete_vertices(vs)
             for state in self.vs:
-                new_out = [(e.target, e["label"]) for e in state.out_edges()]
+                new_out = [self.Out(e.target, e["label"]) for e in state.out_edges()]
                 self.vs[state.index].update_attributes({"out": new_out})
 
     def delete_edges(self, es):
@@ -255,9 +255,9 @@ class _Automata:
         if fill_out:
             out = self.vs[source]["out"]
             if out is not None:
-                out.append((target, label))
+                out.append(self.Out(target, label))
             else:
-                out = [(target, label)]
+                out = [self.Out(target, label)]
 
             self.vs[source].update_attributes({"out": out})
 

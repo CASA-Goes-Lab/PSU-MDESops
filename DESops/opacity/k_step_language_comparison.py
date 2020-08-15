@@ -1,6 +1,6 @@
 from DESops.automata.event import Event
+from DESops.basic_operations import composition
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.language_functions import (
     construct_H_NS,
@@ -74,8 +74,8 @@ def verify_k_step_opacity_language_comparison(
     g_ns.Euo = {e[0] for e in g_ns.Euo}
     g_ns.generate_out()
 
-    g_obs = observer_comp(g)
-    g_ns_obs = observer_comp(g_ns)
+    g_obs = composition.observer(g)
+    g_ns_obs = composition.observer(g_ns)
 
     return_tuple = language_inclusion(
         g_obs, g_ns_obs, Eo, return_num_states, return_violating_path

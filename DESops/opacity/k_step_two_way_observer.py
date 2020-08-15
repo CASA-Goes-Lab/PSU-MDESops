@@ -5,8 +5,8 @@ import warnings
 
 from DESops.automata.DFA import DFA
 from DESops.automata.NFA import NFA
+from DESops.basic_operations import composition
 from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.ureach import ureach_from_set_adj
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 from DESops.opacity.language_functions import find_path_between
@@ -33,10 +33,10 @@ def verify_separate_k_step_opacity_TWO(
 
     g_r = reverse(g)
 
-    g_obs = observer_comp(g)
+    g_obs = composition.observer(g)
 
     if k == "infinite":
-        g_r_obs = observer_comp(g_r)
+        g_r_obs = composition.observer(g_r)
     else:
         g_r_obs = first_k_observer(g_r, k)
 

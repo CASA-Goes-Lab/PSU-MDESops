@@ -9,7 +9,6 @@ from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.basic_operations.ureach import ureach_from_set_adj
 from DESops.SDA.event_extensions import deleted_event, inserted_event
-from DESops.supervisory_control import supr_contr
 
 
 # Construct-AIDA algorithm
