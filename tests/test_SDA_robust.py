@@ -19,16 +19,16 @@ def test_robust_2x2():
 
     arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
     assert arena.vcount() == 26
-    arena_spec = d.offline_VLPPO(arena, X_crit=arena.X_crit)
+    arena_spec = d.offline_VLPPO(arena, arena.X_crit)
 
-    arena_sup = d.composition.parallel_bfs(arena, arena_spec)
+    arena_sup = d.composition.parallel(arena, arena_spec)
 
     assert arena_sup.vcount() == 13
     sup = d.SDA.select_robust_supervisor(arena_sup)
     assert sup.vcount() == 2 or sup.vcount() == 3
 
 
-def test_robust_4x3_2r():
+def _test_robust_4x3_2r():
     G = load_model("models/SDA_tests/robust/ex_4_by_3_2r_g.fsm")
     X_crit = set()
     X_crit.update(
@@ -53,7 +53,7 @@ def test_robust_4x3_2r():
         )
     )
 
-    arena_spec = d.offline_VLPPO(arena, X_crit=arena.X_crit)
+    arena_spec = d.offline_VLPPO(arena, arena.X_crit)
     arena_spec_time = time.process_time() - arena_time
     total_time = time.process_time() - start_time
     print(
@@ -62,7 +62,7 @@ def test_robust_4x3_2r():
         )
     )
 
-    arena_sup = d.parallel_comp([arena, arena_spec])
+    arena_sup = d.composition.parallel(arena, arena_spec)
     arena_sup_time = time.process_time() - arena_spec_time
     total_time = time.process_time() - start_time
     print(

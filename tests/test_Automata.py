@@ -58,7 +58,7 @@ def test_product_comp():
 
 def test_observer():
     G_t = util.load_model("models/G_t.fsm")
-    obs = d.observer_comp(G_t)
+    obs = d.composition.observer(G_t)
     assert obs.vcount() == 5
     assert obs.ecount() == 6
     assert d.Event("a") in (v[1] for v in obs.vs["out"][0])
@@ -85,6 +85,10 @@ def test_trim():
 
 def test_reverse():
     g = util.load_model("models/textbook/fig_2-2.fsm")
+
+    g = d.NFA(g)
+    # should d.replace(g, inplace=True) ensure that g is an NFA (or convert?)
+
     # reverse transition tuples (source, target, label):
     a = d.Event("a")
     b = d.Event("b")

@@ -39,7 +39,6 @@ def test_initial_state_opacity():
 
 def test_k_step_opacity_1():
     g = load_model("models/opacity1.fsm")
-
     g.vs["init"] = False
     g.vs[0]["init"] = True
     g.vs["secret"] = False
