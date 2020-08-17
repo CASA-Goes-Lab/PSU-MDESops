@@ -20,7 +20,7 @@ class NFA(automata._Automata):
         Copy from self to other, as in:
         >>> other = self.copy()
         """
-        A = PFA(self)
+        A = NFA(self)
         return A
 
     def delete_vertices(self, vs):
