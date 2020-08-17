@@ -559,9 +559,9 @@ def observer(G: Automata_t) -> Automata_t:
     observer.events = G.events - G.Euo
     observer.Euc = G.Euc - G.Euo
     observer.Euo = set()
-    observer.vs["out"] = outgoing_list
     observer.vs["marked"] = marked_list
-    observer.add_edges(transition_list, transition_label)
+    observer.add_edges(transition_list, transition_label, fill_out=False)
+    observer.vs["out"] = outgoing_list
     return observer
 
 
