@@ -7,7 +7,6 @@ import igraph as ig
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
-from DESops.basic_operations.ureach import ureach_from_set_adj
 from DESops.SDA.event_extensions import deleted_event, inserted_event
 
 
@@ -49,6 +48,7 @@ def construct_AIDA(G, R, Ea, X_crit):
             gamma = {e for (target, e) in R.vs["out"][Rvs]}
             ev = Event(gamma)
             Gamma.add(ev)
+            """
             if (Gvs, frozenset(G.Euo.intersection(gamma))) not in UR_state_classes:
                 next_Gvs = frozenset(
                     ureach_from_set_adj(Gvs, G._graph, G.Euo.intersection(gamma))
@@ -56,6 +56,8 @@ def construct_AIDA(G, R, Ea, X_crit):
                 UR_state_classes[(Gvs, frozenset(G.Euo.intersection(gamma)))] = next_Gvs
             else:
                 next_Gvs = UR_state_classes[(Gvs, frozenset(G.Euo.intersection(gamma)))]
+            """
+            next_Gvs = G.UR.from_set(Gvs, G.Euo.intersection(gamma), freeze_result=True)
             q2 = (next_Gvs, Rvs, 2)
             q2name = (setvs2statename(G, next_Gvs), R.vs["name"][Rvs], "2")
             if q2 not in Q2:
