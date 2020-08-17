@@ -1,6 +1,6 @@
-import sys
 from collections import namedtuple
 
+from DESops import error
 from DESops.automata.automata import _Automata
 from DESops.automata.event import Event
 
@@ -15,14 +15,13 @@ class PFA(_Automata):
             if "prob" not in self.es.attributes():
                 import warnings
 
-                # sys.exit("ERROR: prob attribute not defined for type PFA")
                 warnings.warn(
                     "prob attribute not defined for type PFA, setting to default"
                 )
 
         elif prob:
             if len(prob) != self.ecount():
-                sys.exit(
+                raise error.IncongruencyError(
                     "ERROR: {0} probabilities specified does not match {1} graph ecount".format(
                         len(prob), self.ecount()
                     )

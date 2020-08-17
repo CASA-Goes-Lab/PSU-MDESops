@@ -14,6 +14,14 @@ class MissingAttributeError(Exception):
     pass
 
 
+class InvalidAttributeError(Exception):
+    pass
+
+
+class FileFormatError(Exception):
+    pass
+
+
 class NoPathError(Exception):
     pass
 
@@ -36,4 +44,8 @@ class IncongruencyError(Exception):
 
 
 class ConversionError(Exception):
+    pass
+
+
+class DeterminismError(Exception):
     pass

@@ -1,9 +1,9 @@
 import ast
-import sys
 
 import igraph as ig
 from dd.autoref import BDD
 
+from DESops import error
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 
@@ -55,7 +55,7 @@ def read_fsm_to_bdd(fsm_filename):
             # Should be delimited in the line by tabs
             states_tuple = line.split("\t")
             if len(states_tuple) < 3:
-                sys.exit(
+                raise error.FileFormatError(
                     "ERROR %s:\nMissing argument in line %d\nStates are in the format:\nSOURCE_STATE\tMARKED\t#TRANSITIONS"
                     % (fsm_filename, i)
                 )
@@ -73,17 +73,17 @@ def read_fsm_to_bdd(fsm_filename):
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
                 if trans_tuple == ["\n"]:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s:\nToo many transitions at state %s"
                         % (fsm_filename, states_tuple[0])
                     )
                 if len(trans_tuple) > 5:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nToo many argument\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )
                 elif len(trans_tuple) < 4:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nMissing arguments\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )

@@ -71,7 +71,7 @@ def offline_VLPPO(
         Euc = set(Euc)
 
     if not isinstance(spec, DFA) and not isinstance(spec, set):
-        sys.exit(
+        raise TypeError(
             "Expected spec to be type DFA or set (of names of critical states). Got {}".format(
                 type(spec)
             )

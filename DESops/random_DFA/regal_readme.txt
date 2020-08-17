@@ -12,7 +12,7 @@ when importing the random_DFA python module
 
 e.g.
 
->>> desops.random_DFA.generate(...) # Will exit w/ error code if rand DFA not installed
+>>> desops.random_DFA.generate(...) # Will exit w/ error code if random_DFA not installed
 
 To install regal and DESops script:
 
@@ -28,7 +28,7 @@ libxml++ also requires:
     Link: https://www.gtkmm.org/en/
 
 
-1. Install regal (see README file in this directory for more details)
+1. Install regal (see README file in the regal directory for more details)
 
 If user:
 
@@ -39,4 +39,4 @@ If root:
 
 2. Compile random_DFA executable:
 
-    make desops 
+    make desops

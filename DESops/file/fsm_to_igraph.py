@@ -1,8 +1,8 @@
 import ast
-import sys
 
 import igraph as ig
 
+from DESops import error
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
@@ -73,7 +73,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             # Should be delimited in the line by tabs
             states_tuple = line.split("\t")
             if len(states_tuple) < 3:
-                sys.exit(
+                raise error.FileFormatError(
                     "ERROR %s:\nMissing argument in line %d\nStates are in the format:\nSOURCE_STATE\tMARKED\t#TRANSITIONS"
                     % (fsm_filename, i)
                 )
@@ -97,7 +97,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             try:
                 x = int(states_tuple[2])
             except ValueError:
-                sys.exit(
+                raise error.FileFormatError(
                     "ERROR {0}:\nExpected integer number of neighbors on line {1}.\nDid previous state have more transitions than noted?".format(
                         fsm_filename, i
                     )
@@ -106,17 +106,17 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
             for _ in range(0, int(states_tuple[2])):
                 trans_tuple = f.readline().split("\t")
                 if trans_tuple == ["\n"]:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s:\nToo many transitions at state %s"
                         % (fsm_filename, states_tuple[0])
                     )
                 if len(trans_tuple) > 5:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nToo many argument\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )
                 elif len(trans_tuple) < 4:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nMissing arguments\nTransitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob(optional)"
                         % (fsm_filename, i)
                     )
@@ -128,12 +128,12 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                         # TODO WHEN NFA IS DEFINED THEN SET AS DFA UNTIL A NONDETERMINISTIC TRANS IS FOUND
                         type_aut = "DFA"
                 if type_aut == "PFA" and len(trans_tuple) != 5:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nPFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo\tprob "
                         % (fsm_filename, i)
                     )
                 elif (type_aut == "DFA" or type_aut == "NFA") and len(trans_tuple) != 4:
-                    sys.exit(
+                    raise error.FileFormatError(
                         "ERROR %s in line %d:\nDFA transitions are in the format:\nEVENT\tTARGET_STATE\tc/uc\to/uo"
                         % (fsm_filename, i)
                     )
@@ -163,7 +163,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                         if float(trans_tuple[4]) > 1 or float(trans_tuple[4]) < 0:
                             raise ValueError
                     except ValueError:
-                        sys.exit(
+                        raise error.FileFormatError(
                             "ERROR %s in line %d:\nProbability value must be a number smaller than or equal to 1"
                             % (fsm_filename, i)
                         )
@@ -183,7 +183,7 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
                 i += 1
             neighbors_list.append(neigh)
             if total > 0 and total != 1:
-                sys.exit(
+                raise error.FileFormatError(
                     "ERROR %s:\nTransitions in state %s do not sum up to 1"
                     % (fsm_filename, states_tuple[0])
                 )

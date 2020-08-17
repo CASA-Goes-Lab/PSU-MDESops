@@ -24,6 +24,16 @@ class NFA(automata._Automata):
         return A
 
     def delete_vertices(self, vs):
+        """
+        Deletes vertex seq vs.
+        Uses igraph delete_vertices method.
+
+        Updates out attr: since there is no default "in" attribute,
+        out is regenerated entirely.
+
+        Faster to use fewer delete_vertices() calls with larger inputs vs
+        than multiple calls with smaller inputs.
+        """
         self._graph.delete_vertices(vs)
 
         if not any([v["init"] for v in self.vs]):
@@ -33,11 +43,7 @@ class NFA(automata._Automata):
             self._graph.delete_vertices([v.index for v in self.vs])
             return
 
-        for state in self.vs:
-            new_out = [
-                automata.Out_Tuple(e.target, e["label"]) for e in state.out_edges()
-            ]
-            self.vs[state.index].update_attributes({"out": new_out})
+        self.generate_out()
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}

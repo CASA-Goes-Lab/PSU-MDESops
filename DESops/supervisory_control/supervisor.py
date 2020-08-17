@@ -1,4 +1,3 @@
-import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum, auto
 from os import cpu_count
@@ -42,7 +41,7 @@ def supremal_sublanguage(
     G_given = plant.copy()
 
     if not isinstance(spec, DFA) and not isinstance(spec, set):
-        sys.exit(
+        raise TypeError(
             "Expected spec to be type DFA or set (of names of critical states). Got {}".format(
                 type(spec)
             )
