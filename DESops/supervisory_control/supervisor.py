@@ -229,7 +229,11 @@ def __find_bad_states_controllable(
 
 
 def preprocessing(
-    G_given: DFA, H_given: DFA, mode, skip_subautomata=False, prefix_closed=False
+    G_given: DFA,
+    H_given: DFA,
+    mode=Mode.CONTROLLABLE_NORMAL,
+    skip_subautomata=False,
+    prefix_closed=False,
 ) -> Tuple[DFA, DFA]:
     """
     Preprocess to obtain G and H such that
