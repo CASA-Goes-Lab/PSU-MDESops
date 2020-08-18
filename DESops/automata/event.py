@@ -20,13 +20,15 @@ class Event:
     def __repr__(self):
         # Should print like: "{label}[, {key} : {val}, ...]"
         base_repr = str(self.__dict__["label"])
-        extension = ", {}".format(
-            ", ".join(
-                "{}".format(k) for k, v in self.__dict__.items() if v and k != "label"
-            )
+        extension = ", ".join(
+            "{} : {}".format(k, v)
+            for k, v in self.__dict__.items()
+            if v and k != "label"
         )
 
-        return base_repr + extension
+        if extension:
+            return base_repr + ", " + extension
+        return base_repr
 
     def __eq__(self, other):
         if isinstance(other, Event):

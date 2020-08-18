@@ -47,7 +47,7 @@ def construct_reverse(g, g_r=None, save_state_names=False, use_marked_states=Tru
         g_r.vs["init"] = True
 
     if "init" in g.vs.attributes():
-        g_r.vs["marked"] = g_r.vs["init"]
+        g_r.vs["marked"] = g.vs["init"]
     else:
         g_r.vs["marked"] = False
         g_r.vs[0]["marked"] = True
