@@ -2,11 +2,23 @@ class InvalidGraphTypeError(Exception):
     pass
 
 
+class InvalidAutomataTypeError(Exception):
+    pass
+
+
 class DependencyNotInstalledError(Exception):
     pass
 
 
 class MissingAttributeError(Exception):
+    pass
+
+
+class InvalidAttributeError(Exception):
+    pass
+
+
+class FileFormatError(Exception):
     pass
 
 
@@ -32,4 +44,8 @@ class IncongruencyError(Exception):
 
 
 class ConversionError(Exception):
+    pass
+
+
+class DeterminismError(Exception):
     pass

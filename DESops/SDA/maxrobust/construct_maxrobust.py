@@ -14,7 +14,7 @@ deception attacks" {better citation here}
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
-from DESops.basic_operations.parallel_comp import parallel_comp
+from DESops.basic_operations import composition
 from DESops.SDA.event_extensions import (
     deleted_event,
     inserted_event,
@@ -59,7 +59,7 @@ def construct_maxrobust(G, X_crit, Ea, A=None, Euo=None, Euc=None, event_orderin
         Ga = augment_plant(G, Ea_i, Ea_d)
     elif A:
         # If A provided, Ga is found as Ga = A || G
-        Ga = parallel_comp([A, G])
+        Ga = composition.parallel(A, G)
 
     # Construct Gm from Ga
     Gm = construct_Gm(Ga)

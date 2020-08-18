@@ -6,8 +6,8 @@ import warnings
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
+from DESops.basic_operations import composition
 from DESops.basic_operations.construct_complement import complement
-from DESops.basic_operations.observer_comp import observer_comp
 from DESops.basic_operations.product_NFA import product_NFA
 
 
@@ -24,7 +24,7 @@ def language_inclusion(g, h, Eo, return_num_states=False, return_unincluded_path
     return_num_states: if True, the number of states in the product g x det(h)^c is returned as an additional value
     return_unincluded_path: if True, a list of observable events representing a path marked in g but not h is returned as an additional value
     """
-    h_det = observer_comp(h)
+    h_det = composition.observer(h)
     complement(h_det, inplace=True, events=Eo)
 
     prod = product_NFA([g, h_det], save_marked_states=True)

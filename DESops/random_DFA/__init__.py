@@ -1,7 +1,6 @@
 import os
 import random
 import subprocess
-import sys
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
@@ -12,7 +11,7 @@ this_dir = os.path.dirname(__file__)
 rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
 
 if not os.path.isfile(rand_DFA_dir):
-    sys.exit(
+    raise ValueError(
         "Could not find random_DFA executable. See instructions to install in DESops/random_DFA/regal_readme.txt"
     )
 
@@ -136,7 +135,7 @@ def generate(
             # convert info to graph-ready lists:
             labels.extend(e)
             transitions.extend((src, trg) for _ in e)
-            out_attr_row.extend((trg, event) for event in e)
+            out_attr_row.extend(g.Out(trg, event) for event in e)
 
         out_attr.append(out_attr_row)
 

@@ -5,16 +5,17 @@ Automata class & methods:
 Used to represent finite-state automata, by means of a directed
 graph object (from the igraph library) with labelled transitions.
 
-Implemented here is the abstract base class _Automata. Use DFA, NFA or PFA
-classes instead.
+Implemented here is the abstract base class _Automata.
+
+Use DFA, NFA or PFA classes instead.
 
 Provides access to many useful methods in discrete event systems,
 e.g. parallel & product compositions or observer construction.
 
 In general, these operations can be performed as follows:
 >>> # For automata A , B:
->>> C = A.parallel_comp(B)
->>> O = A.observer()
+>>> A_par_B = d.composition.parallel(A, B)
+>>> obs_A = d.composition.observer(A)
 
 Automata can be constructed by 'fsm' filetypes, providing easy
 interface with DESUMA.
@@ -31,10 +32,10 @@ Note that the vs() and es() methods for the Automata class are directly bound to
 the vs() and es() methods for the igraph Graph class.
 vs() and es() have dict-like behavior for accessing attributes, which are used here
 to store edge labels and vertex names, e.g:
->>> vert_name_list = G.vs()["name"] # G.vs["name"]
->>> edge_label_list = G.es()["label"] # G.es["label"]
+>>> vert_name_list = G.vs["name"]
+>>> edge_label_list = G.es["label"]
 And to access specific entries by value or index:
->>> vert_index_7 = G.vs()["name"][7] # equivalently G.vs()[7]["name"]
+>>> vert_index_7 = G.vs["name"][7]
 >>> edge_name_a = G.es(label_eq="a") # if multiple edges labelled 'a', returns first by index
 In many cases, information relevant to vertices & edges are stored in attributes. For example,
 in PFA, probabilities of a transition occuring are stored in the "prob" attribute, e.g:
@@ -67,16 +68,12 @@ but might cause some unintended problems?
 Class Members:
 Euc: set object of uncontrollable events.
 Euo: set object of unobservable events.
-Ea: set of compromised events (not particularly relevant here? Used in SDA work)
-    TODO: Probably shouldn't be here, but some in some functions e.g. copy_event_sets,
-    it is a nice convenience. Those functions should instead be overridden in an inherited
-    Automata class.
-X_crit: set of critical states, stored as names of states.
-    e.g., if an Automata is constructed from an igraph Graph with critical vertex named "V1",
-    then X_crit will have as a member "V1" and NOT the corresponding indice of the vertex.
+
+X_crit: set of critical states, stored as names of states (not indices)
+
 dead_state: convenience for operations that create a 'dead' state, usually empty.
-type: what 'type' of Automata, default is 'graph'. Used for certain structures that
-    need to be differentiated, which are contained exclusively to SDA work.
+
+type: what 'type' of Automata
 es: binding to igraph Graph 'edgeSeq' object, e.g.:
     >>> edgeSeqObj = automata_A.es()
     is equivalent to:
@@ -100,8 +97,7 @@ _graph: underlying igraph Graph instance storing the Automata structure. Contain
 
 """
 
-from abc import ABC, abstractmethod
-from collections import deque
+from collections import deque, namedtuple
 from collections.abc import Iterable
 from copy import deepcopy
 from typing import Set, Union
@@ -119,6 +115,10 @@ try:
     import igraph as ig
 except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
+
+
+# TODO: Legacy, to be removed with unobservable_reach method
+State_or_StateSet = Union[int, Set[int]]
 
 
 class _Automata:
@@ -140,9 +140,6 @@ class _Automata:
         # Default case; create Automata from scratch.
         self._graph = ig.Graph(directed=True)
         self.events = set()  # IT SHOULD BE A SET OF EVENTS
-        self.states = (
-            list()
-        )  # A SET OF STATES. I AM GOING BACK TO JUST USE VS OF IGRAPH TO BE THE SET OF STATES
 
         if not Euc:
             self.Euc = set()
@@ -152,6 +149,9 @@ class _Automata:
             self.Euo = set()
         else:
             self.Euo = Euo.copy()
+
+        self.X_crit = set()
+
         self.type = None
 
         if isinstance(init, ig.Graph):
@@ -167,7 +167,6 @@ class _Automata:
             # deepcopy copies attributes
             self._graph = deepcopy(init._graph)
             self.events = init.events.copy()
-            self.states = init.states.copy()
             self.type = init.type
             self.Euo = init.Euo.copy()
             self.Euc = init.Euc.copy()
@@ -199,19 +198,30 @@ class _Automata:
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
 
+        self.Out = namedtuple("Out", ["target", "event"])
+
     def delete_vertices(self, vs):
-        # initial state in vs
+        """
+        Deletes vertex seq vs.
+        Uses igraph delete_vertices method.
+
+        Updates out attr: since there is no default "in" attribute,
+        out is regenerated entirely.
+
+        Faster to use fewer delete_vertices() calls with larger inputs vs
+        than multiple calls with smaller inputs.
+        """
         if 0 in vs:
             import warnings
 
             warnings.warn("Initial state deleted.")
             self._graph.delete_vertices([v.index for v in self.vs])
-            return
+
         else:
+            if len(vs) == 0:
+                return
             self._graph.delete_vertices(vs)
-            for state in self.vs:
-                new_out = [(e.target, e["label"]) for e in state.out_edges()]
-                self.vs[state.index].update_attributes({"out": new_out})
+            self.generate_out()
 
     def delete_edges(self, es):
         """
@@ -228,10 +238,12 @@ class _Automata:
         Additionlly adds label and probability information as edge attributes, if
         they are optionally provided.
 
+        Note: much faster to add multiple edges at once using add_edges
+
         Parameters:
-        pair: 2-tuple of vertex indicies as (source, target). See igraph documentation of
+        source, target: vertex indicies. See igraph documentation of
             the add_edge() method for more details on what is acceptable here.
-        label: (default None) optionally provide label for this transition, to be stored
+        label:  optionally provide label for this transition, to be stored
             in the "label" edge keyword attribute.
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
@@ -249,9 +261,9 @@ class _Automata:
         if fill_out:
             out = self.vs[source]["out"]
             if out is not None:
-                out.append((target, label))
+                out.append(self.Out(target, label))
             else:
-                out = [(target, label)]
+                out = [self.Out(target, label)]
 
             self.vs[source].update_attributes({"out": out})
 
@@ -266,7 +278,7 @@ class _Automata:
         pair_list: an iterable to be passed to the igraph Graph add_edges() method,
             which accepts iterables of pairs or an EdgeSeq (see igraph documentation
             for more details on what is acceptable here).
-        labels: (default None) optionally provide an iterable of labels to attach as
+        labels: optionally provide an iterable of labels to attach as
             keyword attributes. Should be parallel to pair_list (e.g., pair n of
             pair_list corresponding to label n of labels). To be stored in the "label"
             edge keyword attribute.
@@ -320,9 +332,9 @@ class _Automata:
             for label, pair in zip(labels, pair_list):
                 out = out_list[pair[0]]
                 if out is not None:
-                    out.append((pair[1], label))
+                    out.append(self.Out(pair[1], label))
                 else:
-                    out = [(pair[1], label)]
+                    out = [self.Out(pair[1], label)]
                 out_list[pair[0]] = out
             self.vs["out"] = out_list
 
@@ -426,7 +438,10 @@ class _Automata:
         """
         adj_list = self._graph.get_inclist()
         self.vs["out"] = [
-            [(self._graph.es[e].target, self._graph.es[e]["label"]) for e in row]
+            [
+                self.Out(self._graph.es[e].target, self._graph.es[e]["label"])
+                for e in row
+            ]
             for row in adj_list
         ]
 
@@ -500,54 +515,33 @@ class _Automata:
         """
         return self._graph.ecount()
 
+    # TODO: this is legacy, should replace instances of this
+    # with the UR class method
+    def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
+        """
+            Finds the set of states in the unobservable reach from the given state.
+            """
 
-def str2(label):
-    """
-    Helpful function used occasionally in this file.
-    Handles smart/alternate casting to strings (str objects).
+        if isinstance(from_state, set):
+            states = set()
+            for x in from_state:
+                states |= self.unobservable_reach(x)
 
-    e.g:
-    If label is an inserted Event object, with label 'a',
-    this function will return the string "('a','i')"
+            return states
 
-    If label is a frozenset, frozenset({1,2,3}), this function
-    will return the str casting of the set casting of the frozenset,
-    or "{1,2,3}"
+        visited = {from_state}
+        states_stack = deque(visited)
+        while len(states_stack) > 0:
+            state = states_stack.pop()
+            dests_by_unobs = {
+                out[0]
+                for out in self.vs[state]["out"]
+                if out[1] in self.Euo and out[0] not in visited
+            }
+            visited |= dests_by_unobs
+            states_stack.extend(dests_by_unobs)
 
-    Otherwise, returns the normal str casting of label.
-    """
-    if isinstance(label, Event):
-        return str(label.name())
-    if isinstance(label, frozenset):
-        return str(set(label))
-    return str(label)
-
-
-def copy_event_sets(this, other):
-    """
-    Useful function to copy event sets from 'this' to 'other'.
-    Event sets being the set of unobservable events Euo, the set
-    of uncontrollable events Euc, and the set of compromised
-    events Ea.
-
-    Used for example in the parallel_comp function to handle
-    copying attributes from an input set of automata to the
-    automata resulting from the composition.
-
-    this: either an automata or iteratable collection of automata,
-        from which event sets will be copied.
-    other: automata, target of the copying.
-
-    If 'this' is an interable, the event sets copied to 'other'
-    will be the set union of the automata in 'this'.
-
-    """
-    if isinstance(this, _Automata):
-        other.Euo = this.Euo.copy()
-        other.Euc = this.Euc.copy()
-    else:
-        other.Euo = set.union(a.Euo for a in this)
-        other.Euc = set.union(a.Euc for a in this)
+        return visited
 
 
 class UnobservableReach:

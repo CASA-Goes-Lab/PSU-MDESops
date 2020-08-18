@@ -1,69 +1,84 @@
+import time
+
 import DESops as d
 from tests.util import load_model
 
 
 def test_robust_2x2():
-    G = load_model("models/SDA_tests/robust/ex_2_by_2_g.fsm")
+    G = load_model("models/SDA_tests/robust/rob_arena_ex1.fsm")
     X_crit = set()
-    X_crit.add("21")
+    X_crit.add("4")
+    Ea = set()
+    Ea.add(d.Event("b"))
+
+    # Should also work with explicit attack strategy. A here is the all-out strategy.
+    # A = d.DFA()
+    # A.add_vertex()
+    # A.vs["name"] = ["A0"]
+    # A.add_edges([(0,0),(0,0),(0,0),(0,0)], [d.Event("a"), d.Event("b"), d.SDA.inserted_event("b"), d.SDA.deleted_event("b")])
+
+    arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
+    assert arena.vcount() == 26
+    arena_spec = d.offline_VLPPO(arena, arena.X_crit)
+
+    arena_sup = d.composition.parallel(arena, arena_spec)
+
+    assert arena_sup.vcount() == 13
+    sup = d.SDA.select_robust_supervisor(arena_sup)
+    assert sup.vcount() == 2 or sup.vcount() == 3
+
+
+def _test_robust_4x3_2r():
+    G = load_model("models/SDA_tests/robust/ex_4_by_3_2r_g.fsm")
+    X_crit = set()
+    X_crit.update(
+        str(i) + "," + str(i) for i in (11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43)
+    )
     Ea = set()
     Ea.add(d.Event("rE"))
-    Ea.add(d.Event("rN"))
     Ea.add(d.Event("rW"))
     Ea.add(d.Event("rS"))
-    euc, euo, arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
-    assert arena.vcount() == 1437
-    arena.Euo = euo
-    arena.Euc = euc
-    arena_spec = d.offline_VLPPO(arena, X_crit=arena.X_crit)
-    arena_sup = d.parallel_comp([arena, arena_spec])
-    t = arena_sup.vcount()
-    assert arena_sup.vcount() == 288
-    # super = d.SDA.select_robust_supervisor(arena_sup)
-    # TODO: fix select_robust_supervisor
-    # assert super.vcount() == 6
-
-    euc, euo, arena_red = d.SDA.construct_robust_arena(G, X_crit, Ea, reduced=True)
-
-    assert arena_red.vcount() == 118
-    arena_red.Euo = euo
-    arena_red.Euc = euc
-    arena_red_spec = d.offline_VLPPO(arena_red, X_crit=arena_red.X_crit)
-    # Need to || compose to get realization of supervisor (since using VLPPO, same would go for AES)
-    arena_red_sup = d.parallel_comp([arena_red, arena_red_spec])
-    assert arena_red_sup.vcount() == 18
-    # red_super = d.SDA.select_robust_supervisor(arena_red_sup)
-    # assert red_super.vcount() == 2
-
-    G = load_model("models/SDA_tests/robust/ex_3_by_3_g.fsm")
-    X_crit.remove("21")
-    X_crit.add("33")
-    euc, euo, arena3 = d.SDA.construct_robust_arena(G, X_crit, Ea)
-    assert arena3.vcount() == 14572
-
-    euc, euo, arena3_red = d.SDA.construct_robust_arena(G, X_crit, Ea, reduced=True)
-    assert arena3_red.vcount() == 1399
-
-
-def test_robust_2x2_2r():
-    G = load_model("models/SDA_tests/robust/ex_2_by_2_2r_g.fsm")
-    X_crit = set()
-    X_crit.add("11,11")
-    X_crit.add("12,12")
-    X_crit.add("21,21")
-    X_crit.add("22,22")
-    Ea = set()
-    Ea.add(d.Event("rE"))
-    Ea.add(d.Event("rS"))
-    Ea.add(d.Event("rW"))
     Ea.add(d.Event("rN"))
-    euc, euo, arena_red = d.SDA.construct_robust_arena(G, X_crit, Ea, reduced=True)
-    print(arena_red.vcount())
-    assert arena_red.vcount() == 1856
 
-    euc, euo, arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
-    print(arena.vcount())
-    assert arena.vcount() == 442944
+    print(Ea)
+    print(X_crit)
+
+    start_time = time.process_time()
+    arena = d.SDA.construct_robust_arena(G, X_crit, Ea)
+    arena_time = time.process_time() - start_time
+    total_time = arena_time
+    print(
+        "arena construction: {} V --- Segment time: {} --- Total time: {}".format(
+            arena.vcount(), arena_time, total_time
+        )
+    )
+
+    arena_spec = d.offline_VLPPO(arena, arena.X_crit)
+    arena_spec_time = time.process_time() - arena_time
+    total_time = time.process_time() - start_time
+    print(
+        "VLPPO:              {} V --- Segment time: {} --- Total time: {}".format(
+            arena_spec.vcount(), arena_spec_time, total_time
+        )
+    )
+
+    arena_sup = d.composition.parallel(arena, arena_spec)
+    arena_sup_time = time.process_time() - arena_spec_time
+    total_time = time.process_time() - start_time
+    print(
+        "Pcomp:              {} V --- Segment time: {} --- Total time: {}".format(
+            arena_sup.vcount(), arena_sup_time, total_time
+        )
+    )
+
+    sup = d.SDA.select_robust_supervisor(arena_sup)
+    sup_time = time.process_time() - arena_sup_time
+    total_time = time.process_time() - start_time
+    print(
+        "sup extraction:     {} V --- Segment time: {} --- Total time: {}".format(
+            sup.vcount(), sup_time, total_time
+        )
+    )
 
 
 def test_maxrobust():

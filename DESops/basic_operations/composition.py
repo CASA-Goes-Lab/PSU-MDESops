@@ -19,7 +19,18 @@ Automata_t = Union[DFA, NFA]
 SHOW_PROGRESS = False
 
 
-def product_bfs(*automata: DFA) -> DFA:
+def product_bfs(*automata: DFA):
+    """
+    TODO: legacy; use composition.product instead (same thing but more succinct name)
+    """
+    import warnings
+
+    warnings.warn(
+        "TODO: legacy; use composition.product instead (same thing but more succinct name"
+    )
+
+
+def product(*automata: DFA) -> DFA:
     """
     Computes the product composition of 2 (or more) Automata in a BFS manner, and returns the resulting composition as a new Automata.
     """
@@ -211,7 +222,18 @@ def __find_product_edges_at_state(
     return edges
 
 
-def parallel_bfs(*automata: DFA) -> DFA:
+def parallel_bfs(*automata: DFA):
+    """
+    TODO: legacy; use composition.parallel instead (same thing but more succinct name)
+    """
+    import warnings
+
+    warnings.warn(
+        "TODO: legacy; use composition.parallel instead (same thing but more succinct name)"
+    )
+
+
+def parallel(*automata: DFA) -> DFA:
     """
     Computes the parallel composition of 2 (or more) Automata in a BFS manner, and returns the resulting composition as a new Automata.
     """
@@ -220,6 +242,10 @@ def parallel_bfs(*automata: DFA) -> DFA:
 
     G1 = automata[0]
     input_list = automata[1:]
+
+    if any(i.vcount() == 0 for i in automata):
+        # if any inputs are empty, return empty automata
+        return DFA()
 
     for G2 in input_list:
         G_out = DFA()
@@ -447,64 +473,96 @@ def __find_parallel_edges_at_states(
 
 def observer(G: Automata_t) -> Automata_t:
     """
-    Constructs an observer of the given automata..
+    Compute the observer automata of the input G
+    G should be a DFA, NFA or PFA
+
+    Returns the observer as a DFA
     """
-    G_obs = DFA()
-    X_m = {state.index for state in G.vs if state["marked"] is True}
-    E = set(G.es["label"])
-    Eo = E - G.Euo
+    observer = DFA()
+    if not G.vcount() or G is None:
+        warnings.warn(
+            "Observer operation with an empty automaton-return an empty automaton"
+        )
+        return observer
 
-    x0_obs = G.unobservable_reach(0)
-    G_obs_vertices = [
-        {
-            "name": tuple(G.vs[x_e]["name"] for x_e in x0_obs),
-            "marked": False,
-            "indexes": x0_obs,
-        }
-    ]
-    G_obs_indexes = {tuple(x0_obs): 0}
-    G_obs_edges = []  # type: List[Dict[str, Any]]
+    vertice_names = list()  # list of vertex names for igraph construction
+    vertice_number = dict()  # dictionary vertex_names -> vertex_id
+    outgoing_list = list()  # list of outgoing lists for each vertex
+    marked_list = list()  # list with vertices marking
+    transition_list = list()  # list of transitions for igraph construction
+    transition_label = list()  # list os transitions label for igraph construction
 
-    B_queue = deque([x0_obs])
+    # BFS queue that holds states that must be visited
+    queue = list()
 
-    while len(B_queue) > 0:
-        B = B_queue.popleft()
-        src_index = G_obs_indexes[tuple(B)]
-        for e in Eo:
-            destinations = {
-                out[0] for x_e in B for out in G.vs[x_e]["out"] if out[1] == e
-            }
-            if len(destinations) == 0:
-                continue
+    # index tracks the current number of vertices in the graph
+    index = 0
 
-            u_reaches = G.unobservable_reach(destinations)
-            dst_index = G_obs_indexes.get(tuple(u_reaches))
-            if dst_index is None:
-                G_obs_vertices.append(
-                    {
-                        "name": tuple(G.vs[i]["name"] for i in u_reaches),
-                        "marked": False,
-                        "indexes": u_reaches,
-                    }
-                )
-                dst_index = len(G_obs_vertices) - 1
-                G_obs_indexes[tuple(u_reaches)] = dst_index
-                B_queue.append(u_reaches)
+    if isinstance(G, NFA):
+        init_states = frozenset(v.index for v in G.vs if v["init"])
+    else:
+        init_states = frozenset({0})
 
-            G_obs_edges.append({"pair": (src_index, dst_index), "label": e})
+    # Makes Euo hashable for UR dict key:
+    Euo = frozenset(G.Euo)
 
-    G_obs.add_vertices(
-        len(G_obs_vertices),
-        [v["name"] for v in G_obs_vertices],
-        marked=[len(v["indexes"] & X_m) > 0 for v in G_obs_vertices],
-    )
-    G_obs.add_edges([e["pair"] for e in G_obs_edges], [e["label"] for e in G_obs_edges])
+    # Find UR from initial state(s):
+    v0 = G.UR.from_set(init_states, Euo, freeze_result=True)
 
-    G_obs.events = set(G_obs.es["label"])
-    G_obs.Euc = G.Euc
-    G_obs.Euo = G.Euo
+    name_v0 = frozenset([G.vs["name"][v] for v in v0])
+    marking = any([G.vs["marked"][v] for v in v0])
+    vertice_names.insert(index, name_v0)
+    vertice_number[v0] = index
+    marked_list.insert(index, marking)
 
-    return G_obs
+    index = index + 1
+    queue.append(v0)
+    while queue:
+        v = queue.pop(0)
+
+        # finding observable adjacent from v
+        adj_states = dict()
+        for vert in v:
+            for target, event in G.vs["out"][vert]:
+                if event in adj_states and event not in G.Euo:
+                    adj_states[event].add(target)
+                elif event not in adj_states and event not in G.Euo:
+                    s = set()
+                    s.add(target)
+                    adj_states[event] = s
+
+        # print(adj_states)
+        outgoing_v1v2 = list()
+        for ev in adj_states.keys():
+            next_state = frozenset(adj_states[ev])
+
+            next_state = G.UR.from_set(next_state, Euo, freeze_result=True)
+            # updating lists for igraph construction
+            if next_state in vertice_number.keys():
+                transition_list.append((vertice_number[v], vertice_number[next_state]))
+                transition_label.append(ev)
+            else:
+                name_next_state = frozenset([G.vs["name"][v] for v in next_state])
+                transition_list.append((vertice_number[v], index))
+                transition_label.append(ev)
+                vertice_number[next_state] = index
+                marking = any([G.vs["marked"][v] for v in next_state])
+                marked_list.insert(index, marking)
+                vertice_names.insert(index, name_next_state)
+                queue.append(next_state)
+                index = index + 1
+            outgoing_v1v2.append(observer.Out(vertice_number[next_state], ev))
+        outgoing_list.insert(vertice_number[v], outgoing_v1v2)
+
+    # constructing DFA: igraph and events sets
+    observer.add_vertices(index, vertice_names)
+    observer.events = G.events - G.Euo
+    observer.Euc = G.Euc - G.Euo
+    observer.Euo = set()
+    observer.vs["marked"] = marked_list
+    observer.add_edges(transition_list, transition_label, fill_out=False)
+    observer.vs["out"] = outgoing_list
+    return observer
 
 
 def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA], DFA]:
@@ -546,7 +604,7 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     )
 
     # Step 2: Calculating the product automaton AG = A x G
-    AG = product_bfs(A, G)
+    AG = product(A, G)
 
     # Step 3:
     #   Step 3.1: Obtaining G_tilde

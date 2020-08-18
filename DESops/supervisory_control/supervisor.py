@@ -32,26 +32,52 @@ def supremal_sublanguage(
     Euo: Optional[EventSet] = None,
     mode: Mode = Mode.CONTROLLABLE_NORMAL,
     preprocess: bool = True,
-    plant_obs: DFA = None,
+    prefix_closed: bool = False,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
     """
 
-    if Euc is None:
-        Euc = plant.Euc | spec.Euc
-    if Euo is None:
-        Euo = plant.Euo | spec.Euo
-
     G_given = plant.copy()
-    H_given = spec.copy()
-    G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
-    (G, H) = preprocessing(G_given, H_given) if preprocess else (G_given, H_given)
+    if not isinstance(spec, DFA) and not isinstance(spec, set):
+        raise TypeError(
+            "Expected spec to be type DFA or set (of names of critical states). Got {}".format(
+                type(spec)
+            )
+        )
 
-    if plant_obs is not None:
-        G_obs = plant_obs
+    if isinstance(spec, set):
+        G_given = plant.copy()
+        G_given.vs["name"] = ["dead" if v in spec else v for v in plant.vs["name"]]
+        H_given = None
+        skip_SA = True
+
+        G_given.Euc = Euc if Euc is not None else plant.Euc
+        G_given.Euo = Euo if Euo is not None else plant.Euo
     else:
+        skip_SA = False
+        H_given = spec.copy()
+        if Euc is None:
+            Euc = plant.Euc | spec.Euc
+        if Euo is None:
+            Euo = plant.Euo | spec.Euo
+
+        G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
+
+    (G, H) = (
+        preprocessing(
+            G_given,
+            H_given,
+            mode,
+            skip_subautomata=skip_SA,
+            prefix_closed=prefix_closed,
+        )
+        if preprocess
+        else (G_given, H_given)
+    )
+
+    if mode in [Mode.NORMAL, Mode.CONTROLLABLE_NORMAL]:
         G_obs = composition.observer(G)
 
     while True:
@@ -67,7 +93,10 @@ def supremal_sublanguage(
             H.delete_vertices(bad_states_for_controllability)
             deleted_states |= inacc_states | bad_states_for_controllability
 
-        bad_states_to_trim = unary.trim(H)
+        if prefix_closed:
+            bad_states_to_trim = unary.find_inacc(H)
+        else:
+            bad_states_to_trim = unary.trim(H)
         H.delete_vertices(bad_states_to_trim)
         deleted_states |= bad_states_to_trim
 
@@ -133,8 +162,10 @@ def check_controllability(H: DFA, G: DFA) -> StateSet:
     if H.vcount() == 0:
         return set()
 
-    G_all_states = {v["name"]: v["out"] for v in G.vs}
-    H_all_states = {v["name"]: {"index": v.index, "out": v["out"]} for v in H.vs}
+    G_all_states = {v["name"]: [tuple(t) for t in v["out"]] for v in G.vs}
+    H_all_states = {
+        v["name"]: {"index": v.index, "out": [tuple(t) for t in v["out"]]} for v in H.vs
+    }
     bad_states = set()
     Euc = G.Euc
 
@@ -197,7 +228,11 @@ def __find_bad_states_controllable(
 
 
 def preprocessing(
-    G_given: DFA, H_given: DFA, skip_subautomata=False
+    G_given: DFA,
+    H_given: DFA,
+    mode=Mode.CONTROLLABLE_NORMAL,
+    skip_subautomata=False,
+    prefix_closed=False,
 ) -> Tuple[DFA, DFA]:
     """
     Preprocess to obtain G and H such that
@@ -211,17 +246,31 @@ def preprocessing(
     else:
         _, G_tilde = composition.strict_subautomata(H_given, G_given, skip_H_tilde=True)
 
+    if mode == Mode.CONTROLLABLE:
+        H, G = composition.strict_subautomata(H_given, G_given, skip_H_tilde=False)
+        return G, H
+
     # 2. Construct G which is an SPA.
     G_obs = composition.observer(G_tilde)
-    G = composition.parallel_bfs(G_tilde, G_obs)
+    G = composition.parallel(G_tilde, G_obs)
 
     # 3. Extract H from G by deleteing all states ((x, y), z) of G where x = "dead".
+    #       Names are (x, z) if skip_subautomata is True
     H = G.copy()
-    dead_states = [v.index for v in H.vs if v["name"][0][0] == "dead"]
-    H_given_name_marked = {v["name"]: v["marked"] for v in H_given.vs}
-    H.vs["marked"] = [
-        H_given_name_marked.get(name[0][0], False) for name in H.vs["name"]
-    ]
+    if skip_subautomata:
+        dead_states = [v.index for v in H.vs if v["name"][0] == "dead"]
+    else:
+        dead_states = [v.index for v in H.vs if v["name"][0][0] == "dead"]
+    if not prefix_closed:
+        H_given_name_marked = {v["name"]: v["marked"] for v in H_given.vs}
+        if skip_subautomata:
+            H.vs["marked"] = [
+                H_given_name_marked.get(name[0], False) for name in H.vs["name"]
+            ]
+        else:
+            H.vs["marked"] = [
+                H_given_name_marked.get(name[0][0], False) for name in H.vs["name"]
+            ]
     G.vs["name"] = [str(i) for i in range(G.vcount())]
     H.vs["name"] = [str(i) for i in range(H.vcount())]
     H.delete_vertices(dead_states)

@@ -6,7 +6,7 @@ def compare_language(g1, g2):
     # https://cs.stackexchange.com/questions/81813/is-the-equality-of-two-dfas-a-decidable-problem/81815#81815
     """
     Returns a bool for language equivalence
-    L(g1) = L(g2)
+    L(g1) == L(g2)
 
     Slight modification of the product composition:
         computes product of g1, g2 with transition function
@@ -17,6 +17,8 @@ def compare_language(g1, g2):
     "dead" states are noted as accepting states in the stack exchange links above.
 
     Returns False if a "dead" state is reached in the search (the full product need not be computed)
+
+    TODO: update for marked language equivalence
     """
 
     if g1.vcount() == 0 and g2.vcount() == 0:

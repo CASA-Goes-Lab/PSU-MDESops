@@ -8,7 +8,6 @@ current product_comp to work with NFAs, rather than having this as a separate fu
 from collections import OrderedDict
 
 from DESops.automata.NFA import NFA
-from DESops.basic_operations.parallel_comp import assemble_graph, marked_bool
 
 
 def product_NFA(g_list, save_state_names=True, save_marked_states=True):
@@ -177,3 +176,56 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True):
 
     g_comp.Euo = set.intersection(*[g.Euo for g in g_list])
     return g_comp
+
+
+def assemble_graph(
+    output,
+    output_edges,
+    index,
+    output_vert_mark,
+    output_edge_labels,
+    output_vert,
+    save_state_names,
+    save_marked_states,
+    adj=dict(),
+):
+    """
+    Assemble product_pairs, edge_pairs and edge_labels into resultant graph.
+    """
+    output_edges_list = list()
+    # substitute names of edges via dict mapping
+    for vert_pair in output_edges:
+        source = output_vert[vert_pair[0]][0]
+        target = output_vert[vert_pair[1]][0]
+        output_edges_list.append((source, target))
+
+    # add items to new graph
+    output._graph.delete_vertices(i for i in range(0, output.vcount()))
+
+    if not save_marked_states:
+        output_vert_mark = None
+
+    names = [v[1] for v in output_vert.values()]
+
+    output.add_vertices(index + 1, names, output_vert_mark)
+    output.add_edges(output_edges_list, output_edge_labels)
+
+    if adj:
+        # print(adj)
+        # print(output_vert.values())
+        adj = [
+            [(output_vert[v[0]][0], v[1]) for v in adj[out_ver[2]]]
+            for out_ver in output_vert.values()
+        ]
+        output.vs["out"] = adj
+
+
+def marked_bool(g1, g2, vert_pair):
+    """
+    graphs g1,g2
+    vert_pair (v1, v2) vertices in g1,g2
+    "marked" graph attribute string for marked vertices
+    """
+    if g1.vs[int(vert_pair[0])]["marked"] and g2.vs[int(vert_pair[1])]["marked"]:
+        return True
+    return False

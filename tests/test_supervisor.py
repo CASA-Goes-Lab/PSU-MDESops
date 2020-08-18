@@ -1,3 +1,4 @@
+import DESops as d
 import DESops.supervisory_control.supervisor as sup
 import tests.util as util
 
@@ -7,7 +8,7 @@ def test_supc():
     H = util.load_model("models/sc_tests/book_ex_3_11_H.fsm")
 
     C = sup.supremal_sublanguage(G, H, mode=sup.Mode.CONTROLLABLE)
-    assert C is None
+    assert C.vcount() == 0
 
 
 def test_preprocessing_mark():
@@ -17,7 +18,7 @@ def test_preprocessing_mark():
     Euo = H_given.Euo | G_given.Euo
     G_given.Euc, G_given.Euo, H_given.Euc, H_given.Euo = Euc, Euo, Euc, Euo
 
-    G, H = sup.preprocessing(G_given, H_given)
+    G, H = sup.preprocessing(G_given, H_given, mode=sup.Mode.CONTROLLABLE_NORMAL)
     assert len(G.vs.select(marked_eq=True)["name"]) == 3
     assert len(H.vs.select(marked_eq=True)["name"]) == 2
 
@@ -48,7 +49,9 @@ def test_preprocess():
     G = util.load_model("models/textbook/fig_3-21_G.fsm")
     H = util.load_model("models/textbook/fig_3-21_H.fsm")
 
-    Gpp, Hpp = sup.preprocessing(G, H, skip_subautomata=True)
+    Gpp, Hpp = sup.preprocessing(
+        G, H, sup.Mode.CONTROLLABLE_NORMAL, skip_subautomata=True
+    )
     pass
 
 
@@ -59,3 +62,48 @@ def test_supcn_paper():
     S = sup.supremal_sublanguage(G, H, G.Euc, G.Euo)
 
     assert S is not None
+
+
+def test_scn_prefix_closed():
+    g1 = d.read_fsm("tests/models/scn_tests/cn_test1_g.fsm")
+    g1_pp = d.read_fsm("tests/models/scn_tests/cn_test1_g_pp.fsm")
+
+    h1 = d.read_fsm("tests/models/scn_tests/cn_test1_h.fsm")
+    h1_pp = d.read_fsm("tests/models/scn_tests/cn_test1_h_pp.fsm")
+
+    h_n = d.read_fsm("tests/models/scn_tests/cn_test1_h_n.fsm")
+
+    Euc = g1.Euc | h1.Euc
+    Euo = g1.Euo | h1.Euo
+    # preprocessing no longer outside of scn
+    # h1_pp_test, g1_pp_test, _ = cn_preprocessing(h1, g1, Euc, Euo)
+
+    # assert same_size(g1_pp, g1_pp_test)
+
+    h1 = d.DFA()
+    d.read_fsm("tests/models/scn_tests/cn_test1_h.fsm", h1)
+
+    h1_n_test = d.supervisor.supremal_sublanguage(g1, h1, prefix_closed=True)
+
+    assert util.same_size(h_n, h1_n_test)
+
+
+def test_supr_contr_prefix_closed_1():
+    g1 = d.read_fsm("tests/models/sc_tests/book_ex_3_11_G.fsm")
+    h1 = d.read_fsm("tests/models/sc_tests/book_ex_3_11_H.fsm")
+
+    C_test = sup.supremal_sublanguage(
+        g1, h1, mode=sup.Mode.CONTROLLABLE, prefix_closed=True, preprocess=True
+    )
+    assert C_test.vcount() == 0
+
+
+def test_supr_contr_prefix_closed_2():
+    g1 = d.read_fsm("tests/models/sc_tests/G2.fsm")
+    h1 = d.read_fsm("tests/models/sc_tests/H2.fsm")
+
+    C_test = sup.supremal_sublanguage(
+        g1, h1, mode=sup.Mode.CONTROLLABLE, prefix_closed=True, preprocess=True
+    )
+    assert C_test.vcount() == 4
+    assert C_test.ecount() == 5

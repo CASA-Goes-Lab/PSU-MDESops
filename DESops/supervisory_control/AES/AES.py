@@ -9,7 +9,7 @@ import pydash
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
-from DESops.supervisory_control import supr_contr
+from DESops.supervisory_control import supervisor
 
 
 def construct_AES(G, X_crit, compact=False):
@@ -62,8 +62,14 @@ def construct_AES(G, X_crit, compact=False):
     Atrim.delete_vertices(M)
 
     # Finding supcon based on A and Atrim
-    AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
-
+    # AES = supr_contr.supr_contr(A, Atrim, mark_states=False, preprocess=False)
+    AES = supervisor.supremal_sublanguage(
+        A,
+        Atrim,
+        mode=supervisor.Mode.CONTROLLABLE,
+        preprocess=False,
+        prefix_closed=True,
+    )
     AES.events = G.events.copy()
     return AES, A
 

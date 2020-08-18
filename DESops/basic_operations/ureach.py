@@ -3,12 +3,19 @@
 Functions related to finding unobservable
 and extended ubobservable reaches.
 """
+import warnings
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Iterable
 from typing import Set, Union
 
 
+### TODO: remove these
+# replace with UR class functionality instead?
+# Benefits being caching results, which is repetititve code
+# and readability (G.UR.from_set instead of G.ureach_from_set, etc.)
+# Extended_ureach and ureach_ignore_states might be exceptions,
+# but for the sake of readability might be better to move all these to a UR class
 def unobservable_reach(x_set, state, g, e):
     """
     x_set: set of states to be expanded upon
@@ -17,6 +24,9 @@ def unobservable_reach(x_set, state, g, e):
     "label": keyword for edge label
     e: keys associated with unobserved
     """
+    warnings.warn(
+        "Deprecated: use automata UR class instead (e.g.  g.UR.from_set(states, events, freeze_result=False)"
+    )
     x_set.add(state)
     if not e:
         return
@@ -44,6 +54,9 @@ def ureach_from_set(x_set, S, g, e):
     g: graph to search
     e: set of unobservable events to consider
     """
+    warnings.warn(
+        "Deprecated: use automata UR class instead (e.g.  g.UR.from_set(states, events, freeze_result=False)"
+    )
     x_set.update(S)
     if not e:
         return
@@ -97,6 +110,9 @@ def ureach_from_set_adj(S, g, e):
     g: graph to search
     e: set of unobservable events to consider
     """
+    warnings.warn(
+        "Deprecated: use automata UR class instead (e.g.  g.UR.from_set(states, events, freeze_result=False)"
+    )
     x_set = set()
     x_set.update(S)
     if not e:
@@ -130,6 +146,9 @@ def ureach_from_set_adjdict(S, g, e):
     g: graph to search
     e: set of unobservable events to consider
     """
+    warnings.warn(
+        "Deprecated: use automata UR class instead (e.g.  g.UR.from_set(states, events, freeze_result=False)"
+    )
     x_set = set()
     x_set.update(S)
     if not e:
@@ -160,6 +179,9 @@ def ureach_from_set_adjdict(S, g, e):
 
 
 def ureach_from_set_adjlist(S, g, e, adj_list):
+    warnings.warn(
+        "Deprecated: use automata UR class instead (e.g.  g.UR.from_set(states, events, freeze_result=False)"
+    )
     x_set = set()
     x_set.update(S)
     if not e:

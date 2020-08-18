@@ -1,5 +1,5 @@
 from DESops.automata.event import Event
-from DESops.basic_operations.observer_comp import observer_comp
+from DESops.basic_operations import composition
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.language_functions import (
     construct_H_NS,
@@ -63,7 +63,7 @@ def verify_k_step_opacity_state_observer(
     g_ns.Euo = {e[0] for e in g_ns.Euo}
     g_ns.generate_out()
 
-    state_observer = observer_comp(g_ns)
+    state_observer = composition.observer(g_ns)
 
     # opacity holds if every state containing a marked q_g also contains a marked q_h
     opaque = True
@@ -85,10 +85,10 @@ def verify_k_step_opacity_state_observer(
         else:
             path = find_path_between(state_observer, 0, violating_id)
 
-            while e_init in path:
-                path.remove(e_init)
-            while e_ext in path:
-                path.remove(e_ext)
+            while "e_init" in path:
+                path.remove("e_init")
+            while "e_ext" in path:
+                path.remove("e_ext")
 
             return_list.append(path)
 

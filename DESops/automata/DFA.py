@@ -1,10 +1,8 @@
-import sys
-
 import igraph as ig
 
+from DESops import error
 from DESops.automata.automata import _Automata
 from DESops.automata.event import Event
-from DESops.error import IncongruencyError
 
 # MUST HAVE A DEFINITION NFA TO DFA
 # CHECKS IF THERE IS NONDETERMINISM
@@ -22,12 +20,14 @@ class DFA(_Automata):
         if isinstance(init, ig.Graph) and check_DFA:
             all_out = self.check_DFA()
             if not all(all_out):
-                sys.exit(
+                raise error.DeterminismError(
                     "ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA\n State %s is nondeterministic"
                     % self._graph.vs["name"][all_out.index(False)]
                 )
             elif "prob" in self._graph.es.attributes():
-                sys.exit("ERROR:\nTRIED TO CREATE A DFA BUT IT IS A PFA")
+                raise error.InvalidAutomataTypeError(
+                    "ERROR:\nTRIED TO CREATE A DFA BUT IT IS A PFA"
+                )
         # if symbolic arguments
         self.symbolic = dict()
         if args:
@@ -47,7 +47,7 @@ class DFA(_Automata):
                     self.symbolic[key] = value[1]
                     self.symbolic["events_dict"] = value[0]
                 else:
-                    sys.exit(
+                    raise error.InvalidAttributeError(
                         "ERROR:\nTRIED TO CREATE SYMBOLIC DFA ARG ERROR\nARG KEYS ARE:bdd,transitions,uctr,uobs,states,events"
                     )
 
@@ -58,6 +58,40 @@ class DFA(_Automata):
         # CHECK IF IT IS DETERMINISTIC
         # AVOID MULTIPLE TESTS. IF IT IS A DFA COPY, DEFINED BASED ON OPERATIONS ON DFAS THEN NO NEED TO CHECK
         # ONLY CHECK IF init IS A FRESH IGRAPH INSTANCE
+
+    def copy(self):
+        """
+        Copy from self to other, as in:
+        >>> other = self.copy()
+        """
+        A = DFA(self)
+        return A
+
+    def add_edge(self, source, target, label, check_DFA=True, fill_out=True, **kwargs):
+        if check_DFA:
+            out_events = [e[1] for e in self.vs["out"][source]]
+            if label in out_events:
+                # Passive check: if adding this edge would create nondeterminism,
+                # do nothing. No exit (although possibly issue a warning?)
+                raise error.InvalidAutomataTypeError(
+                    "ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA"
+                )
+
+        self._graph.add_edge(source, target)
+        if label:
+            if isinstance(label, str):
+                # convert labels from str to Event
+                label = Event(label)
+            self.es[self.ecount() - 1].update_attributes({"label": label})
+
+        if fill_out:
+            out = self.vs[source]["out"]
+            if out is not None:
+                out.append(self.Out(target, label))
+            else:
+                out = [self.Out(target, label)]
+
+            self.vs[source].update_attributes({"out": out})
 
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         """
@@ -77,6 +111,9 @@ class DFA(_Automata):
             provide an iterable of labels to attach as
             keyword attributes. Should be parallel to pair_list (e.g., pair n of
             pair_list corresponding to label n of labels). To be stored in the "label" edge keyword attribute.
+
+        check_DFA: (defalt True) ensure that the transitions won't violate determinism. Exits with error if
+            adding these transitions would cause nondeterminism.
         Returns nothing.
         """
         # WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
@@ -90,10 +127,7 @@ class DFA(_Automata):
             # no transitions provided
             return
 
-        if isinstance(labels[0], str):
-            # convert labels from str to Event
-            labels = [Event(s) for s in labels]
-
+        labels = [Event(l) if isinstance(l, str) else l for l in labels]
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
         self.events.update(labels)
@@ -105,22 +139,25 @@ class DFA(_Automata):
                 self.es[key] = value
 
         if fill_out:
-            self.generate_out()
+            out_list = self.vs["out"]
+            for label, pair in zip(labels, pair_list):
+                out = out_list[pair[0]]
+                if out is not None:
+                    out.append(self.Out(pair[1], label))
+                else:
+                    out = [self.Out(pair[1], label)]
+                out_list[pair[0]] = out
+            self.vs["out"] = out_list
 
         if check_DFA:
-            dict_out = dict()
-            for (i, p) in enumerate(pair_list):
-                if p[0] not in dict_out.keys():
-                    dict_out[p[0]] = list()
-                    dict_out[p[0]].append(labels[i])
-                else:
-                    dict_out[p[0]].append(labels[i])
-            out_event = [
-                True if len(set(v)) == len(v) else False for v in dict_out.values()
-            ]
-            if not all(out_event):
-                # TODO: THIS NEEDS TO BE TESTED
-                sys.exit("ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA")
+            modified_sources = {t[0] for t in pair_list}
+            deterministic = True
+            for source in modified_sources:
+                out_events = {el[1] for el in self.vs["out"][source]}
+                if len(out_events) != len(self.vs["out"][source]):
+                    raise error.DeterminismError(
+                        "Tried to create a DFA but it is a NFA"
+                    )
 
     def check_DFA(self):
         out_event = lambda v: {el[1] for el in v}
