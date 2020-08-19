@@ -22,8 +22,19 @@ def test_type():
         dfa.add_edges([(0, 0)], ["a"])
     except d.error.DeterminismError:
         error_caught = True
+
+    assert error_caught
+    error_caught = False
+    try:
+        dfa.add_edges([(1, 1), (1, 1)], ["c", "c"])
+    except d.error.DeterminismError:
+        error_caught = True
+
     assert error_caught
 
+    assert dfa.ecount() == 3
+
+    dfa.add_edges([(1, 1), (1, 0)], ["c", "d"])
     # TODO: test copies and type-specific operations,
     # like parallel_comp
 

@@ -249,23 +249,8 @@ class _Automata:
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
 
-        self._graph.add_edge(source, target)
-        if label:
-            if isinstance(label, str):
-                # convert labels from str to Event
-                label = Event(label)
-            self.es[self.ecount() - 1].update_attributes({"label": label})
-        if prob:
-            self.es[self.ecount() - 1].update_attributes({"prob": prob})
-
-        if fill_out:
-            out = self.vs[source]["out"]
-            if out is not None:
-                out.append(self.Out(target, label))
-            else:
-                out = [self.Out(target, label)]
-
-            self.vs[source].update_attributes({"out": out})
+        # Abstract method
+        return
 
     def add_edges(self, pair_list, labels, probs=None, fill_out=False, **kwargs):
         """
@@ -289,54 +274,9 @@ class _Automata:
 
         Returns nothing.
         """
-        # SHOULD label be optional?
-        # e.g. 'label=None' vs just 'label' in function arguments
-        # when would an edge need to be added without a label?
-        if labels:
-            if len(pair_list) != len(labels):
-                raise IncongruencyError("Length of pairs != length of labels")
-            if isinstance(labels[0], str):
-                # convert labels from str to Event
-                labels = [Event(s) for s in labels]
-            new_labels = list(self._graph.es["label"])
-            new_labels.extend(labels)
 
-        if probs is not None:
-            if len(pair_list) != len(probs):
-                raise IncongruencyError("Length of pairs != length of probs")
-            new_probs = list(self._graph.es["prob"])
-            new_probs.extend(probs)
-
-        if not pair_list:
-            # no transitions provided
-            return
-
-        self._graph.add_edges(pair_list)
-
-        if labels:
-            self.es["label"] = new_labels
-
-        if probs is not None:
-            self.es["prob"] = new_probs
-
-        if kwargs:
-            for key, value in kwargs.items():
-                if len(pair_list) != len(value):
-                    raise IncongruencyError(
-                        "Length fo pairs != length of kwarg {}".format(key)
-                    )
-                self.es[key] = value
-
-        if fill_out:
-            out_list = self.vs["out"]
-            for label, pair in zip(labels, pair_list):
-                out = out_list[pair[0]]
-                if out is not None:
-                    out.append(self.Out(pair[1], label))
-                else:
-                    out = [self.Out(pair[1], label)]
-                out_list[pair[0]] = out
-            self.vs["out"] = out_list
+        # Abstract method
+        return
 
     def add_vertex(self, name=None, marked=None, **kwargs):
         self._graph.add_vertex()

@@ -43,10 +43,48 @@ class PFA(_Automata):
         A = PFA(self)
         return A
 
+    def add_edge(self, source, target, label, prob, fill_out=False):
+        """
+        Adds an edge to the Automata instance. Edge is created across pair, a tuple
+        of vertex indices according to the igraph Graph add_edge() method.
+        Additionlly adds label and probability information as edge attributes, if
+        they are optionally provided.
+
+        Note: much faster to add multiple edges at once using add_edges
+
+        Parameters:
+        source, target: vertex indicies. See igraph documentation of
+            the add_edge() method for more details on what is acceptable here.
+        label:  optionally provide label for this transition, to be stored
+            in the "label" edge keyword attribute.
+        prob: (default None) optionally provide probability for this transition (indicating
+            stochastic transition), to be stored in the "prob" edge keyword attribute.
+        """
+
+        self._graph.add_edge(source, target)
+        if label:
+            if not isinstance(label, Event):
+                # convert labels from str to Event
+                label = Event(label)
+            self.es[self.ecount() - 1].update_attributes({"label": label})
+
+        self.es[self.ecount() - 1].update_attributes({"prob": prob})
+
+        if fill_out:
+            out = self.vs[source]["out"]
+            if out is not None:
+                out.append(self.Out(target, label))
+            else:
+                out = [self.Out(target, label)]
+
+            self.vs[source].update_attributes({"out": out})
+
     def add_edges(self, pair_list, labels, probs, fill_out=False, **kwargs):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
+
+        labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
 

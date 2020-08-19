@@ -68,6 +68,10 @@ class DFA(_Automata):
         return A
 
     def add_edge(self, source, target, label, check_DFA=True, fill_out=True, **kwargs):
+        if not isinstance(label, Event):
+            # convert labels from str to Event
+            label = Event(label)
+
         if check_DFA:
             out_events = [e[1] for e in self.vs["out"][source]]
             if label in out_events:
@@ -78,11 +82,7 @@ class DFA(_Automata):
                 )
 
         self._graph.add_edge(source, target)
-        if label:
-            if isinstance(label, str):
-                # convert labels from str to Event
-                label = Event(label)
-            self.es[self.ecount() - 1].update_attributes({"label": label})
+        self.es[self.ecount() - 1].update_attributes({"label": label})
 
         if fill_out:
             out = self.vs[source]["out"]
@@ -127,7 +127,27 @@ class DFA(_Automata):
             # no transitions provided
             return
 
-        labels = [Event(l) if isinstance(l, str) else l for l in labels]
+        labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+
+        if check_DFA:
+            modified_sources = dict()
+            for i, pair in enumerate(pair_list):
+                source = pair[0]
+                if source not in modified_sources:
+                    modified_sources[source] = []
+                modified_sources[source].append(labels[i])
+
+            for source in modified_sources.keys():
+                out_events = set(el[1] for el in self.vs["out"][source])
+                out_events.update(modified_sources[source])
+
+                if len(out_events) != len(self.vs["out"][source]) + len(
+                    modified_sources[source]
+                ):
+                    raise error.DeterminismError(
+                        "Tried to create a DFA but it is a NFA"
+                    )
+
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
         self.events.update(labels)
@@ -148,16 +168,6 @@ class DFA(_Automata):
                     out = [self.Out(pair[1], label)]
                 out_list[pair[0]] = out
             self.vs["out"] = out_list
-
-        if check_DFA:
-            modified_sources = {t[0] for t in pair_list}
-            deterministic = True
-            for source in modified_sources:
-                out_events = {el[1] for el in self.vs["out"][source]}
-                if len(out_events) != len(self.vs["out"][source]):
-                    raise error.DeterminismError(
-                        "Tried to create a DFA but it is a NFA"
-                    )
 
     def check_DFA(self):
         out_event = lambda v: {el[1] for el in v}
