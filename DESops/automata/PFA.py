@@ -33,6 +33,8 @@ class PFA(_Automata):
 
         self.Out = namedtuple("Out", ["target", "event", "prob"])
 
+        self.type = "PFA"
+
     def copy(self):
         """
         Copy from self to other, as in:

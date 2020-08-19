@@ -451,15 +451,22 @@ class _Automata:
         Requires out attribute.
         Would there be other useful things to print here?
         """
-        print("Source | (Target, Event), ...)")
+
+        ret_str = "{} : {} V, {} E\n".format(self.type, self.vcount(), self.ecount())
+        ret_str += "Source | (Target, Event), ...)\n"
         for v in range(self.vcount()):
             if use_state_names:
                 vname = self.vs["name"][v]
 
                 out_list = [(self.vs[t[0]]["name"], t[1]) for t in self.vs["out"][v]]
-                print("{}  :  {}".format(vname, out_list))
+
+                ret_str = ret_str + "{}  :  {}\n".format(vname, out_list)
             else:
-                print("{}  :  {}".format(v, self.vs["out"][v]))
+                ret_str = ret_str + "{}  :  {}\n".format(v, self.vs["out"][v])
+        return ret_str
+
+    def __str__(self):
+        return self.summary(use_state_names=True)
 
     def compute_state_costs(self, starting_states=None, Euc=None):
         """

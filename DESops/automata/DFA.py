@@ -51,7 +51,7 @@ class DFA(_Automata):
                         "ERROR:\nTRIED TO CREATE SYMBOLIC DFA ARG ERROR\nARG KEYS ARE:bdd,transitions,uctr,uobs,states,events"
                     )
 
-        pass
+        self.type = "DFA"
 
         # ADD SOME CONSTRAINTS ON CREATING THE OBJECT
         # LIKE NOT HAVING ATTRIBUTES PROB

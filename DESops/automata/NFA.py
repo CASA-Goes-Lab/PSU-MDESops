@@ -15,6 +15,8 @@ class NFA(automata._Automata):
             self.vs["init"] = False
             self.vs[0]["init"] = True
 
+        self.type = "NFA"
+
     def copy(self):
         """
         Copy from self to other, as in:
