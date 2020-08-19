@@ -3,7 +3,6 @@ Functions related to automaton languages
 """
 import warnings
 
-from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 from DESops.basic_operations import composition
@@ -151,7 +150,7 @@ def H_star(events):
 
     events: set of (e, S/NS) pairs
     """
-    h = DFA()
+    h = NFA()
     h.add_vertex()
     h.vs["init"] = [True]
     h.vs["marked"] = [True]
@@ -170,7 +169,7 @@ def H_epoch_all(events, Euo):
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
     """
-    h = DFA()
+    h = NFA()
     h.add_vertices(2)
     h.vs["init"] = [True, False]
     h.vs["marked"] = [False, True]

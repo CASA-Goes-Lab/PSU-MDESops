@@ -27,6 +27,10 @@ def write_pickle(filename, automata, compress=False):
 
     automata._graph["type"] = automata.type
 
+    # clear out attirubute since it can't be pickled
+    # it is regenerated when reading pickle
+    automata._graph.vs["out"] = None
+
     if not compress:
         automata._graph.write_pickle(filename)
     else:
@@ -61,3 +65,6 @@ def read_pickle(filename, automata, compress=False):
 
     automata.vs = automata._graph.vs
     automata.es = automata._graph.es
+
+    # regenerate out attribute
+    automata.generate_out()
