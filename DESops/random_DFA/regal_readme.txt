@@ -1,5 +1,4 @@
 regal is a c++ program, requires local compilation
-    (Or I can try compiling a version of windows/mac/linux)
 
 
 For now, need to install regal and its prerequisites, and then compile the executable used to generate random DFA's.

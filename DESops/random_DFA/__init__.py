@@ -2,6 +2,7 @@ import os
 import random
 import subprocess
 
+from DESops import error
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.random_DFA.helpers import *
@@ -11,7 +12,7 @@ this_dir = os.path.dirname(__file__)
 rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
 
 if not os.path.isfile(rand_DFA_dir):
-    raise ValueError(
+    raise error.DependencyNotInstalledError(
         "Could not find random_DFA executable. See instructions to install in DESops/random_DFA/regal_readme.txt"
     )
 
