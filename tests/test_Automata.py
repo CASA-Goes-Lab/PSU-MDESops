@@ -11,49 +11,21 @@ def test_type():
     assert isinstance(nfa1, d.NFA)
     assert isinstance(nfa2, d.NFA)
 
+    # test error checking for NFA/DFA:
+    dfa = d.DFA()
+    dfa.add_vertices(2)
+    dfa.add_edges([(0, 0), (0, 1)], ["a", "b"])
+    error_caught = False
+
+    dfa.add_edges([(1, 0)], ["a"])
+    try:
+        dfa.add_edges([(0, 0)], ["a"])
+    except d.error.DeterminismError:
+        error_caught = True
+    assert error_caught
+
     # TODO: test copies and type-specific operations,
     # like parallel_comp
-
-
-"""
-def test_parallel_comp():
-    g1, g2, g3 = util.load_basic_models()
-
-    g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-    assert all(
-        v["marked"] if v["name"] == ["mark1", "mark2", "init3"] else True for v in g.vs
-    )
-    assert all(
-        v["marked"] if v["name"] == ["mark1", "mark2", "state3"] else True for v in g.vs
-    )
-
-    g_int = d.parallel_comp([g1, g2, g3], save_marked_states=True, save_names_as="int")
-    assert all(v["marked"] if v["name"] == [1, 1, 0] else True for v in g.vs)
-    assert all(v["marked"] if v["name"] == [0, 1, 2] else True for v in g.vs)
-
-
-def test_parallel_comp_same():
-    g1, g2 = util.load_basic_models(1, 2)
-    g3 = g2.copy()
-
-    g = d.parallel_comp([g1, g2, g3], save_marked_states=True)
-    # FIXME: This assertion fails
-    assert {ms["name"] for ms in g.vs.select(marked_eq=True)} == {
-        (("mark1", "mark2"), "mark2"),
-        (("mark1", "state2"), "state2"),
-    }
-
-
-def test_product_comp():
-    g2, g3 = util.load_basic_models(2, 3)
-
-    g = d.product_comp([g2, g3], save_marked_states=True)
-    assert g.vs.find(marked=True)["name"] == ["state2", "state3"]
-
-    g_ind = d.product_comp([g2, g3], save_marked_states=True, save_names_as="int")
-
-    assert g_ind.vs.find(marked=True)["name"] == [2, 2]
-"""
 
 
 def test_observer():
