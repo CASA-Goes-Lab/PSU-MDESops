@@ -1,4 +1,4 @@
-from DESops.automata.automata import _Automata
+from DESops.automata.NFA import NFA
 
 
 def complement(g, inplace=False, g_comp=None, events=None, dead_state_name=None):
@@ -18,7 +18,7 @@ def complement(g, inplace=False, g_comp=None, events=None, dead_state_name=None)
 
     g_comp_defined = True
     if g_comp is None:
-        g_comp = _Automata()
+        g_comp = NFA()
         g_comp_defined = False
 
     construct_complement(g, g_comp, events, dead_state_name)
@@ -37,7 +37,7 @@ def construct_complement(g, g_comp=None, events=None, dead_state_name=None):
     """
     g_comp_defined = True
     if g_comp is None:
-        g_comp = _Automata()
+        g_comp = NFA()
         g_comp_defined = False
 
     if not events:
