@@ -31,7 +31,7 @@ class PFA(_Automata):
         else:
             self._graph.es["prob"] = []
 
-        self.Out = namedtuple("Out", ["target", "event", "prob"])
+        self.Out = namedtuple("Out", ["target", "label", "prob"])
 
         self.type = "PFA"
 

@@ -198,7 +198,7 @@ class _Automata:
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
 
-        self.Out = namedtuple("Out", ["target", "event"])
+        self.Out = namedtuple("Out", ["target", "label"])
 
     def delete_vertices(self, vs):
         """
