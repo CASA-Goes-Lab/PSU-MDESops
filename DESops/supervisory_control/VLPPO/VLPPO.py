@@ -375,8 +375,8 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
         new_edge_pairs.append((source, target))
         out[source].append(P.Out(target, l))
 
-    P.vs["out"] = out
     P.add_edges(new_edge_pairs, edge_labels, fill_out=False)
+    P.vs["out"] = out
 
 
 def invalid_state(G, H, Euc, H_state):
