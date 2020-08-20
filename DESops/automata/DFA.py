@@ -70,8 +70,8 @@ class DFA(_Automata):
     def add_edge(self, source, target, label, check_DFA=True, fill_out=True, **kwargs):
         if not isinstance(label, Event):
             # convert labels from str to Event
-            label = Event(label)
-
+            # label = Event(label)
+            pass
         if check_DFA:
             out_events = [e[1] for e in self.vs["out"][source]]
             if label in out_events:
@@ -129,7 +129,7 @@ class DFA(_Automata):
             # no transitions provided
             return
 
-        labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+        # labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
 
         if check_DFA:
             modified_sources = dict()

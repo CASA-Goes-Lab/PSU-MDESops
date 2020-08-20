@@ -72,7 +72,8 @@ class NFA(automata._Automata):
         if label:
             if not isinstance(label, Event):
                 # convert labels from str to Event
-                label = Event(label)
+                # label = Event(label)
+                pass
             self.es[self.ecount() - 1].update_attributes({"label": label})
         if prob:
             self.es[self.ecount() - 1].update_attributes({"prob": prob})
@@ -115,7 +116,7 @@ class NFA(automata._Automata):
             if len(pair_list) != len(labels):
                 raise IncongruencyError("Length of pairs != length of labels")
 
-            labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+            # labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
 
             new_labels = list(self._graph.es["label"])
             new_labels.extend(labels)
