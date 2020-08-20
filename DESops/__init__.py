@@ -1,7 +1,7 @@
 # flake8: noqa
 # from DESops.automata.automata import _Automata
 
-from DESops import SDA
+from DESops import SDA, error
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
