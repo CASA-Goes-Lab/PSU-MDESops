@@ -77,8 +77,10 @@ class DFA(_Automata):
             if label in out_events:
                 # Passive check: if adding this edge would create nondeterminism,
                 # do nothing. No exit (although possibly issue a warning?)
-                raise error.InvalidAutomataTypeError(
-                    "ERROR:\nTRIED TO CREATE A DFA BUT IT IS A NFA"
+                raise error.DeterminismError(
+                    "Tried to create a DFA but it is a NFA. Repeated at source {}".format(
+                        source
+                    )
                 )
 
         self._graph.add_edge(source, target)
@@ -145,7 +147,9 @@ class DFA(_Automata):
                     modified_sources[source]
                 ):
                     raise error.DeterminismError(
-                        "Tried to create a DFA but it is a NFA"
+                        "Tried to create a DFA but it is a NFA. Repeated at source {}".format(
+                            source
+                        )
                     )
 
         new_labels = list(self._graph.es["label"])
