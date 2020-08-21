@@ -6,10 +6,11 @@ from DESops.automata.event import Event
 
 def plot(
     automata,
-    layout_i="kk",
-    bbox_i=(0, 0, 1000, 1000),
-    margin_i=100,
+    layout="kk",
+    bbox=(0, 0, 1000, 1000),
+    margin=100,
     flatten_state_name=False,
+    inline=False,
 ):
     """
     Plot the Graph attribute of the Automata.
@@ -41,7 +42,7 @@ def plot(
     P.vs["label"] = P.vs["name"]
     P.vs["label_size"] = [30]
     P.vs["size"] = [70]
-    ig.plot(P, bbox=bbox_i, layout=layout_i, margin=margin_i)
+    return ig.plot(P, bbox=bbox, layout=layout, margin=margin, inline=inline)
 
 
 def str2(label):
