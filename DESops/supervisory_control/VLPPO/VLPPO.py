@@ -20,7 +20,7 @@ def offline_VLPPO(
     Euc=None,
     Euo=None,
     event_ordering=None,
-    construct_SA=False,
+    preprocess=True,
     supervisor=None,
 ):
     """
@@ -28,9 +28,9 @@ def offline_VLPPO(
         the given system and specification Automata.
 
     Parameters:
-    system (G): Automata representing the plant/system.
-    specification (H): Either an automata representing the specification or a set of critical states
-        (names of states in G)
+    plant: Automata representing the plant/system.
+    spec: Either an automata representing the specification or a set of critical states
+        (names of states in plant)
 
     event_ordering: optionally provide a priority list of controllable events;
         if not provided, an arbitrary ordering will be used (the set of controllable
@@ -77,39 +77,21 @@ def offline_VLPPO(
             )
         )
 
-    # Accumlate sets of states for final control policy in sets_of_states var
-    sets_of_states = set()
-
     if isinstance(spec, DFA):
         # TODO: test this, I think most of the time X_crit is specified so this hasn't been used a lot
         # Need to construct H_o as refined product of GxH to determine infinite-cost states
-        if construct_SA:
-            G_pp = DFA()
-            H_pp = DFA()
-            strict_subautomata(spec, plant, H_pp, G_pp)
-            # To keep names simple, reassign H, G to their pre-processed counterparts.
-            spec_pp = H_pp
-            plant_pp = G_pp
 
-        else:
-            spec_pp = spec
-            plant_pp = plant
+        _, plant_pp = composition.strict_subautomata(spec, plant, skip_H_tilde=True)
 
-        # probably don't need this:
-        H_o = composition.parallel(plant_pp, spec_pp)
-        X_crit = [
-            v["name"][0]
-            for v in H_o.vs
-            if invalid_state(plant_pp, H_o, Euc, v["name"][1])
-        ]
-        comp_G_names = {i[0] for i in H_o.vs["name"]}
+        X_crit = set(i.index for i in plant_pp.vs if i["name"][0] == "dead")
 
-        # end up with critical states:
-        X_crit.extend([i.index for i in plant_pp.vs if i.index not in comp_G_names])
     else:
         # X_crit provided; specification is plant w/o X_crit states
         plant_pp = plant
-        X_crit = [i.index for i in plant.vs if i["name"] in spec]
+        X_crit = set(i.index for i in plant_pp.vs if i["name"] in spec)
+
+    # Accumlate sets of states for final control policy in sets_of_states var
+    sets_of_states = set()
 
     bad_states = plant_pp.compute_state_costs(X_crit, Euc)
     # State is illegal if in bad_states
@@ -133,7 +115,7 @@ def offline_VLPPO(
 
     # Compute next set of present states PS, and control policy ACT
     ACT, PS = VLPPO(
-        plant,
+        plant_pp,
         Euc,
         Euo,
         frozenset(0 for _ in range(1)),
@@ -154,7 +136,7 @@ def offline_VLPPO(
     if PS:
         sets_of_states.add(init_set)
         search_VLPPO(
-            plant,
+            plant_pp,
             Euc,
             Euo,
             PS,
@@ -222,8 +204,6 @@ def search_VLPPO(
     event_ordering: priority ordering of controllable events, with largest priorty going
         to the first element.
     """
-    tttt = G.vs["out"]
-    ttttt = G.vs["name"]
     Q = list()
     Q.append((ACT, PS))
     while Q:
@@ -377,13 +357,6 @@ def convert_to_graph(P, sets_of_states, edge_pairs, edge_labels, Euc, Euo, init_
 
     P.add_edges(new_edge_pairs, edge_labels, fill_out=False)
     P.vs["out"] = out
-
-
-def invalid_state(G, H, Euc, H_state):
-    H_uc_count = len([_ for v in H.vs[H_state]["out"] if v[1] in Euc])
-    G_assoc_state = H.vs["name"][H_state][0]
-    G_uc_count = len([_ for v in G.vs[G_assoc_state]["out"] if v[1] in Euc])
-    return H_uc_count < G_uc_count
 
 
 def ext_ur_from_set(set_of_states, g, ACT, Euo, eur_dict):
