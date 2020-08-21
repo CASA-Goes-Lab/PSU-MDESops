@@ -9,13 +9,33 @@ import pydash
 
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
+from DESops.basic_operations import composition
 from DESops.supervisory_control import supervisor
 
 
-def construct_AES(G, X_crit, compact=False):
+def construct_AES(G, spec, compact=False, preprocess=True):
     # arena: igraph graph object where resulting arena will be stored, assumed to be empty
     # G: input system automata
-    # X_crit: safety specification based on name of the states
+    # spec: Either an automata representing the specification or a set of critical states
+    #   (names of states in G)
+
+    if not isinstance(spec, DFA) and not isinstance(spec, set):
+        raise TypeError(
+            "Expected spec to be type DFA or set (of names of critical states). Got {}".format(
+                type(spec)
+            )
+        )
+    if isinstance(spec, DFA):
+        # TODO: test this, I think most of the time X_crit is specified so this hasn't been used a lot
+        # Need to construct H_o as refined product of GxH to determine infinite-cost states
+
+        _, G = composition.strict_subautomata(spec, G, skip_H_tilde=True)
+        X_crit_vs = set(i.index for i in G.vs if i["name"][0] == "dead")
+        G.vs["name"] = [str(i) for i in range(G.vcount())]
+
+    else:
+        # X_crit provided; specification is plant w/o X_crit states
+        X_crit_vs = set(i.index for i in G.vs if i["name"] in spec)
 
     # Computing the control decision set
     process_G(G)
@@ -25,12 +45,8 @@ def construct_AES(G, X_crit, compact=False):
         Gamma = find_compact_control_decisions_sets(G.events, G.Euc, G.Euo)
     else:
         Gamma = find_control_decisions_sets(G.events, G.Euc)
-    # getting vertices of X_crit
-    X_crit_vs = G.vs.select(name_in=X_crit)
-    X_crit_vs = [v.index for v in X_crit_vs]
 
     # get infinite cost states:
-    # TODO: clean this up; could be slightly faster
     X_crit_vs = G.compute_state_costs(starting_states=X_crit_vs)
 
     # Q1 and Q2 states map name to vertex index for BTS and set of vertex indices of G; init state is 0
@@ -71,6 +87,10 @@ def construct_AES(G, X_crit, compact=False):
         prefix_closed=True,
     )
     AES.events = G.events.copy()
+
+    # clear "out_dict" attr
+    del G.vs["out_dict"]
+
     return AES, A
 
 
