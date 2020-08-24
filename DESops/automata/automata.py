@@ -212,9 +212,11 @@ class _Automata:
         than multiple calls with smaller inputs.
         """
         if 0 in vs:
-            import warnings
-
-            warnings.warn("Initial state deleted.")
+            # Jack: this is expected behavior, does it need a warning?
+            # i.e. deleting vert 0 should always result in deleting everything.
+            #
+            # import warnings
+            # warnings.warn("Initial state deleted.")
             self._graph.delete_vertices([v.index for v in self.vs])
 
         else:
@@ -282,6 +284,10 @@ class _Automata:
         self._graph.add_vertex()
         if name:
             self.vs[self.vcount() - 1].update_attributes({"name": name})
+        else:
+            self.vs[self.vcount() - 1].update_attributes(
+                {"name": str(self.vcount() - 1)}
+            )
         if marked is not None:
             self.vs[self.vcount() - 1].update_attributes({"marked": marked})
 
@@ -311,6 +317,10 @@ class _Automata:
             if number_vertices != len(marked):
                 raise IncongruencyError("Number vertices to be added != number names")
             new_marked = self._graph.vs["marked"] + marked
+        else:
+            new_marked = self._graph.vs["marked"] + [
+                False for _ in range(number_vertices)
+            ]
 
         # list comprehension used instead of [[]] * number_vertices because latter gives list of references to the same object
         new_out = self._graph.vs["out"] + [[] for _ in range(number_vertices)]
@@ -332,8 +342,6 @@ class _Automata:
         self._graph.vs["out"] = new_out
 
         if marked is not None:
-            # if not marked, igraph will fill with whatever the last value in marked vertices was
-            # TODO: change this behavior? default false/true?
             self._graph.vs["marked"] = new_marked
 
         for key, val in extra_attrs.items():
@@ -391,18 +399,25 @@ class _Automata:
         Requires out attribute.
         Would there be other useful things to print here?
         """
-
         ret_str = "{} : {} V, {} E\n".format(self.type, self.vcount(), self.ecount())
         ret_str += "Source | (Target, Event), ...)\n"
+
+        use_markings = any(self.vs["marked"])
+
         for v in range(self.vcount()):
             if use_state_names:
                 vname = self.vs["name"][v]
 
                 out_list = [(self.vs[t[0]]["name"], t[1]) for t in self.vs["out"][v]]
-
-                ret_str = ret_str + "{}  :  {}\n".format(vname, out_list)
             else:
-                ret_str = ret_str + "{}  :  {}\n".format(v, self.vs["out"][v])
+                vname = v
+                out_list = self.vs["out"][v]
+
+            if use_markings:
+                markings_str = "*" if self.vs["marked"][v] else " "
+                ret_str = ret_str + "{}{}:  {}\n".format(vname, markings_str, out_list)
+            else:
+                ret_str = ret_str + "{}  :  {}\n".format(vname, out_list)
         return ret_str
 
     def __str__(self):
