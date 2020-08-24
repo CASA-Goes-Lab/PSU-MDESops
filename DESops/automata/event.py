@@ -2,7 +2,7 @@ import sys
 
 
 class Event:
-    def __init__(self, label, kwargs=None):
+    def __init__(self, label, **kwargs):
         self.attr = set()
         # if not isinstance(label, str):
         #    sys.exit("ERROR:\nEvent label must be str")

@@ -12,8 +12,7 @@ def inserted_event(event):
         label = event.label
     else:
         label = event
-    d = {"inserted": True, "deleted": False}
-    return Event(label, d)
+    return Event(label, inserted=True, deleted=False)
 
 
 def deleted_event(event):
@@ -27,8 +26,7 @@ def deleted_event(event):
         label = event.label
     else:
         label = event
-    d = {"inserted": False, "deleted": True}
-    return Event(label, d)
+    return Event(label, inserted=True, deleted=False)
 
 
 def unedited_event(event):
