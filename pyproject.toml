@@ -6,15 +6,11 @@ authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gm
 packages = [
     { include = "DESops" },
 ]
-build = "build.py"
-include = [
-    "DESops/random_DFA/regal-1.08.0929/**/*"
-]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 python-igraph = "^0.8.0"
-pycairo = "^1.19.1"
+pycairo = {version="^1.19.1", optional=true}
 pydash = "^4.7.6"
 requests = "^2.24.0"
 dd = "^0.5.5"
@@ -37,3 +33,6 @@ line-length = 88
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
+
+[tool.poetry.extras]
+caching=["pycairo"]

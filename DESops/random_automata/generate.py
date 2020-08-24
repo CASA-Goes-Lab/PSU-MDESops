@@ -11,7 +11,7 @@ from DESops.automata.NFA import NFA
 from DESops.file.igraph_pickle import write_pickle
 
 
-def generate_automaton(
+def generate(
     num_states,
     num_events,
     min_trans_per_state=0,

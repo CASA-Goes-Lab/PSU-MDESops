@@ -1,0 +1,62 @@
+
+/*-------------------------------------------------------*/
+	 _____    _____   _____       ___   _
+	|  _  \  | ____| /  ___|     /   | | |
+	| |_| |  | |__   | |        / /| | | |
+	|  _  /  |  __|  | |  _    / / | | | |
+	| | \ \  | |___  | |_| |  / /  | | | |___
+	|_|  \_\ |_____| \_____/ /_/   |_| |_____|
+
+
+	Random and Exhaustive Generator for Automata
+			Library
+
+                        v 1.08.0501
+
+/*-------------------------------------------------------*/
+
+
+DOC:
+
+http://igm.univ-mlv.fr/~jdavid01/REGAL/index.html
+
+
+INSTALL:
+
+if you are root:
+
+make install
+
+if you're not:
+
+make install-user
+
+
+UNINSTALL:
+
+make uninstall
+
+make install-user if you installed REGAL as a simple user
+
+
+USE REGAL LIBRARY:
+
+
+use option -lregal with g++
+
+
+HINT:
+
+If you're already using a package for automata, build a frontage between REGAL's AbstractAutomaton and
+your representation.
+In any other case, you're free to use REGAL's implementation : DFAAutomaton, or to define your own.
+
+If you want to take a look at an example of how to use REGAL:
+make test
+source: src/Test.ccp
+description: generate randomly 10 complete automata and then 10
+automata (without the completeness constraint) of a given size.
+
+
+
+/*-------------------------------------------------------*/
