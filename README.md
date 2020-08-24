@@ -10,35 +10,37 @@ The package can be installed using [poetry](https://python-poetry.org/) and runn
 
     $ poetry install
 
-(TODO: add to PyPi?)
+pycairo is used by `python-igraph` for plotting Graphs. `DESops` uses these methods for plotting as well.
+To use the `DESops.plot` submodule, install with pycairo as well:
 
-When using Windows: (I think) pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
+    $ poetry install -E pycairo
+
+Note that this may only work on Linux (Mac untested but should work there as well).
+
+When using Windows, pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
 
 Then install using `pip install <path_to>\pycairo‑1.19.1‑cp38‑cp38‑<win_version>.whl`
-
 
 
 ### Manual Installation:
 
 Download/clone the DESops repository. The following dependencies must also be installed:
 
-* `python-igraph` must be installed. The installation process may be slightly more involved than simply using `pip`. Their [website](https://igraph.org/python/) has more information on how to install.
-* `cairo` is required by `igraph` to handle plotting & visualization. Only required if using `plot()` method.
+* `python-igraph` (at least version `0.8.0`) must be installed. The installation process may be slightly more involved than simply using `pip`. Their [website](https://igraph.org/python/) has more information on how to install.
+* `pycairo` is required by `igraph` to handle plotting & visualization. Only required if using `plot()` method.
 
-* `pydash`, `requests`, `dd`, `tqdm`
-(There may be a lot more than just this. Do we need a manual installation section, or just use poetry/pypi?)
+* `pydash` (version `4.7.6`), `requests` (version `2.24.0`), `dd` (version `0.5.5`), `tqdm` (version `4.46.1`), `colorama` (version `0.4.3`)
 
 
 #### Random Automata Generation
 
 Generating random automata using the `random_DFA` submodule requires the REGAL software package, with source code bundled in this repository.
 The following is only relevant for using the `random_DFA` submodule.
-(Might need some copyright notice here? I'm not sure) Some of the files in the library have been modified, so an external installation of the software won't work.
+(link to DESops/random_DFA/regal-1.08.0929/COPYING) Some of the files in the library have been modified, so an external installation of the software won't work.
 
 There are detailed instructions for compiling the source code in the file `random_DFA/regal-1.08.0929/regal_readme.txt`
-There are several required libraries, and a g++ compiler is needed to build the REGAL executables. The script `build.py` will also work for compiling REGAL
-after the preqrequisite libraries are installed (build.py doesn't install those, right?)
+There are several required libraries, and a c++ compiler is needed to build the REGAL executables. The script `build.py` (only for Linux systems with a g++ compiler) automates the build process after the preqrequisite libraries are installed.
 
 
 ## Automata Classes
