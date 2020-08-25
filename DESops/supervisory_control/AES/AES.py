@@ -13,7 +13,7 @@ from DESops.basic_operations import composition
 from DESops.supervisory_control import supervisor
 
 
-def construct_AES(G, spec, compact=False, preprocess=True):
+def construct_AES(G, spec, compact=True, preprocess=True):
     # arena: igraph graph object where resulting arena will be stored, assumed to be empty
     # G: input system automata
     # spec: Either an automata representing the specification or a set of critical states
