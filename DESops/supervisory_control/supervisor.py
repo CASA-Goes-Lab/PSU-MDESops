@@ -9,6 +9,8 @@ from tqdm import tqdm
 from DESops.automata import DFA
 from DESops.automata.event import Event
 from DESops.basic_operations import composition, unary
+from DESops.supervisory_control.AES.AES import construct_AES, extract_AES_super
+from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
 
 
 class Mode(Enum):
@@ -21,8 +23,6 @@ EventSet = Set[Event]
 StateSet = Set[int]
 
 SHOW_PROGRESS = False
-# MAX_PROCESSES = cpu_count()
-MAX_PROCESSES = 1
 
 
 def supremal_sublanguage(
@@ -33,11 +33,15 @@ def supremal_sublanguage(
     mode: Mode = Mode.CONTROLLABLE_NORMAL,
     preprocess: bool = True,
     prefix_closed: bool = False,
+    num_cores: int = None,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
     """
-
+    if not num_cores:
+        MAX_PROCESSES = 1
+    else:
+        MAX_PROCESSES = max(cpu_count(), num_cores)
     G_given = plant.copy()
 
     if not isinstance(spec, DFA) and not isinstance(spec, set):
@@ -79,17 +83,18 @@ def supremal_sublanguage(
 
     if mode in [Mode.NORMAL, Mode.CONTROLLABLE_NORMAL]:
         G_obs = composition.observer(G)
+        G_obs_names = G_obs.vs["name"]
 
     while True:
         deleted_states = set()
         if mode in [Mode.NORMAL, Mode.CONTROLLABLE_NORMAL]:
-            bad_states_for_normality = check_normality(H, G_obs)
+            bad_states_for_normality = check_normality(H, G_obs_names, MAX_PROCESSES)
             H.delete_vertices(bad_states_for_normality)
             deleted_states |= bad_states_for_normality
         if mode in [Mode.CONTROLLABLE, Mode.CONTROLLABLE_NORMAL]:
             inacc_states = unary.find_inacc(H)
             H.delete_vertices(inacc_states)
-            bad_states_for_controllability = check_controllability(H, G)
+            bad_states_for_controllability = check_controllability(H, G, MAX_PROCESSES)
             H.delete_vertices(bad_states_for_controllability)
             deleted_states |= inacc_states | bad_states_for_controllability
 
@@ -103,10 +108,11 @@ def supremal_sublanguage(
         if H.vcount() == 0 or 0 in deleted_states:
             return DFA()
         elif len(deleted_states) == 0:
+            H.vs["name"] = [str(i) for i in H.vs["name"]]
             return H
 
 
-def check_normality(H: DFA, G_obs: DFA) -> StateSet:
+def check_normality(H: DFA, G_obs_names: DFA, MAX_PROCESSES: int) -> StateSet:
     """
     Check the normality condition of states H and returns states violating the condition.
     """
@@ -115,7 +121,6 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
 
     bad_states = set()
     all_H_names = H.vs["name"]
-    all_Gobs_names = G_obs.vs["name"]
     with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
         futures = []
         chk = H.vcount() // MAX_PROCESSES
@@ -124,7 +129,7 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
         ):
             futures.append(
                 executor.submit(
-                    __find_bad_states_normal, H_indecies, all_Gobs_names, all_H_names, i
+                    __find_bad_states_normal, H_indecies, G_obs_names, all_H_names, i
                 )
             )
 
@@ -135,7 +140,7 @@ def check_normality(H: DFA, G_obs: DFA) -> StateSet:
 
 
 def __find_bad_states_normal(
-    H_indecies: List[int], Gobs_names: List[str], H_names: List[str], barpos: int
+    H_indecies: List[int], G_obs_names: List[str], H_names: List[str], barpos: int
 ) -> StateSet:
     bad_states = set()
     for index in tqdm(
@@ -147,15 +152,15 @@ def __find_bad_states_normal(
         mininterval=0.5,
     ):
         y = H_names[index]
-        for q in Gobs_names:
-            if y in q and not set(q) <= set(H_names):
+        for q in G_obs_names:
+            if y in q and not q <= set(H_names):
                 bad_states.add(index)
                 break
 
     return bad_states
 
 
-def check_controllability(H: DFA, G: DFA) -> StateSet:
+def check_controllability(H: DFA, G: DFA, MAX_PROCESSES: int) -> StateSet:
     """
     Check the controllability condition of states in H and returns states violating the condition.
     """
@@ -271,8 +276,8 @@ def preprocessing(
             H.vs["marked"] = [
                 H_given_name_marked.get(name[0][0], False) for name in H.vs["name"]
             ]
-    G.vs["name"] = [str(i) for i in range(G.vcount())]
-    H.vs["name"] = [str(i) for i in range(H.vcount())]
+    G.vs["name"] = [i for i in range(G.vcount())]
+    H.vs["name"] = [i for i in range(H.vcount())]
     H.delete_vertices(dead_states)
 
     return G, H
