@@ -5,20 +5,6 @@ import subprocess
 from DESops import error
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
-from DESops.random_DFA.helpers import *
-
-# On import, ensure random_DFA file exists:
-this_dir = os.path.dirname(__file__)
-rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
-
-if not os.path.isfile(rand_DFA_dir):
-    raise error.DependencyNotInstalledError(
-        "Could not find random_DFA executable. See instructions to install in DESops/random_DFA/regal_readme.txt"
-    )
-
-# output = subprocess.run(["./random_DFA", str(num_vert), str(num_events), str(num_automata)], capture_output=True, text=True)
-
-# print(output.stdout)
 
 
 def generate_regal(
@@ -64,6 +50,14 @@ def generate_regal(
         Default 0
 
     """
+
+    this_dir = os.path.dirname(__file__)
+    rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
+
+    if not os.path.isfile(rand_DFA_dir):
+        raise error.DependencyNotInstalledError(
+            "Could not find random_DFA executable. See instructions to install in DESops/random_DFA/regal_readme.txt"
+        )
 
     if not max_parallel_edges:
         max_parallel_edges = num_events
