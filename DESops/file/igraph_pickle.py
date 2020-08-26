@@ -52,8 +52,8 @@ def read_pickle(filename, automata, compress=False):
         automata._graph = ig.Graph.Read_Picklez(filename)
     # Retrieve any other releveant info from graph object e.g. obs/contr sets.
     automata.events = automata._graph["events"]
-    automata.Euc = automata._graph["Euc"]
-    automata.Euo = automata._graph["Euo"]
+    automata.Euc.update(automata._graph["Euc"])
+    automata.Euo.update(automata._graph["Euo"])
 
     if "Ea" in automata._graph.attributes():
         automata.Ea = automata._graph["Ea"]

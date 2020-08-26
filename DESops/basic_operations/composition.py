@@ -93,8 +93,8 @@ def product(*automata: DFA) -> DFA:
             [e["pair"] for e in G_out_edges], [e["label"] for e in G_out_edges]
         )
         G_out.events = G1.events | G2.events
-        G_out.Euc = G1.Euc | G2.Euc
-        G_out.Euo = G1.Euo | G2.Euo
+        G_out.Euc.update(G1.Euc | G2.Euc)
+        G_out.Euo.update(G1.Euo | G2.Euo)
 
         G1 = G_out
 
@@ -180,11 +180,13 @@ def product_linear(*automata: Automata_t) -> Automata_t:
         G1 = G_out
 
     del G_out.vs["indexes"]
-    G_out.Euc = pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set()) & set(
-        G_out.es["label"]
+    G_out.Euc.update(
+        pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set())
+        & set(G_out.es["label"])
     )
-    G_out.Euo = pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set()) & set(
-        G_out.es["label"]
+    G_out.Euo.update(
+        pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set())
+        & set(G_out.es["label"])
     )
 
     return G_out
@@ -312,8 +314,8 @@ def parallel(*automata: DFA) -> DFA:
             [e["pair"] for e in G_out_edges], [e["label"] for e in G_out_edges]
         )
         G_out.events = G1.events | G2.events
-        G_out.Euc = G1.Euc | G2.Euc
-        G_out.Euo = G1.Euo | G2.Euo
+        G_out.Euc.update(G1.Euc | G2.Euc)
+        G_out.Euo.update(G1.Euo | G2.Euo)
 
         G1 = G_out
 
@@ -401,11 +403,13 @@ def parallel_linear(*automata: Automata_t) -> Automata_t:
         G1 = G_out
 
     del G_out.vs["indexes"]
-    G_out.Euc = pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set()) & set(
-        G_out.es["label"]
+    G_out.Euc.update(
+        pydash.reduce_(automata, lambda euc, g: euc | g.Euc, set())
+        & set(G_out.es["label"])
     )
-    G_out.Euo = pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set()) & set(
-        G_out.es["label"]
+    G_out.Euo.update(
+        pydash.reduce_(automata, lambda euo, g: euo | g.Euo, set())
+        & set(G_out.es["label"])
     )
 
     return G_out
@@ -557,8 +561,8 @@ def observer(G: Automata_t) -> Automata_t:
     # constructing DFA: igraph and events sets
     observer.add_vertices(index, vertice_names)
     observer.events = G.events - G.Euo
-    observer.Euc = G.Euc - G.Euo
-    observer.Euo = set()
+    observer.Euc.update(G.Euc - G.Euo)
+    observer.Euo.clear()
     observer.vs["marked"] = marked_list
     observer.add_edges(transition_list, transition_label, fill_out=False)
     observer.vs["out"] = outgoing_list
@@ -612,8 +616,8 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     G_states = {x["name"]: x["marked"] for x in G.vs}
     G_tilde.vs["marked"] = [G_states[state["name"][1]] for state in G_tilde.vs]
 
-    G_tilde.Euc = G.Euc
-    G_tilde.Euo = G.Euo
+    G_tilde.Euc.update(G.Euc)
+    G_tilde.Euo.update(G.Euo)
     G_tilde.events = G.events
 
     if skip_H_tilde:
@@ -626,8 +630,8 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     H_states = {x["name"]: x["marked"] for x in H.vs}
     H_tilde.vs["marked"] = [H_states[state["name"][0]] for state in H_tilde.vs]
 
-    H_tilde.Euc = H.Euc
-    H_tilde.Euo = H.Euo
+    H_tilde.Euc.update(H.Euc)
+    H_tilde.Euo.update(H.Euo)
     H_tilde.events = H.events
 
     return H_tilde, G_tilde

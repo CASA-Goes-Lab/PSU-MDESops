@@ -205,8 +205,8 @@ def construct_AIDA(G, R, Ea, X_crit):
 
     A.events = A.events.union(ins)
     A.events = A.events.union(dele)
-    A.Euc = G.events.copy() - Ea
-    A.Euc = A.Euc.union(Gamma)
+    A.Euc.update(G.events.copy() - Ea)
+    A.Euc.update(A.Euc.union(Gamma))
     A.generate_out()
     return A
 

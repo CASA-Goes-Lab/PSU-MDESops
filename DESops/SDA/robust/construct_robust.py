@@ -87,8 +87,8 @@ def construct_robust_arena(G, X_crit, Ea, A=None):
     # Euo for meta SCP = Ea_e, i.e. set of modified events
     Euo_new = Ea_e.copy()
 
-    arena.Euc = Euc_new
-    arena.Euo = Euo_new
+    arena.Euc.update(Euc_new)
+    arena.Euo.update(Euo_new)
     return arena
 
 

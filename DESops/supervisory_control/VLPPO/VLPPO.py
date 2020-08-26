@@ -167,9 +167,8 @@ def offline_VLPPO(
 
     # Otherwise, P will be an empty graph?
 
-    # EVENT TODO: switch this to more general event updating
-    supervisor.Euc = Euc.copy()
-    supervisor.Euo = Euo.copy()
+    supervisor.Euc.update(Euc)
+    supervisor.Euo.update(Euo)
 
     supervisor.events = plant.events.copy()
 

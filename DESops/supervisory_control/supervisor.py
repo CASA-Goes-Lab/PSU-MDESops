@@ -58,8 +58,8 @@ def supremal_sublanguage(
         H_given.delete_vertices([i.index for i in H_given.vs if i["name"] == "dead"])
         skip_SA = True
 
-        G_given.Euc = Euc if Euc is not None else plant.Euc
-        G_given.Euo = Euo if Euo is not None else plant.Euo
+        G_given.Euc.update(Euc if Euc is not None else plant.Euc)
+        G_given.Euo.update(Euo if Euo is not None else plant.Euo)
     else:
         skip_SA = False
         H_given = spec.copy()

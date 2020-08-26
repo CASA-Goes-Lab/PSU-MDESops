@@ -202,8 +202,8 @@ def read_fsm(fsm_filename, g=None, type_aut=""):
         trans_list_int_names.append((source, target))
 
     if g_defined:
-        g.Euc = events_unctr.copy()
-        g.Euo = events_unobs.copy()
+        g.Euc.update(events_unctr)
+        g.Euo.update(events_unobs)
         g.events = events.copy()
 
     if type_aut == "DFA" or isinstance(g, DFA):

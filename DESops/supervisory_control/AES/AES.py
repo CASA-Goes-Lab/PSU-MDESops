@@ -218,7 +218,7 @@ def construct_T(
 
     A.events = G.events.copy()
     A.events = A.events.union(Ev[0])
-    A.Euc = G.events.copy()
+    A.Euc.update(G.events)
     A.Euc.add(Ev[1])
     A.generate_out()
 

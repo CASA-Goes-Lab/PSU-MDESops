@@ -177,8 +177,8 @@ def first_k_observer(G, k) -> DFA:
     # constructing DFA: igraph and events sets
     observer.add_vertices(index, vertice_names)
     observer.events = G.events - G.Euo
-    observer.Euc = G.Euc - G.Euo
-    observer.Euo = set()
+    observer.Euc.update(G.Euc - G.Euo)
+    observer.Euo.clear()
     if observer.ecount():
         observer.vs["out"] = outgoing_list
     observer.vs["marked"] = marked_list
