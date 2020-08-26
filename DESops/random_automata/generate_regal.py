@@ -8,13 +8,12 @@ from DESops.automata.event import Event
 
 
 def generate_regal(
-    num_vert,
+    num_states,
     num_events,
-    num_Euc,
-    num_Euo,
+    num_uo=0,
+    num_uc=0,
     g=None,
     timeout=None,
-    overlap=True,
     max_out_degree=None,
     max_parallel_edges=None,
     remove_self_loop_prob=0,
@@ -34,9 +33,6 @@ def generate_regal(
     timeout: time in seconds after start of generation to stop process (taking too long).
         Default None, so won't stop.
 
-    overlap: whether Euc and Euo should have intersection (True) or be disjoint (False)
-        Default true
-        NOT YET IMPLEMENTED
 
     max_out_degree: limit number of transitions defined from a single state.
         Default None is no limit (i.e. num_events)
@@ -67,7 +63,7 @@ def generate_regal(
     if not max_out_degree:
         max_out_degree = num_events
 
-    check_valid_params(num_events, num_Euc, num_Euo, max_out_degree, max_parallel_edges)
+    check_valid_params(num_events, num_uc, num_uo, max_out_degree, max_parallel_edges)
 
     this_dir = os.path.dirname(__file__)
     rand_DFA_dir = this_dir + "/regal-1.08.0929/random_DFA"
@@ -134,11 +130,11 @@ def generate_regal(
 
         out_attr.append(out_attr_row)
 
-    g.Euc = set(random.sample(events, num_Euc))
-    g.Euo = set(random.sample(events, num_Euo))
+    g.Euc.update(set(random.sample(events, num_uc)))
+    g.Euo.update(set(random.sample(events, num_uo)))
 
     g.events = set(events)
-    g.add_edges(transitions, labels, check_DFA=False)
+    g.add_edges(transitions, labels, check_DFA=False, fill_out=False)
     g.vs["out"] = out_attr
 
     if g_not_defined:
