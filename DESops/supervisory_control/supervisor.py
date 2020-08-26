@@ -54,7 +54,8 @@ def supremal_sublanguage(
     if isinstance(spec, set):
         G_given = plant.copy()
         G_given.vs["name"] = ["dead" if v in spec else v for v in plant.vs["name"]]
-        H_given = None
+        H_given = G_given.copy()
+        H_given.delete_vertices([i.index for i in H_given.vs if i["name"] == "dead"])
         skip_SA = True
 
         G_given.Euc = Euc if Euc is not None else plant.Euc
@@ -267,6 +268,7 @@ def preprocessing(
     else:
         dead_states = [v.index for v in H.vs if v["name"][0][0] == "dead"]
     if not prefix_closed:
+
         H_given_name_marked = {v["name"]: v["marked"] for v in H_given.vs}
         if skip_subautomata:
             H.vs["marked"] = [
