@@ -267,11 +267,11 @@ class randomAutomata:
 
         # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uo)
-        self.g.Euo = {self.event_names[i] for i in ids}
+        self.g.Euo.update(self.event_names[i] for i in ids)
 
         # Events are of type Event and are stored as sets
         ids = sample(range(self.num_events), self.num_uc)
-        self.g.Euc = {self.event_names[i] for i in ids}
+        self.g.Euc.update(self.event_names[i] for i in ids)
 
         # Events are of type Event and are stored as sets
         self.g.events = set(self.event_names)
