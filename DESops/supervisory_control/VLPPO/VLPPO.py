@@ -11,6 +11,7 @@ import copy
 import igraph as ig
 
 from DESops.automata.DFA import DFA
+from DESops.automata.event import Event
 from DESops.basic_operations import composition
 
 
@@ -76,6 +77,17 @@ def offline_VLPPO(
                 type(spec)
             )
         )
+
+    if event_ordering and not isinstance(event_ordering, list):
+        try:
+            event_ordering = [i for i in event_ordering]
+        except:
+            raise ValueError("Could not convert event_ordering to list().")
+    if event_ordering:
+        event_ordering = [
+            i if isinstance(i, Event) else Event(i) for i in event_ordering
+        ]
+        event_ordering = [i for i in event_ordering if i not in Euc]
 
     if isinstance(spec, DFA):
         # TODO: test this, I think most of the time X_crit is specified so this hasn't been used a lot
