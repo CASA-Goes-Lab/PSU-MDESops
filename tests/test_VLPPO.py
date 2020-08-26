@@ -11,6 +11,6 @@ def test_VLPPO_basic():
 
     X_crit = set()
     X_crit.add("5")
-    C = d.offline_VLPPO(G, X_crit)
+    C = d.supervisor.offline_VLPPO(G, X_crit)
     assert C.vcount() == 7
     assert C.ecount() == 18
