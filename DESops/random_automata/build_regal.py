@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 rootdir = Path(__file__).parent.resolve()
-desops_regal = rootdir.joinpath("DESops", "random_automata", "regal-1.08.0929")
+desops_regal = rootdir.joinpath("regal-1.08.0929")
 regaldir = desops_regal.joinpath("regal")
 
 
