@@ -28,10 +28,10 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
     if G.vcount() == 0:
-        warnings.warn("Ac(): the given automaton is empty.")
+        # warnings.warn("Ac(): the given automaton is empty.")
         return set()
     if 0 in states_removed:
-        warnings.warn("Initial state deleted.")
+        # warnings.warn("Initial state deleted.")
         return set([v.index for v in G.vs])
 
     good_states = {0}
@@ -57,7 +57,7 @@ def find_incoacc(G: _Automata, states_removed=set()) -> set:
     states_removed: vertices in G that have been marked for deletion, but not yet been deleted.
     """
     if G.vcount() == 0:
-        warnings.warn("CoAc(): the given automaton is empty.")
+        # warnings.warn("CoAc(): the given automaton is empty.")
         return set()
 
     good_states = {
