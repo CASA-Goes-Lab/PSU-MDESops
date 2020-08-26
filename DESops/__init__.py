@@ -16,8 +16,6 @@ from DESops.file.igraph_pickle import *
 from DESops.file.igraph_to_fsm import write_fsm
 from DESops.opacity import opacity
 from DESops.supervisory_control import supervisor
-from DESops.supervisory_control.AES.AES import construct_AES, extract_AES_super
-from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
