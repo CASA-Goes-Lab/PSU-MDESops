@@ -71,8 +71,6 @@ Euo: set object of unobservable events.
 
 X_crit: set of critical states, stored as names of states (not indices)
 
-dead_state: convenience for operations that create a 'dead' state, usually empty.
-
 type: what 'type' of Automata
 es: binding to igraph Graph 'edgeSeq' object, e.g.:
     >>> edgeSeqObj = automata_A.es()
@@ -85,14 +83,13 @@ vs: binding to igraph Graph 'vertSeq' object, e.g.:
 
 _graph: underlying igraph Graph instance storing the Automata structure. Contains the
     original EdgeSeq and VertSeq objects bound by the es() and vs() functions here.
-    Ideally, usage of the the functions here will never require directly modifying
-    this member. However, implementing new methods might require interfacing
-    with igraph classes and functions.
+    Usage of DESops should never require directly modifying the igraph Graph member.
+    However, implementing new methods might require interfacing with igraph classes
+    and functions.
 
 
     Further details of how the igraph library is used are included in the implementation
-    files. For example, the observer() method in the Automata class merely does a call to
-    the function 'observer_comp' in '..basic.observer_comp'
+    files.
 
 
 """
@@ -368,15 +365,6 @@ class _Automata:
         >>> A.X_crit.add('critical_state_name')
         """
         self.X_crit.add(X_crit_state)
-
-    def set_dead_state(self, dead_state_index):
-        """
-        Alternative to setting the dead state, e.g.
-        >>> A.set_dead_state(7)
-        is equivalent to:
-        >>> A.dead_state = 7
-        """
-        self.dead_state = dead_state_index
 
     def generate_out(self):
         """
