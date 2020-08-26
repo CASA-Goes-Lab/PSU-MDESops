@@ -112,8 +112,6 @@ def offline_VLPPO(
 
     if 0 in bad_states:
         # return empty DFA
-
-        # do a warning here?
         empty_sol = DFA()
         return empty_sol
 
