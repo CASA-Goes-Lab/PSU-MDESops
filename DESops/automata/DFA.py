@@ -84,6 +84,8 @@ class DFA(_Automata):
                     )
                 )
 
+        self.events.add(label)
+
         self._graph.add_edge(source, target)
         self.es[self.ecount() - 1].update_attributes({"label": label})
 

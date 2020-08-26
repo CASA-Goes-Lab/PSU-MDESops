@@ -60,14 +60,13 @@ class PFA(_Automata):
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
-
         self._graph.add_edge(source, target)
-        if label:
-            if not isinstance(label, Event):
-                # convert labels from str to Event
-                label = Event(label)
-            self.es[self.ecount() - 1].update_attributes({"label": label})
+        if not isinstance(label, Event):
+            # convert labels from str to Event
+            label = Event(label)
+        self.es[self.ecount() - 1].update_attributes({"label": label})
 
+        self.events.add(label)
         self.es[self.ecount() - 1].update_attributes({"prob": prob})
 
         if fill_out:
@@ -83,8 +82,8 @@ class PFA(_Automata):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
-
         labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+        self.events.update(labels)
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
 

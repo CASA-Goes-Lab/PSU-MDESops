@@ -69,12 +69,12 @@ class NFA(automata._Automata):
         """
 
         self._graph.add_edge(source, target)
-        if label:
-            if not isinstance(label, Event):
-                # convert labels from str to Event
-                # label = Event(label)
-                pass
-            self.es[self.ecount() - 1].update_attributes({"label": label})
+        if not isinstance(label, Event):
+            # convert labels from str to Event
+            # label = Event(label)
+            pass
+        self.es[self.ecount() - 1].update_attributes({"label": label})
+        self.events.add(label)
         if prob:
             self.es[self.ecount() - 1].update_attributes({"prob": prob})
 
@@ -109,17 +109,15 @@ class NFA(automata._Automata):
 
         Returns nothing.
         """
-        # SHOULD label be optional?
-        # e.g. 'label=None' vs just 'label' in function arguments
-        # when would an edge need to be added without a label?
-        if labels:
-            if len(pair_list) != len(labels):
-                raise IncongruencyError("Length of pairs != length of labels")
+        if len(pair_list) != len(labels):
+            raise IncongruencyError("Length of pairs != length of labels")
 
-            # labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+        # labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
 
-            new_labels = list(self._graph.es["label"])
-            new_labels.extend(labels)
+        new_labels = list(self._graph.es["label"])
+        new_labels.extend(labels)
+
+        self.events.update(labels)
 
         if probs is not None:
             if len(pair_list) != len(probs):

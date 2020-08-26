@@ -341,8 +341,7 @@ class _Automata:
         self._graph.vs["name"] = new_names
         self._graph.vs["out"] = new_out
 
-        if marked is not None:
-            self._graph.vs["marked"] = new_marked
+        self._graph.vs["marked"] = new_marked
 
         for key, val in extra_attrs.items():
             self._graph.vs[key] = val
@@ -514,13 +513,11 @@ class UnobservableReach:
     def __init__(self, Euo, vs):
         self.use_cache = True
         self.set_of_states_dict = dict()
-        self.single_state_dict = dict()
         self.Euo = Euo
         self.vs = vs
 
     def empty_cache(self):
         self.set_of_states_dict = dict()
-        self.single_state_dict = dict()
 
     def from_set(self, set_of_states, events=None, freeze_result=False):
         """
@@ -551,6 +548,9 @@ class UnobservableReach:
             if key in self.set_of_states_dict:
                 result = self.set_of_states_dict[key]
                 if freeze_result and not isinstance(result, frozenset):
+                    # What was stored wasn't frozen,
+                    # but this call used freeze_result=True
+                    # Update the stored result to be frozen now:
                     result = frozenset(result)
                     self.set_of_states_dict[key] = result
 
@@ -612,3 +612,10 @@ class UnobservableReach:
                 if t[1] in events and t[0] not in x_set
             }
         return x_set
+
+    def __str__(self):
+        return "UR Class\n   Sets of states: {}\n   Len(keys): {}\n   Len(items): {}".format(
+            len(self.set_of_states_dict),
+            sum((len(k[0]) + len(k[1])) for k in self.set_of_states_dict.keys()),
+            sum(len(i) for i in self.set_of_states_dict.items()),
+        )
