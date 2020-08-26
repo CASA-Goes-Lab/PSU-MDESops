@@ -1,4 +1,5 @@
 import DESops.automata as automata
+from DESops import error
 
 
 def compare_language(g1, g2):
@@ -18,8 +19,15 @@ def compare_language(g1, g2):
 
     Returns False if a "dead" state is reached in the search (the full product need not be computed)
 
-    TODO: update for marked language equivalence
+    TODO: - update for marked language equivalence
+          - NFA equivalence
     """
+    if not g1.type == "DFA" or not g2.type == "DFA":
+        raise error.InvalidAutomataTypeError(
+            "Expected inputs g1, g2 to be type DFA, got: {}, {}".format(
+                g1.type, g2.type
+            )
+        )
 
     if g1.vcount() == 0 and g2.vcount() == 0:
         # both empty, so equivalent
