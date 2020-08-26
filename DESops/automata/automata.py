@@ -514,7 +514,7 @@ class UnobservableReach:
     """
 
     def __init__(self, Euo, vs):
-        self.use_cache = True
+        self.USE_CACHE = True
         self.set_of_states_dict = dict()
         self.Euo = Euo
         self.vs = vs
@@ -541,7 +541,7 @@ class UnobservableReach:
         if events is None:
             events = self.Euo
 
-        if not self.use_cache:
+        if not self.USE_CACHE:
             if freeze_result:
                 return frozenset(self.__ureach_from_set(set_of_states, events))
             return self.__ureach_from_set(set_of_states, events)
