@@ -399,6 +399,9 @@ class _Automata:
         Would there be other useful things to print here?
         """
         ret_str = "{} : {} V, {} E\n".format(self.type, self.vcount(), self.ecount())
+        ret_str += "Events: {}\nEuc: {}\nEuo: {}\n".format(
+            self.events, self.Euc, self.Euo
+        )
         ret_str += "Source | (Target, Event), ...)\n"
 
         use_markings = any(self.vs["marked"])
