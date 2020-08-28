@@ -7,6 +7,7 @@ from DESops.SDA.event_extensions import (
     inserted_event,
     is_deleted,
     is_inserted,
+    is_unedited,
     unedited_event,
 )
 
@@ -18,6 +19,8 @@ def construct_robust_arena(G, X_crit, Ea, A=None):
     # A: optionally provide attack specification
 
     arena = DFA()
+    if G.vcount() == 0:
+        return arena
 
     E = G.events
     Euo = G.Euo
@@ -76,7 +79,7 @@ def construct_robust_arena(G, X_crit, Ea, A=None):
     arena.add_edges(h1_pairs, h1_labels)
     arena.add_edges(h2_pairs, h2_labels)
 
-    arena.generate_out()
+    arena.events.update(G.events)
 
     arena.X_crit = {Qname[i] for i in X_crit_vert}
 
@@ -547,7 +550,8 @@ def select_robust_supervisor(arena):
     #   >>> robust_sup = d.SDA.select_supervisor(arena_sup)
 
     S = DFA()
-
+    if arena.vcount() == 0:
+        return S
     Q = list()
     trans = list()
     trans_labels = list()
@@ -584,6 +588,9 @@ def select_robust_supervisor(arena):
 
     S.add_vertices(len(vertex_dict))
     S.add_edges(trans, trans_labels)
+    S.events.update(
+        e for e in arena.events if not isinstance(e.label, frozenset) and is_unedited(e)
+    )
     S.generate_out()
     return S
 

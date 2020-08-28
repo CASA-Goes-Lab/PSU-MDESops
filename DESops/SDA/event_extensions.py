@@ -56,3 +56,16 @@ def is_inserted(event):
     if "inserted" in event.__dict__:
         return event.inserted
     return False
+
+
+def is_unedited(event):
+    """
+    Returns whether an event has no true-valued attributes.
+    This implies it is neither inserted nor deleted
+
+    """
+    if len(event.__dict__) == 1:
+        # Most events will only have the label attribute
+        return True
+
+    return not is_deleted(event) and not is_inserted(event)
