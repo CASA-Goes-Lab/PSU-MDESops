@@ -50,7 +50,7 @@ class NFA(automata._Automata):
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}
 
-    def add_edge(self, source, target, label, prob=None, fill_out=False):
+    def add_edge(self, source, target, label, prob=None, fill_out=True):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
         of vertex indices according to the igraph Graph add_edge() method.
@@ -87,7 +87,7 @@ class NFA(automata._Automata):
 
             self.vs[source].update_attributes({"out": out})
 
-    def add_edges(self, pair_list, labels, probs=None, fill_out=False, **kwargs):
+    def add_edges(self, pair_list, labels, probs=None, fill_out=True, **kwargs):
         """
         Add an iterable of edges to the Automata instance.
         Calls the igraph Graph add_edges() method on the underlying graph

@@ -380,7 +380,7 @@ class _Automata:
             for row in adj_list
         ]
 
-    def summary(self, use_state_names=False):
+    def summary(self, use_state_names=False, lines=None):
         """
         Convenience method: prints a cleaned up adjacency list
         Requires out attribute.
@@ -395,6 +395,8 @@ class _Automata:
         use_markings = any(self.vs["marked"])
 
         for v in range(self.vcount()):
+            if lines and v == lines:
+                break
             if use_state_names:
                 vname = self.vs["name"][v]
 
@@ -507,7 +509,7 @@ class UnobservableReach:
         self.Euo = Euo
         self.vs = vs
 
-    def empty_cache(self):
+    def empty(self):
         self.set_of_states_dict = dict()
 
     def from_set(self, set_of_states, events=None, freeze_result=False):

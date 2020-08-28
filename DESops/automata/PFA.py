@@ -43,7 +43,7 @@ class PFA(_Automata):
         A = PFA(self)
         return A
 
-    def add_edge(self, source, target, label, prob, fill_out=False):
+    def add_edge(self, source, target, label, prob, fill_out=True):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
         of vertex indices according to the igraph Graph add_edge() method.
@@ -78,7 +78,7 @@ class PFA(_Automata):
 
             self.vs[source].update_attributes({"out": out})
 
-    def add_edges(self, pair_list, labels, probs, fill_out=False, **kwargs):
+    def add_edges(self, pair_list, labels, probs, fill_out=True, **kwargs):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
