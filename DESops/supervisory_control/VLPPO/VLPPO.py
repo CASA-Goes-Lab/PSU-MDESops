@@ -52,7 +52,8 @@ def offline_VLPPO(
     are found as the unions of the Euc & Euo sets in the plant & specification.
     """
 
-    # TODO: Find uncontrollable events (if not provided)
+    if plant.vcount() == 0:
+        return DFA()
     if not Euo:
         if isinstance(spec, DFA):
             Euo = plant.Euo.union(spec.Euo)
@@ -90,9 +91,6 @@ def offline_VLPPO(
         event_ordering = [i for i in event_ordering if i not in Euc]
 
     if isinstance(spec, DFA):
-        # TODO: test this, I think most of the time X_crit is specified so this hasn't been used a lot
-        # Need to construct H_o as refined product of GxH to determine infinite-cost states
-
         _, plant_pp = composition.strict_subautomata(spec, plant, skip_H_tilde=True)
 
         X_crit = set(i.index for i in plant_pp.vs if i["name"][0] == "dead")

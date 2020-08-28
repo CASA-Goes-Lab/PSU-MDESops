@@ -39,6 +39,9 @@ def product(*automata: DFA) -> DFA:
             "Product composition needs more than one automaton."
         )
 
+    if any(g.vcount() == 0 for g in automata):
+        return DFA()
+
     G1 = automata[0]
     input_list = automata[1:]
 
@@ -484,9 +487,6 @@ def observer(G: Automata_t) -> Automata_t:
     """
     observer = DFA()
     if not G.vcount() or G is None:
-        warnings.warn(
-            "Observer operation with an empty automaton-return an empty automaton"
-        )
         return observer
 
     vertice_names = list()  # list of vertex names for igraph construction

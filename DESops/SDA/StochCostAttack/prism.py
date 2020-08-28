@@ -28,6 +28,8 @@ def MDP_max_reachability(A, X_crit, prism_path, save_model=False, prop_string=No
     prop_string: (default None)
 
     """
+    if A.vcount() == 0:
+        return (dict(), None, DFA())
     file_names = convert_MDP_to_prism(
         A, X_crit, prism_path, save_model=False, prop_string=None
     )
@@ -45,6 +47,8 @@ def MDP_max_reachability(A, X_crit, prism_path, save_model=False, prop_string=No
 
 
 def MDP_multi_min_cost(A, X_crit, prism_path, save_model=False, prop_string=None):
+    if A.vcount() == 0:
+        return (None, None)
     file_names = convert_MDP_to_prism(
         A, X_crit, prism_path, save_model=False, prop_string=None
     )
@@ -173,9 +177,7 @@ def prism(prism_file, props_file, prism_path, adversary=True):
         prop4 = "-exportadv"
         prop5 = str(Path().absolute()) + "/" + "adversary.tra"
         commands = ["./prism", prism_file, prop1, prop2, prop3, prop4, prop5]
-        import os
 
-        print(os.listdir(prism_path))
         output, _ = subprocess.Popen(
             commands, cwd=prism_path, stdout=subprocess.PIPE, encoding="utf-8"
         ).communicate()
@@ -185,8 +187,7 @@ def prism(prism_file, props_file, prism_path, adversary=True):
             commands, cwd=prism_path, stdout=subprocess.PIPE, encoding="utf-8"
         ).communicate()
     # Process the output: prism output is a lot of text, with the relevant values
-    # coming after "Results" keyword. The values are organized as a
-    print(output)
+    # coming after "Results" keyword.
     split_on_results = output.split("Results")
     assert len(split_on_results) > 1, "Could not find results from PRISM"
     second_half = split_on_results[1]
@@ -264,7 +265,6 @@ def extract_adversary(A):
     with open("adversary.tra", "r") as f:
         for line in f:
             line = line[0 : len(line) - 1].split(" ")
-            print(line)
 
             if len(line) > 2:
                 source = line[0]

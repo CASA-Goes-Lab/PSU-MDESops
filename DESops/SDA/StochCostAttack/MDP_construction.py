@@ -19,6 +19,8 @@ def construct_MDP(G, H, Ea, X_crit):
     A = ig.Graph(directed=True)
     Q = list()
     X = set()
+    if G.vcount() == 0 or H.vcount() == 0:
+        return A
     init_state = (0, 0, "eps")
     Q.append(init_state)
     X.add(init_state)
