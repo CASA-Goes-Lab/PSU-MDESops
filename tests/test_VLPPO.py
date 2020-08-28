@@ -14,3 +14,14 @@ def test_VLPPO_basic():
     C = d.supervisor.offline_VLPPO(G, X_crit)
     assert C.vcount() == 7
     assert C.ecount() == 18
+
+
+def test_VLPPO_empty():
+    g = d.DFA()
+    C = d.supervisor.offline_VLPPO(g, g)
+    assert C.vcount() == 0
+
+    g.add_vertices(3)
+    h = d.DFA()
+    C2 = d.supervisor.offline_VLPPO(g, h)
+    assert C2.vcount() == 0

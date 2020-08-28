@@ -107,3 +107,30 @@ def test_supr_contr_prefix_closed_2():
     )
     assert C_test.vcount() == 4
     assert C_test.ecount() == 5
+
+
+def test_supervisor_empty():
+    g = d.DFA()
+    S = sup.supremal_sublanguage(g, g, mode=sup.Mode.CONTROLLABLE)
+    assert S.vcount() == 0
+    S = sup.supremal_sublanguage(
+        g, g, mode=sup.Mode.CONTROLLABLE, prefix_closed=True, preprocess=True
+    )
+    assert S.vcount() == 0
+
+    S1 = sup.supremal_sublanguage(g, g, mode=sup.Mode.CONTROLLABLE_NORMAL)
+    assert S1.vcount() == 0
+    S2 = sup.supremal_sublanguage(
+        g, g, mode=sup.Mode.CONTROLLABLE_NORMAL, prefix_closed=True, preprocess=False
+    )
+    assert S2.vcount() == 0
+
+    g.add_vertices(3)
+    h = d.DFA()
+
+    S3 = sup.supremal_sublanguage(g, h, mode=sup.Mode.CONTROLLABLE_NORMAL)
+    assert S3.vcount() == 0
+    S4 = sup.supremal_sublanguage(
+        g, h, mode=sup.Mode.CONTROLLABLE_NORMAL, prefix_closed=True, preprocess=True
+    )
+    assert S4.vcount() == 0

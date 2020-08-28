@@ -54,6 +54,12 @@ def test_observer():
             assert names == frozenset(("2", "5"))
 
 
+def test_observer_empty():
+    G = d.DFA()
+    obs = d.composition.observer(G)
+    assert obs.vcount() == 0
+
+
 def test_trim():
     G = util.load_model("models/textbook/exmp_2-16_modified.fsm")
     inacc_states = {G.vs[i]["name"] for i in d.unary.find_inacc(G)}
@@ -64,6 +70,12 @@ def test_trim():
 
     bad_states = {G.vs[i]["name"] for i in d.unary.trim(G)}
     assert bad_states == inacc_states | incoacc_states
+
+
+def test_trim_empty():
+    G = d.DFA()
+    inacc_states = d.unary.find_inacc(G)
+    assert inacc_states == set()
 
 
 def test_reverse():

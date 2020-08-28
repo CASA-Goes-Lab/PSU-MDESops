@@ -28,6 +28,21 @@ def test_robust_2x2():
     assert sup.vcount() == 2 or sup.vcount() == 3
 
 
+def test_robust_empty():
+    G = d.DFA()
+    arena = d.SDA.construct_robust_arena(G, set(), set())
+    assert arena.vcount() == 0
+
+    arena_spec = d.supervisor.offline_VLPPO(arena, set())
+    assert arena_spec.vcount() == 0
+
+    arena_sup = d.composition.parallel(arena, arena_spec)
+    assert arena_sup.vcount() == 0
+
+    sup = d.SDA.select_robust_supervisor(arena_sup)
+    assert sup.vcount() == 0
+
+
 def _test_robust_4x3_2r():
     G = load_model("models/SDA_tests/robust/ex_4_by_3_2r_g.fsm")
     X_crit = set()

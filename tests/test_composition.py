@@ -31,3 +31,24 @@ def test_parallel():
 #     G2 = util.load_model("models/textbook/fig_2-21_G2.fsm")
 
 #     H_tilde, G_tilde = d.composition.strict_subautomata(G1, G2)
+
+
+def test_empty():
+    g1 = d.DFA()
+    g2 = d.DFA()
+    g3 = util.load_model("models/textbook/fig_2-1.fsm")
+
+    c1 = d.composition.product(g1, g2)
+    assert c1.vcount() == 0
+
+    c2 = d.composition.parallel(g1, g2)
+    assert c2.vcount() == 0
+
+    c3 = d.composition.product(g1, g2)
+    assert c3.vcount() == 0
+
+    c4 = d.composition.product(g3, g3, g3, g1, g3)
+    assert c4.vcount() == 0
+
+    c5 = d.composition.product(g3, g3, g3, g1, g3)
+    assert c5.vcount() == 0
