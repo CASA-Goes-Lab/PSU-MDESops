@@ -93,7 +93,10 @@ def product(*automata: DFA) -> DFA:
             [v["marked"] for v in G_out_vertices],
         )
         G_out.add_edges(
-            [e["pair"] for e in G_out_edges], [e["label"] for e in G_out_edges]
+            [e["pair"] for e in G_out_edges],
+            [e["label"] for e in G_out_edges],
+            check_DFA=False,
+            fill_out=True,
         )
         G_out.events = G1.events | G2.events
         G_out.Euc.update(G1.Euc | G2.Euc)
@@ -314,7 +317,10 @@ def parallel(*automata: DFA) -> DFA:
             [v["marked"] for v in G_out_vertices],
         )
         G_out.add_edges(
-            [e["pair"] for e in G_out_edges], [e["label"] for e in G_out_edges]
+            [e["pair"] for e in G_out_edges],
+            [e["label"] for e in G_out_edges],
+            check_DFA=False,
+            fill_out=True,
         )
         G_out.events = G1.events | G2.events
         G_out.Euc.update(G1.Euc | G2.Euc)
@@ -564,7 +570,9 @@ def observer(G: Automata_t) -> Automata_t:
     observer.Euc.update(G.Euc - G.Euo)
     observer.Euo.clear()
     observer.vs["marked"] = marked_list
-    observer.add_edges(transition_list, transition_label, fill_out=False)
+    observer.add_edges(
+        transition_list, transition_label, check_DFA=False, fill_out=False
+    )
     observer.vs["out"] = outgoing_list
     return observer
 
@@ -595,6 +603,7 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     A.add_edges(
         [edge["pair"] for edge in edges_to_dead],
         [edge["label"] for edge in edges_to_dead],
+        check_DFA=False,
         fill_out=True,
     )
 
@@ -604,6 +613,7 @@ def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA
     A.add_edges(
         [edge["pair"] for edge in dead_selfloops],
         [edge["label"] for edge in dead_selfloops],
+        check_DFA=False,
         fill_out=True,
     )
 
