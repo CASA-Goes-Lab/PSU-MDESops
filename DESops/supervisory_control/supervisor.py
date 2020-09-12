@@ -154,7 +154,7 @@ def __find_bad_states_normal(
     ):
         y = H_names[index]
         for q in G_obs_names:
-            if y in q and not q <= set(H_names):
+            if y in q and not set(q) <= set(H_names):
                 bad_states.add(index)
                 break
 
