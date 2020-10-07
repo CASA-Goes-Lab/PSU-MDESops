@@ -574,6 +574,9 @@ def observer(G: Automata_t) -> Automata_t:
         transition_list, transition_label, check_DFA=False, fill_out=False
     )
     observer.vs["out"] = outgoing_list
+
+    observer.vs["name"] = [tuple(v) for v in observer.vs["name"]]
+
     return observer
 
 
