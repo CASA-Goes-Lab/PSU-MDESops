@@ -5,8 +5,6 @@ Contains helpful functions used in various operations.
 """
 from collections.abc import Iterable
 
-from dd.autoref import BDD
-
 
 def find_obs_contr(S, Euc=set(), Euo=set(), E=set()):
     """

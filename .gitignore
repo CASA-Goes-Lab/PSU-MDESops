@@ -147,3 +147,7 @@ Examples/
 
 #pycharm stuff
 .idea/
+
+# Edisyn tmp directory
+tests/edisyn/
+edisyn/

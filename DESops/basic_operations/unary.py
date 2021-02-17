@@ -30,11 +30,17 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
     if G.vcount() == 0:
         # warnings.warn("Ac(): the given automaton is empty.")
         return set()
-    if 0 in states_removed:
+
+    init_set = None
+    try:
+        init_set = set([v.index for v in G.vs.select(init=True)])
+    except KeyError:
+        init_set = {0}
+    if init_set.issubset(states_removed):
         # warnings.warn("Initial state deleted.")
         return set([v.index for v in G.vs])
 
-    good_states = {0}
+    good_states = init_set
     stack = deque(good_states)
     while len(stack) > 0:
         index = stack.popleft()
