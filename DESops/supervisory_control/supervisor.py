@@ -1,6 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from enum import Enum, auto
 from os import cpu_count
+from math import ceil
 from typing import List, Optional, Set, Tuple
 
 import pydash
@@ -33,15 +34,12 @@ def supremal_sublanguage(
     mode: Mode = Mode.CONTROLLABLE_NORMAL,
     preprocess: bool = True,
     prefix_closed: bool = False,
-    num_cores: int = None,
+    num_cores: int = 1,
 ) -> DFA:
     """
     Computes the supremal controllable and/or normal supervisor for the given plant and specification Automata.
     """
-    if not num_cores:
-        MAX_PROCESSES = 1
-    else:
-        MAX_PROCESSES = max(cpu_count(), num_cores)
+    max_processses = min(cpu_count(), num_cores)
     G_given = plant.copy()
 
     if not isinstance(spec, DFA) and not isinstance(spec, set):
@@ -89,13 +87,13 @@ def supremal_sublanguage(
     while True:
         deleted_states = set()
         if mode in [Mode.NORMAL, Mode.CONTROLLABLE_NORMAL]:
-            bad_states_for_normality = check_normality(H, G_obs_names, MAX_PROCESSES)
+            bad_states_for_normality = check_normality(H, G_obs_names, max_processses)
             H.delete_vertices(bad_states_for_normality)
             deleted_states |= bad_states_for_normality
         if mode in [Mode.CONTROLLABLE, Mode.CONTROLLABLE_NORMAL]:
             inacc_states = unary.find_inacc(H)
             H.delete_vertices(inacc_states)
-            bad_states_for_controllability = check_controllability(H, G, MAX_PROCESSES)
+            bad_states_for_controllability = check_controllability(H, G, max_processses)
             H.delete_vertices(bad_states_for_controllability)
             deleted_states |= inacc_states | bad_states_for_controllability
 
@@ -113,7 +111,7 @@ def supremal_sublanguage(
             return H
 
 
-def check_normality(H: DFA, G_obs_names: DFA, MAX_PROCESSES: int) -> StateSet:
+def check_normality(H: DFA, G_obs_names: DFA, max_processes: int) -> StateSet:
     """
     Check the normality condition of states H and returns states violating the condition.
     """
@@ -122,15 +120,17 @@ def check_normality(H: DFA, G_obs_names: DFA, MAX_PROCESSES: int) -> StateSet:
 
     bad_states = set()
     all_H_names = H.vs["name"]
-    with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
+    with ProcessPoolExecutor(max_workers=max_processes) as executor:
         futures = []
-        chk = H.vcount() // MAX_PROCESSES
-        for i, H_indecies in enumerate(
-            pydash.chunk(range(H.vcount()), chk if chk > 0 else H.vcount(),)
-        ):
+        chk = ceil(H.vcount() / max_processes)
+        for i, H_indecies in enumerate(pydash.chunk(range(H.vcount()), chk)):
             futures.append(
                 executor.submit(
-                    __find_bad_states_normal, H_indecies, G_obs_names, all_H_names, i
+                    __find_bad_states_normal,
+                    H_indecies,
+                    G_obs_names,
+                    all_H_names,
+                    i + 1,
                 )
             )
 
@@ -161,7 +161,7 @@ def __find_bad_states_normal(
     return bad_states
 
 
-def check_controllability(H: DFA, G: DFA, MAX_PROCESSES: int) -> StateSet:
+def check_controllability(H: DFA, G: DFA, max_processes: int) -> StateSet:
     """
     Check the controllability condition of states in H and returns states violating the condition.
     """
@@ -175,14 +175,10 @@ def check_controllability(H: DFA, G: DFA, MAX_PROCESSES: int) -> StateSet:
     bad_states = set()
     Euc = G.Euc
 
-    with ProcessPoolExecutor(max_workers=MAX_PROCESSES) as executor:
+    with ProcessPoolExecutor(max_workers=max_processes) as executor:
         futures = []
-        chk = len(H_all_states) // MAX_PROCESSES
-        for i, H_names in enumerate(
-            pydash.chunk(
-                list(H_all_states.keys()), chk if chk > 0 else len(H_all_states),
-            )
-        ):
+        chk = ceil(len(H_all_states) / max_processes)
+        for i, H_names in enumerate(pydash.chunk(list(H_all_states.keys()), chk)):
             futures.append(
                 executor.submit(
                     __find_bad_states_controllable,
@@ -190,7 +186,7 @@ def check_controllability(H: DFA, G: DFA, MAX_PROCESSES: int) -> StateSet:
                     H_all_states,
                     G_all_states,
                     Euc,
-                    i,
+                    i + 1,
                 )
             )
 

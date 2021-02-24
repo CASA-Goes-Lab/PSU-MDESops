@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DESops"
-version = "20.9.1a2"
+version = "20.9.2"
 description = ""
 authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>"]
 packages = [

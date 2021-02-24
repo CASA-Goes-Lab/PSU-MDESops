@@ -19,4 +19,4 @@ from DESops.supervisory_control import supervisor
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 
-__version__ = "20.9.1a2"
+__version__ = "20.9.2"
