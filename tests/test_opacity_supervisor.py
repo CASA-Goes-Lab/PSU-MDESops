@@ -1,20 +1,11 @@
 import DESops as d
-from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn
-from DESops.opacity.secret_observer import construct_secret_observer, verify_opacity_secret_observer
-from DESops.opacity.secret_specification import transform_secret_state_based, current_state_spec, k_step_spec
+from DESops.opacity.secret_observer import construct_secret_observer_label_transform
 from DESops.supervisory_control.supervisor import supremal_sublanguage
+
 
 def compute_opacity_supervisor(g):
 
-    a, Ens, Eo, obs_map = transform_secret_state_based(g)
-    E = a.events
-
-    #h_ns, ns_state_sets = current_state_spec(Ens, E)
-    h_ns, ns_state_sets = k_step_spec(1, 1, Ens, Eo, E)
-
-    a_so = construct_secret_observer(a, h_ns, ns_state_sets, True, obs_map)
-
-    #print(verify_opacity_secret_observer(a_so))
+    a_so = construct_secret_observer_label_transform(g, notion="KSTEP", k=1, secret_type=1, joint=True)
 
     plant = a_so.copy()
     plant.vs['marked'] = True
@@ -25,7 +16,6 @@ def compute_opacity_supervisor(g):
     spec.vs['marked'] = True
 
     sup = supremal_sublanguage(plant, spec)
-
     return sup
 
 def test_simple_example():
@@ -46,8 +36,8 @@ def test_simple_example():
 
     sup = compute_opacity_supervisor(g)
 
-    assert sup.vcount() == 2
-    assert sup.ecount() == 1
+    assert sup.vcount() == 1
+    assert sup.ecount() == 0
 
 
 
@@ -73,8 +63,9 @@ def test_k_step_example():
 
     sup = compute_opacity_supervisor(g)
 
-    assert sup.vcount() == 3
-    assert sup.ecount() == 2
+    assert sup.vcount() == 2
+    assert sup.ecount() == 1
+
 
 def ind_to_coord(ind, m):
     return ind % m, int(ind / m)
@@ -93,8 +84,8 @@ def test_square_example():
 
     sup = compute_opacity_supervisor(g)
 
-    assert sup.vcount() == 9
-    assert sup.ecount() == 10
+    assert sup.vcount() == 8
+    assert sup.ecount() == 9
 
 
 def gen_square_example(m, n):
@@ -122,3 +113,9 @@ def gen_square_example(m, n):
     g.generate_out()
 
     return g
+
+
+if __name__ == '__main__':
+    test_simple_example()
+    test_square_example()
+    test_k_step_example()

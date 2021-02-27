@@ -1,69 +1,12 @@
 """
 Functions related to specification of secrets for opacity
 """
-import warnings
-
-from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
 
-
-def transform_secret_state_based(g, orig_obs_map=None):
-    '''
-    Transform an automaton with secret state labels to an automaton with secret events.
-    Additionally transform or construct the corresponding observation map.
-
-    Parameters:
-    g: The automaton with secret states to transform
-    orig_obs_map: The static mask observation map for g, if None is provided then projection of unobservable events is used
-
-    Returns:
-    a: The transformed automaton
-    Ens: The nonsecret events of a
-    Eo: The observable events of a
-    obs_map: The static mask observation map for a
-    '''
-    a = NFA()
-    a.add_vertices(g.vcount() + 1)
-    obs_map = {}
-    Ens = set()
-
-    if not orig_obs_map:
-        orig_obs_map = {e: '' if e in g.Euo else e for e in g.events}
-
-    a.vs["init"] = False
-    a.vs[0]["init"] = True
-
-    a.vs['name'] = ['q_init'] + g.vs['name']
-
-    # create new initial state that leads to old initial states via e_init
-    # this means that vertex i in g is vertex i+1 in h
-    for v in g.vs:
-        if v["init"]:
-            label = (Event("e_init"), v["secret"])
-            if not v['secret']:
-                Ens.add(label)
-            obs_map[label] = 'e_init'
-
-            a.add_edge(0, v.index + 1, label)
-
-    # all vertices except the initial one should be marked, because we should always have an e_init event
-    a.vs['marked'] = [False]+g.vs['marked']
-
-    for t in g.es:
-        label = (t["label"], t.target_vertex["secret"])
-        if not t.target_vertex["secret"]:
-            Ens.add(label)
-        obs_map[label] = orig_obs_map[t['label']]
-        a.add_edge(t.source + 1, t.target + 1, label)
-
-    a.Euo = {e for e in obs_map.keys() if obs_map[e] == ''}
-    a.generate_out()
-    Eo = a.events - a.Euo
-    return a, Ens, Eo, obs_map
-
+initial_event = 'e_init'
 
 def current_state_spec(Ens, E):
-    '''
+    """
     Construct a current-state opacity specification automaton over the given event sets
 
     Parameters:
@@ -71,7 +14,7 @@ def current_state_spec(Ens, E):
     E: All events
 
     Returns: a current-state opacity nonsecret specification automaton
-    '''
+    """
     Es = E - Ens
 
     h = NFA()
@@ -116,6 +59,7 @@ def initial_state_spec(Ens, E):
     h.vs['marked'] = True
     h.generate_out()
     return h, ns_state_sets
+
 
 def k_step_spec(secret_type, k, Ens, Eo, E):
     '''
@@ -322,3 +266,28 @@ def H_epoch_NS(secret_type, Ens, Eo, E):
 
     h.generate_out()
     return h
+
+
+def construct_nonsecret_spec(notion, E, Ens=None, Eo=None,
+                             joint=False, k=1, secret_type=1):
+    h_ns = None
+    ns_state_sets = None
+    if notion == 'CSO':
+        h_ns, ns_state_sets = current_state_spec(Ens, E)
+    elif notion == 'ISO':
+        h_ns, ns_state_sets = initial_state_spec(Ens, E)
+    elif notion == 'KSTEP':
+        h_ns, ns_state_sets = k_step_spec(secret_type, k, Ens, Eo, E)
+    elif notion == 'KDELAY':
+        if joint:
+            print("Warning: K-delayed secrets should be used for separate opacity.")
+        h_ns, ns_state_sets = k_step_spec(secret_type, k, Ens, Eo, E)
+        ns_state_sets = [ns_state_sets[-1]]
+    elif notion == 'INFSTEP':
+        if not joint:
+            raise ValueError("Separate infinite-step opacity is not implemented")
+        h_ns, ns_state_sets = joint_infinite_step_spec(secret_type, Ens, Eo, E)
+    else:
+        raise ValueError("Unrecognized notion of opacity")
+
+    return h_ns, ns_state_sets

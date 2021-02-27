@@ -22,8 +22,10 @@ def test_simple_example():
 
     obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1)
 
+    assert obf
     assert obf.vcount() == 2
     assert obf.ecount() == 2
+
 
 def test_k_step_example():
     g = d.automata.NFA()
@@ -53,6 +55,7 @@ def test_k_step_example():
 
     obf = enforce_state_based_opacity_edisyn(g, utility, 'KSTEP', k=1, insertion_bound=1, joint=True)
     assert not obf
+
 
 def ind_to_coord(ind, m):
     return ind % m, int(ind / m)
