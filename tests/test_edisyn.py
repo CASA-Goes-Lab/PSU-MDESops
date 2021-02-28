@@ -20,11 +20,15 @@ def test_simple_example():
 
     utility = [(u.index, v.index) for u in g.vs for v in g.vs]
 
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1)
+    obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1, allow_deletions=True)
 
     assert obf
     assert obf.vcount() == 2
     assert obf.ecount() == 2
+
+    obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1, allow_deletions=False)
+
+    assert obf is None
 
 
 def test_k_step_example():

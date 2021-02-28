@@ -9,7 +9,7 @@ import edisyn.edisyn_main as ed
 from os import makedirs
 
 
-def apply_edisyn(path, plant, utility, insertion_bound=1):
+def apply_edisyn(path, plant, utility, insertion_bound=1, allow_deletions=True):
     """
     Synthesizes an obfuscation automaton to enforce current-state opacity.
     The marked states of the plant are interpreted to be secret.
@@ -40,7 +40,7 @@ def apply_edisyn(path, plant, utility, insertion_bound=1):
 
     # Apply Edisyn to the created files
     obf_path = path + '/obf.fsm'
-    success = ed.main(plant_path, utility_path, obf_path, insertion_bound, False)
+    success = ed.main(plant_path, utility_path, obf_path, insertion_bound, False, allow_deletions)
 
     # Old interface
     # subprocess.run('python ' + edisyn_path + ' -b ' + str(insertion_bound) + ' ' + plant_path + ' ' + utility_path + ' ' + obf_path)
@@ -192,7 +192,8 @@ def _utility_to_spc(utility, out_utility_path):
 
 def enforce_state_based_opacity_edisyn(g, utility, notion='CSO', joint=False,
                                        working_dir='./edisyn',
-                                       obs_map=None, insertion_bound=1, **spec_kwargs):
+                                       obs_map=None, insertion_bound=1, allow_deletions=True,
+                                       **spec_kwargs):
     """
     Synthesize an obfuscator enforcing the desired notion of opacity using Edisyn.
     This is done by applying Edisyn to the secret observer of the system.
@@ -220,7 +221,7 @@ def enforce_state_based_opacity_edisyn(g, utility, notion='CSO', joint=False,
     so_utility = _state_based_utility(a_so, a_utility)
 
     # Apply Edisyn to construct an automaton encoding the edit function / obfuscator
-    obfuscator = apply_edisyn(working_dir, a_so, so_utility, insertion_bound)
+    obfuscator = apply_edisyn(working_dir, a_so, so_utility, insertion_bound, allow_deletions=allow_deletions)
     # Convert the obfuscator to an edit automaton
     edit = _edisyn_obf_to_edit(obfuscator)
 
