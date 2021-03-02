@@ -20,20 +20,19 @@ def label_transform(g, attribute_list, attributes_to_label):
     a.add_vertices(g.vcount() + 1)
 
     a.vs["init"] = False
-    a.vs[0]["init"] = True
+    a.vs[g.vcount()]["init"] = True
 
     a.vs['name'] = ['q_init'] + g.vs['name']
 
     # create new initial state that leads to old initial states via e_init
-    # this means that vertex i in g is vertex i+1 in h
-    init_pairs = [(0, v.index + 1) for v in g.vs.select(init=True)]
+    init_pairs = [(g.vcount(), v.index) for v in g.vs.select(init=True)]
     init_labels = [(initial_event, attributes_to_label(*[v[attr] for attr in attribute_list])) for v in g.vs.select(init=True)]
     a.add_edges(init_pairs, init_labels)
 
     # all vertices except the initial one should be marked, because we should always have an e_init event
     a.vs['marked'] = [False] + g.vs['marked']
 
-    new_pairs = [(e.source + 1, e.target + 1) for e in g.es]
+    new_pairs = [(e.source, e.target) for e in g.es]
     new_labels = [(e['label'], attributes_to_label(*[g.vs[e.target][attr] for attr in attribute_list])) for e in g.es]
     a.add_edges(new_pairs, new_labels)
 

@@ -151,3 +151,8 @@ Examples/
 # Edisyn tmp directory
 tests/edisyn/
 edisyn/
+
+
+# temp
+temp.prism
+temp.props

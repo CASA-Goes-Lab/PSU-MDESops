@@ -108,3 +108,4 @@ def gen_square_example(m, n, l1_dist_bound):
 
     return g, utility
 
+

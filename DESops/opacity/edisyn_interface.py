@@ -214,9 +214,7 @@ def enforce_state_based_opacity_edisyn(g, utility, notion='CSO', joint=False,
     # Construct the secret observer of the label transform of the provided system g
     a_so = construct_secret_observer_label_transform(g, obs_map, notion, joint=joint, **spec_kwargs)
 
-    # Shift the provided utility for g by 1 to account for the artificial initial state in the label transform
-    # TODO: change this to not depend on the internal indices of the secret observer construction
-    a_utility = [(v+1, u+1) for (v, u) in utility]
+    a_utility = utility
     # Map the utility for a to the a utility for the secret observer a_so
     so_utility = _state_based_utility(a_so, a_utility)
 

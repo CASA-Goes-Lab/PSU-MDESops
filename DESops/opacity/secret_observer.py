@@ -8,7 +8,6 @@ from DESops.opacity.secret_specification import construct_nonsecret_spec
 from DESops.opacity.label_transform import transform_secret_labels, induced_observation_map
 from DESops.opacity.observation_map import observable_projection_map, StaticMask, SetValuedStaticMask, NonDetDynamicMask
 from DESops.opacity.language_functions import language_inclusion
-from DESops.basic_operations.transducers import transducer_input_automaton
 
 def construct_secret_observer(
     g,
@@ -79,22 +78,29 @@ def construct_secret_observer(
     return g_so
 
 
-def verify_opacity_secret_observer(g_so):
+def verify_opacity_secret_observer(g_so, return_violating=False):
     """
     Verify the system corresponding to the given secret observer is opaque
 
     Parameters:
     g_so: The secret observer automaton marking secrets
+    return_violating: Whether or not to return the index of a violating state if one exists
 
     Returns:
     is_opaque: whether the system is opaque or not
-    violating_index: the index of a state violating opacity if one exists
+    violating_index: the index of a state violating opacity if one exists else -1
     """
     try:
         violating_state = next(v for v in g_so.vs if v["marked"])
-        return False, violating_state.index
+        if return_violating:
+            return False, violating_state.index
+        else:
+            return False
     except StopIteration:
-        return True, -1
+        if return_violating:
+            return True, -1
+        else:
+            return True
 
 
 def construct_secret_observer_label_transform(g, obs_map=None, notion='CSO', joint=False, **spec_kwargs,):
@@ -146,6 +152,8 @@ def is_obs_state_secret(state, ns_state_sets, joint):
 def tmp_verify_edit_opacity(g, edit, public=False, obs_map=None, notion='CSO', joint=False,
                             k=1, **spec_kwargs):
 
+    if not obs_map:
+        obs_map = observable_projection_map(g)
     a_so_list = []
     if joint or notion != 'KSTEP':
         a_so_list.append(construct_secret_observer_label_transform(g, obs_map=obs_map, notion=notion,
