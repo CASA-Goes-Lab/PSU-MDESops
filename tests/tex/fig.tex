@@ -1,0 +1,22 @@
+\begin{figure}[]
+\centering
+
+% Created with DESops: https://gitlab.eecs.umich.edu/M-DES-tools/desops
+\begin{tikzpicture}[node distance=2cm, scale=1, initial text=, transform shape, every text node part/.style={align=center}]
+
+\tikzset{sec state/.style=draw,rectangle,minimum size=1cm}
+
+\node[state, initial]              (0)       []                  {$0$};
+\node[sec state]                   (1)       [right=of 0]        {$1$};
+\node[state, accepting]            (2)       [right=of 1]        {$2$};
+
+\path[->]
+(0)       edge []                  node [above]             {$e_1$}                  (1)
+(1)       edge [loop above]        node [above]             {$e_2$}                  ()
+          edge []                  node [above]             {$e_3$}                  (2)
+;
+
+\end{tikzpicture}
+\caption{Caption Here}
+\label{fig:automata_label}
+\end{figure}

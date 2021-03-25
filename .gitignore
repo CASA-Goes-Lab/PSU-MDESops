@@ -152,6 +152,9 @@ Examples/
 tests/edisyn/
 edisyn/
 
+# Tikz tests
+tests/tex/
+!tests/tex/fig.tex
 
 # temp
 temp.prism
