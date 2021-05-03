@@ -152,6 +152,8 @@ Examples/
 tests/edisyn/
 edisyn/
 
+# Bosy test directory
+tests/bosy/
 
 # temp
 temp.prism
