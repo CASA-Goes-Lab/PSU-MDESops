@@ -1,6 +1,7 @@
 import os, os.path
 import sys, getopt
 
+# The functions in this file use BoSyHyper which requires Swift. Make sure these are on the path.
 
 def synthesize_bosy(bosy_path, aag_path):
 	"""

@@ -211,7 +211,7 @@ def tree_example():
     g.add_edges([(0,1), (1,2), (2,2), (0,3),(3,4),(4,4),(3,5),(5,5)], ['a', 'a', 'a', 'b', 'a', 'a', 'b','a'])
     g.generate_out()
 
-    base_path = 'D:/Users/Andrew/Documents/projects/Desops/tests/bosy/tree'
+    base_path = 'tests/bosy/tree'
     write_bosy_insertion_system(base_path + '.bosy', g, base_path + '._smv', ins_bound=1)
 
 
@@ -225,13 +225,13 @@ def insert_example():
     g.add_edges([(0,1),(1,0),(0,2),(2,0),(2,2)], ['a', 'a', 'b', 'b', 'a'])
     g.generate_out()
 
-    base_path = 'D:/Users/Andrew/Documents/projects/Desops/tests/bosy/three_rep'
+    base_path = 'tests/bosy/three_rep'
     write_bosy_insertion_system(base_path + '.bosy', g, base_path + '._smv', ins_bound=1)
 
-    base_path = 'D:/Users/Andrew/Documents/projects/Desops/tests/bosy/three_ins'
+    base_path = 'tests/bosy/three_ins'
     write_bosy_insertion_system(base_path + '.bosy', g, base_path + '._smv')
 
-    base_path = 'D:/Users/Andrew/Documents/projects/Desops/tests/bosy/three_ins_2'
+    base_path = 'tests/bosy/three_ins_2'
     write_bosy_insertion_system(base_path + '.bosy', g, base_path + '._smv', ins_bound=2)
 
 
