@@ -1,7 +1,16 @@
 import os, os.path
+from pathlib import Path
 import sys, getopt
 
-# The functions in this file use BoSyHyper which requires Swift. Make sure these are on the path.
+# This program relies on BoSy and Aiger.
+# Note BoSy relies on swift. Ensure this is in your path
+# Ensure bosy is properly installed and placed in a directory with write/execute permissions
+# (I had to move it to my home directory)
+# Change the path to Bosy here appropriately
+bosy_path = "/".join([str(Path.home()), "libraries/bosy"])
+# Also ensure that Aiger is installed at the following path
+aiger_path = "/".join([str(Path.home()), "libraries/aiger-1.9.9"])
+# Note there are currently some issues with non-absolute paths
 
 def synthesize_bosy(bosy_path, aag_path):
 	"""
@@ -11,6 +20,7 @@ def synthesize_bosy(bosy_path, aag_path):
 	bosy_path: the path for the input bosy file
 	aag_path: the path for the Aiger (.aag) file
 	"""
+	print(os.popen("echo $PATH").read())
 	os.system(f"swift run -c release BoSyHyper --synthesize {bosy_path} | sed -ne '/^aag.*/,$ p' > {aag_path}")
 
 
@@ -39,7 +49,7 @@ def aag_to_smv(aag_path, smv_path):
 				lsplit = line.split(' ')
 				output_map[lsplit[0]] = lsplit[1].strip()
 		
-	smv_stream = os.popen(f"aigtosmv {aag_path}").read()
+	smv_stream = os.popen(f"{aiger_path}/aigtosmv {aag_path}").read()
 	with open(smv_path, 'w') as smv_file:
 		for line in smv_stream.splitlines():
 			if line.startswith('o'):
@@ -120,8 +130,18 @@ if __name__ == '__main__':
 		output_aag_path = os.path.splitext(input_bosy_path)[0] + ".aag"
 	if input_smv_path is None:
 		input_smv_path = os.path.splitext(input_bosy_path)[0] + "._smv"
+
+	cwd = os.getcwd()
+	abs_input_bosy_path = "/".join([cwd, input_bosy_path])
+	abs_output_smv_path = "/".join([cwd, output_smv_path])
+	abs_output_aag_path = "/".join([cwd, output_aag_path])
+	abs_input_smv_path = "/".join([cwd, input_smv_path])
+
+	os.chdir(bosy_path)
 	
 	if check_unrealizable:
 		check_unrealizable_bosy(input_bosy_path)
 	else:
-		synthesize_smv(input_bosy_path, output_aag_path, input_smv_path, output_smv_path)
+		synthesize_smv(abs_input_bosy_path, abs_output_aag_path, abs_input_smv_path, abs_output_smv_path)
+
+	os.chdir(cwd)
