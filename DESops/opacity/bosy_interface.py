@@ -23,6 +23,19 @@ def run_bosy(g, base_path, ins_bound=None):
     Use BoSy to synthesize a controller that obfuscates secret behavior while preserving discernability.
     Returns an automaton representation of the controller.
 
+    States in the controller's automaton representation are named in the form (a,b,c,d) where:
+        a is the input (real) automaton state
+        b is the output (observed) automaton state
+        c is the previous input (real) event
+        d is the controller's internal auxiliary state
+
+    Transitions in the controller's automaton representation are labelled in the form x/y where:
+        x is the input (real) event
+        y is the ouput (observed) event
+
+    When the controller replaces a single input event with multiple output events, output events beyond the first one are shown as replacing the empty string
+    e.g. if event x is replaced with the string y1 y2 y3, the controller automaton will show this as the three distinct events x/y1, /y2, /y3
+
     Parameters:
     g: The automaton
     base_path: The base path/filename where bosy/aag/smv files will be written
