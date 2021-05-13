@@ -20,7 +20,7 @@ def make_human_readable(smv_path, g):
 
     # Count number of latches
     num_latches = sum(line.startswith("__latch_s") for line in contents)
-    controller_states = list(range(num_latches))
+    controller_states = list(range(2 ** num_latches))
 
     # Encode automaton states/events and controller states as boolean variables
     bool_vars = get_bool_vars(g, num_latches)
@@ -30,17 +30,17 @@ def make_human_readable(smv_path, g):
     event_map_O = bool_vars["event_map_O"]
     controller_state_map = bool_vars["controller_state_map"]
 
-    i = contents.index("VAR\n")
+    i = contents.index("VAR")
     contents.insert(
         i + 1,
         f"event_i : {{{', '.join(events)}, undef}};\n"
         + f"event_o : {{{', '.join(events)}, undef}};\n"
         + f"state_i : {{{', '.join(str(s) for s in states)}, undef}};\n"
         + f"state_o : {{{', '.join(str(s) for s in states)}, undef}};\n"
-        + f"controller_state : {{{', '.join(str(c) for c in controller_states)}, undef}};\n",
+        + f"controller_state : {{{', '.join(str(c) for c in controller_states)}, undef}};",
     )
 
-    i = contents.index("ASSIGN\n")
+    i = contents.index("ASSIGN")
     contents.insert(
         i + 1,
         "event_i := "
@@ -57,12 +57,12 @@ def make_human_readable(smv_path, g):
         + "undef;\n"
         + "controller_state := "
         + "".join(f"{controller_state_map[c]} ? {c} : " for c in controller_states)
-        + "undef;\n",
+        + "undef;",
     )
     contents[i + 1] = contents[i + 1].replace("&&", "&")
 
     with open(smv_path, "w") as smv_file:
-        smv_file.write("".join(contents))
+        smv_file.write("\n".join(contents))
 
 
 def smv_to_automata(smv_path, g, inferences=None, simplify=True):
