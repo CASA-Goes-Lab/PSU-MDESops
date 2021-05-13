@@ -52,6 +52,9 @@ def write_bosy_insertion_system(
     event_vars_O = bool_vars["event_vars_O"]
     event_map_O = bool_vars["event_map_O"]
 
+    if guarantees is None:
+        guarantees = list()
+
     # Default inference is to determine whether the input run is secret
     if inferences is None:
         inferences = ["s_OO"]
