@@ -1,6 +1,7 @@
 from _collections import deque
 from DESops.automata.NFA import NFA
-from DESops.opacity.edit_to_bosy import list_to_bool_vars
+from DESops.opacity.bisimulation import construct_bisimulation, construct_simulation
+from DESops.opacity.edit_to_bosy import get_bool_vars
 
 
 def make_human_readable(smv_path, g):
@@ -11,25 +12,23 @@ def make_human_readable(smv_path, g):
     smv_path: Path to the smv file representing the controller
     g: The automaton that the original bosy file was created from
     """
-    # Encode states with boolean variables
     states = list(range(g.vcount()))
-    _, state_map_I = list_to_bool_vars(states, "x_I")
-    _, state_map_O = list_to_bool_vars(states, "x_O")
-
-    # Encode events with boolean variables
     events = sorted(list(g.events))
-    _, event_map_I = list_to_bool_vars(events, "e_I")
-    _, event_map_O = list_to_bool_vars(events, "e_O")
 
     with open(smv_path, "r") as smv_file:
-        contents = smv_file.readlines()
+        contents = smv_file.read().splitlines()
 
-    # Encode controller states with boolean variables
+    # Count number of latches
     num_latches = sum(line.startswith("__latch_s") for line in contents)
-    controller_states = list(range(2 ** num_latches))
-    _, controller_state_map = list_to_bool_vars(controller_states, "__latch_s")
-    for key, val in controller_state_map.items():
-        controller_state_map[key] = val.replace("__latch_s_", "__latch_s")
+    controller_states = list(range(num_latches))
+
+    # Encode automaton states/events and controller states as boolean variables
+    bool_vars = get_bool_vars(g, num_latches)
+    state_map_I = bool_vars["state_map_I"]
+    state_map_O = bool_vars["state_map_O"]
+    event_map_I = bool_vars["event_map_I"]
+    event_map_O = bool_vars["event_map_O"]
+    controller_state_map = bool_vars["controller_state_map"]
 
     i = contents.index("VAR\n")
     contents.insert(
@@ -66,7 +65,7 @@ def make_human_readable(smv_path, g):
         smv_file.write("".join(contents))
 
 
-def smv_to_automaton(smv_path, g):
+def smv_to_automata(smv_path, g, inferences=None, simplify=True):
     """
     Returns an automaton that captures the behavior of the synthesized controller described in the smv file
 
@@ -74,27 +73,25 @@ def smv_to_automaton(smv_path, g):
     smv_path: Path to the smv file
     g: The automaton that the original bosy file was created from
     """
-    # Encode states with boolean variables
-    states = list(range(g.vcount()))
-    state_vars_I, state_map_I = list_to_bool_vars(states, "x_I")
+    if inferences is None:
+        inferences = ["s_OO"]
 
-    # Encode events with boolean variables
     events = sorted(list(g.events))
-    event_vars_I, event_map_I = list_to_bool_vars(events, "e_I")
 
     with open(smv_path, "r") as smv_file:
         contents = smv_file.read().splitlines()
 
-    # Encode controller states with boolean variables
+    # Count number of latches
     num_latches = sum(line.startswith("__latch_s") for line in contents)
-    controller_states = list(range(2 ** num_latches))
-    controller_state_vars, controller_state_map = list_to_bool_vars(
-        controller_states, "__latch_s"
-    )
-    for i, var in enumerate(controller_state_vars):
-        controller_state_vars[i] = var.replace("__latch_s_", "__latch_s")
-    for key, val in controller_state_map.items():
-        controller_state_map[key] = val.replace("__latch_s_", "__latch_s")
+
+    # Encode automaton states/events and controller states as boolean variables
+    bool_vars = get_bool_vars(g, num_latches)
+    state_vars_I = bool_vars["state_vars_I"]
+    state_map_I = bool_vars["state_map_I"]
+    event_vars_I = bool_vars["event_vars_I"]
+    event_map_I = bool_vars["event_map_I"]
+    controller_state_vars = bool_vars["controller_state_vars"]
+    controller_state_map = bool_vars["controller_state_map"]
 
     # find and parse the logical expressions
     exprs = [line for line in contents if ":=" in line]
@@ -193,18 +190,22 @@ def smv_to_automaton(smv_path, g):
     ]
     states_to_check = deque(range(len(init_states)))
 
-    g_out = NFA()
-    g_out.add_vertices(len(init_states), init_states)
-    g_out.vs["init"] = True
+    # controller automaton
+    cntl = NFA()
+    cntl.add_vertices(len(init_states), init_states)
+    cntl.vs["init"] = True
 
+    inference_results = [dict() for _ in inferences]
+
+    # construct controller automaton
     while states_to_check:
         source_index = states_to_check.pop()
-        state_i, state_o, event_i, controller_state = g_out.vs[source_index]["name"]
+        state_i, state_o, event_i, controller_state = cntl.vs[source_index]["name"]
 
         # compute binary variable inputs from state / event / controller state
-        compute_binary_vars(state_i, state_vars_I, state_map_I)
-        compute_binary_vars(event_i, event_vars_I, event_map_I)
-        compute_binary_vars(
+        compute_boolean_vars(state_i, state_vars_I, state_map_I)
+        compute_boolean_vars(event_i, event_vars_I, event_map_I)
+        compute_boolean_vars(
             controller_state, controller_state_vars, controller_state_map
         )
 
@@ -226,15 +227,19 @@ def smv_to_automaton(smv_path, g):
 
         source_event = event_i
 
+        # record the value of each inference that is made
+        for i, inf in enumerate(inferences):
+            inference_results[i][source_index] = eval(inf)
+
         # find next states
         for out in outs:
             state_i = out[0]
             event_i = out[1] if out[1] else source_event
 
             # compute binary variable inputs from state / event / controller state
-            compute_binary_vars(state_i, state_vars_I, state_map_I)
-            compute_binary_vars(event_i, event_vars_I, event_map_I)
-            compute_binary_vars(
+            compute_boolean_vars(state_i, state_vars_I, state_map_I)
+            compute_boolean_vars(event_i, event_vars_I, event_map_I)
+            compute_boolean_vars(
                 controller_state, controller_state_vars, controller_state_map
             )
 
@@ -250,20 +255,37 @@ def smv_to_automaton(smv_path, g):
             label = f"{out[1]}/{event_o}"
 
             # add vertex if it hasn't already been added
-            if target not in g_out.vs["name"]:
-                target_index = g_out.vcount()
-                g_out.add_vertex(target)
+            if target not in cntl.vs["name"]:
+                target_index = cntl.vcount()
+                cntl.add_vertex(target)
                 states_to_check.append(target_index)
             else:
-                target_index = g_out.vs["name"].index(target)
+                target_index = cntl.vs["name"].index(target)
 
             # create outgoing transition
-            g_out.add_edge(source_index, target_index, label)
+            cntl.add_edge(source_index, target_index, label)
 
-    return g_out
+    # create predictor automata for each inference
+    preds = list()
+    for i, inf in enumerate(inferences):
+        pred = cntl.copy()
+        # mark inference assertions as secret
+        pred.vs["secret"] = [inference_results[i][v.index] for v in pred.vs]
+        # replace events with their output events
+        pred.es["label"] = [e["label"].split("/")[1] for e in pred.es]
+        if simplify:
+            # simplify by constructing a simulation
+            pred = construct_simulation(pred)
+        preds.append(pred)
+
+    if simplify:
+        # simplify controller by constructing a bisimulation
+        cntl = construct_bisimulation(cntl)
+
+    return cntl, preds
 
 
-def compute_binary_vars(var, var_list, var_map):
+def compute_boolean_vars(var, var_list, var_map):
     """
     Given a variable var, sets its corresponding global boolean variables so that they encode the value of var.
 

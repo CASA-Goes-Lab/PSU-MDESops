@@ -10,7 +10,9 @@ smv_next = "next"
 ltl_next = "X"
 
 
-def write_bosy_insertion_system(path, g, smv_path=None, ins_bound=None):
+def write_bosy_insertion_system(
+    path, g, smv_path=None, ins_bound=None, inferences=None, guarantees=None
+):
     """
     Construct a system representing the composition of the underlying system (input/environment) and the
     insertion function (output). Constraints specifying the secrecy of the system and inferability are also
@@ -28,25 +30,41 @@ def write_bosy_insertion_system(path, g, smv_path=None, ins_bound=None):
     g: The automaton to construct the insertion system for
     smv_path: The optional path to write the partial smv file to
     ins_bound: The bound on the number of consecutive insertions allowed (None specifies finite insertions)
+    inferences: A list of variable names of the inferences that some "intended recipient" should be able to make
+                Default is s_OO
+    guarantees: A list of LTL specifcations for when inferences should be asserted, and for any additional custom constraints
+                Required if inferences is not None
+                Default is that the secret behavior of the input automaton should be inferrable
     """
+    if inferences and not guarantees:
+        raise ValueError("Non-default inferences require non-default guarantees")
+
+    states = list(range(g.vcount()))
+
+    # Encode states and events with boolean variables
+    bool_vars = get_bool_vars(g)
+    state_vars_I = bool_vars["state_vars_I"]
+    state_map_I = bool_vars["state_map_I"]
+    state_vars_O = bool_vars["state_vars_O"]
+    state_map_O = bool_vars["state_map_O"]
+    event_vars_I = bool_vars["event_vars_I"]
+    event_map_I = bool_vars["event_map_I"]
+    event_vars_O = bool_vars["event_vars_O"]
+    event_map_O = bool_vars["event_map_O"]
+
+    # Default inference is to determine whether the input run is secret
+    if inferences is None:
+        inferences = ["s_OO"]
+        secret_I = f"({' || '.join([state_map_I[i] for i, sec in enumerate(g.vs['secret']) if sec])})"
+        guarantees.append(f"G ({secret_I} <-> s_OO)")
 
     # Setup bosy object (JSON)
     bosy = {}
     # Mealy means current outputs can depend on current inputs
     bosy["semantics"] = "mealy"
 
-    # Encode states with boolean variables
-    states = list(range(g.vcount()))
-    state_vars_I, state_map_I = list_to_bool_vars(states, "x_I")
-    state_vars_O, state_map_O = list_to_bool_vars(states, "x_O")
-
-    # Encode events with boolean variables
-    events = sorted(list(g.events))
-    event_vars_I, event_map_I = list_to_bool_vars(events, "e_I")
-    event_vars_O, event_map_O = list_to_bool_vars(events, "e_O")
-
     # Set inputs and outputs for Bosy
-    auxiliary_outputs = ["s_OO", "yield"]
+    auxiliary_outputs = ["yield"] + inferences
     bosy["inputs"] = event_vars_I + state_vars_I
     bosy["outputs"] = event_vars_O + state_vars_O + auxiliary_outputs
 
@@ -73,14 +91,10 @@ def write_bosy_insertion_system(path, g, smv_path=None, ins_bound=None):
     dyn_I = init_I + yield_I + trans_I
     dyn_O = init_O + trans_O
 
-    # Secret formulas - whether the current state of the run (input/output) is secret
-    secret_I = f"({' || '.join([state_map_I[i] for i, sec in enumerate(g.vs['secret']) if sec])})"
-    secret_O = f"({' || '.join([state_map_O[i] for i, sec in enumerate(g.vs['secret']) if sec])})"
-
     # Secrecy formula - all outputs always correpsond to a nonsecret run
+    secret_O = f"({' || '.join([state_map_O[i] for i, sec in enumerate(g.vs['secret']) if sec])})"
     secrecy = f"G !{secret_O}"
-    # Discernability formula - the output observer can always infer the secrecy of the input system
-    discernability = f"G ({secret_I} <-> s_OO)"
+
     # Insertion bound formula - bounds the number of insertions the edit function can perform
     # "1" corresponds to replacement and "None" corresponds to any finite sequence of insertions
     if ins_bound is None:
@@ -94,16 +108,16 @@ def write_bosy_insertion_system(path, g, smv_path=None, ins_bound=None):
 
     # Set LTL assumptions and guarantees for Bosy
     bosy["assumptions"] = dyn_I
-    bosy["guarantees"] = [secrecy, discernability, finite_insertion] + dyn_O
+    bosy["guarantees"] = [secrecy, finite_insertion] + guarantees + dyn_O
 
     # Setup HyperLTL constraints
     # Formula for different current outputs for two runs
     diff_output = " || ".join([f"!({e}[pi1] <-> {e}[pi2])" for e in event_vars_O])
-    # Formula for same current secret assertions for two runs
-    same_secret_assertion = "(s_OO[pi1] <-> s_OO[pi2])"
+    # Formula for same current inferences for two runs
+    same_inferences = [f"({inf}[pi1] <-> {inf}[pi2])" for inf in inferences]
     # HyperLTL formula representing consistency of secret assertion across two runs with the same outputs
     secret_output_consistency = [
-        f"forall pi1 pi2. ({same_secret_assertion}) W ({diff_output})"
+        f"forall pi1 pi2. ({s}) W ({diff_output})" for s in same_inferences
     ]
     # Set HyperLTL constraints for Bosy
     bosy["hyper"] = secret_output_consistency
@@ -142,6 +156,29 @@ def write_bosy_insertion_system(path, g, smv_path=None, ins_bound=None):
             f.write(smv_block)
 
 
+def get_bool_vars(g, num_latches=None):
+    ret = dict()
+
+    # Encode automaton states with boolean variables
+    states = list(range(g.vcount()))
+    ret["state_vars_I"], ret["state_map_I"] = list_to_bool_vars(states, "x_I_")
+    ret["state_vars_O"], ret["state_map_O"] = list_to_bool_vars(states, "x_O_")
+
+    # Encode events with boolean variables
+    events = sorted(list(g.events))
+    ret["event_vars_I"], ret["event_map_I"] = list_to_bool_vars(events, "e_I_")
+    ret["event_vars_O"], ret["event_map_O"] = list_to_bool_vars(events, "e_O_")
+
+    if num_latches is not None:
+        # Encode controller states with boolean variables
+        controller_states = list(range(2 ** num_latches))
+        ret["controller_state_vars"], ret["controller_state_map"] = list_to_bool_vars(
+            controller_states, "__latch_s"
+        )
+
+    return ret
+
+
 def list_to_bool_vars(values, base_name):
     """
     Encode a list of possible values a variable can take on in terms of boolean variables.
@@ -156,7 +193,7 @@ def list_to_bool_vars(values, base_name):
     """
     n_values = len(values)
     n_vars = math.ceil(math.log2(n_values))
-    b_vars = [f"{base_name}_{i}" for i in range(n_vars)]
+    b_vars = [f"{base_name}{i}" for i in range(n_vars)]
     var_map = {values[i]: _index_to_formula(i, b_vars) for i in range(n_values)}
     return b_vars, var_map
 

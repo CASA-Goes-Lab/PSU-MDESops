@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from DESops.opacity.edit_to_bosy import write_bosy_insertion_system
-from DESops.opacity.parse_smv import make_human_readable, smv_to_automaton
+from DESops.opacity.parse_smv import make_human_readable, smv_to_automata
 
 # This program relies on BoSy and Aiger.
 # Note BoSy relies on swift. Ensure this is in your path
@@ -18,16 +18,12 @@ aiger_path = "/".join([str(Path.home()), "libraries/aiger-1.9.9"])
 # Note there are currently some issues with non-absolute paths
 
 
-def run_bosy(g, base_path, ins_bound=None):
+def run_bosy(
+    g, base_path, ins_bound=None, inferences=None, guarantees=None, simplify=True
+):
     """
     Use BoSy to synthesize a controller that obfuscates secret behavior while preserving discernability.
-    Returns an automaton representation of the controller.
-
-    States in the controller's automaton representation are named in the form (a,b,c,d) where:
-        a is the input (real) automaton state
-        b is the output (observed) automaton state
-        c is the previous input (real) event
-        d is the controller's internal auxiliary state
+    Returns automata representing the controller and the inferrer(s)
 
     Transitions in the controller's automaton representation are labelled in the form x/y where:
         x is the input (real) event
@@ -37,21 +33,38 @@ def run_bosy(g, base_path, ins_bound=None):
     e.g. if event x is replaced with the string y1 y2 y3, the controller automaton will show this as the three distinct events x/y1, /y2, /y3
 
     Parameters:
-    g: The automaton
+    g: The original system automaton
     base_path: The base path/filename where bosy/aag/smv files will be written
     ins_bound: The bound on the number of consecutive insertions allowed (None specifies finite insertions)
+    inferences: A list of variable names of the inferences that some "intended recipient" should be able to make
+                Default is s_OO
+    guarantees: A list of LTL specifcations for when inferences should be asserted, and for any additional custom constraints
+                Required if inferences is not None
+                Default is that the secret behavior of the input automaton should be inferrable
+    simplify: If true (default), then controller and predictor automata are simplified by constructing a (bi)simulation
+              If false, states are named in the form (a,b,c,d) where:
+                  a is the input (real) automaton state
+                  b is the output (observed) automaton state
+                  c is the previous input (real) event
+                  d is the controller's internal auxiliary state
+
+    Returns:
+        cntl: The controller automaton
+        pred: A list of "predictor" automata (one for each inference) that mark runs in which the inference is asserted as secret
     """
     input_bosy_path = base_path + ".bosy"
     smv_in_path = base_path + "._smv"
     smv_out_path = base_path + ".smv"
 
-    write_bosy_insertion_system(input_bosy_path, g, smv_in_path, ins_bound)
+    write_bosy_insertion_system(
+        input_bosy_path, g, smv_in_path, ins_bound, inferences, guarantees
+    )
     bosy_main(input_bosy_path)
 
     make_human_readable(smv_out_path, g)
-    g_out = smv_to_automaton(smv_out_path, g)
+    cntl, preds = smv_to_automata(smv_out_path, g, inferences, simplify)
 
-    return g_out
+    return cntl, preds
 
 
 def synthesize_bosy(bosy_path, aag_path):
