@@ -20,9 +20,12 @@ Note that this may only work on Linux (Mac untested but should work there as wel
 If poetry does not recognize pycairo as an optional dependency, try running these two commands:
 
     $ poetry remove pycairo
+
+Removes pycairo from the list of dependencies.
+
     $ poetry add "pycairo==1.11.1"
 
-Poetry should then install pycairo within the virtual environment for DESops.
+Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
 
 When using Windows, pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
