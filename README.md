@@ -29,7 +29,9 @@ Download/clone the DESops repository. The following dependencies must also be in
 
 * `python-igraph` (at least version `0.8.0`) must be installed. The installation process may be slightly more involved than simply using `pip`. Their [website](https://igraph.org/python/) has more information on how to install.
 * `pycairo` is required by `igraph` to handle plotting & visualization. Only required if using `plot()` method.
-If unable to install pycairo with poetry, the two dependenices needed are `cairo` and `pkg-config`.
+
+* If unable to install `pycairo` with poetry, the two dependenices needed are `cairo` and `pkg-config`. For macOS/Homebrew users, run:
+    $ brew install cairo pkg-config
 
 * `pydash` (version `4.7.6`), `requests` (version `2.24.0`), `dd` (version `0.5.5`), `tqdm` (version `4.46.1`), `colorama` (version `0.4.3`)
 
