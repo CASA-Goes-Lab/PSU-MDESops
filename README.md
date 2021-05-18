@@ -27,6 +27,7 @@ Removes pycairo from the list of dependencies.
     $ poetry add "pycairo==1.11.1"
 
 Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
+### Note for Windows Users:
 
 When using Windows, pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
