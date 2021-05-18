@@ -17,7 +17,7 @@ To use the `DESops.plot` submodule, install with pycairo as well:
 
 Note that this may only work on Linux (Mac untested but should work there as well).
 
-If poetry does not recognize pycairo as an optional dependency, try running these two commands:
+If poetry **does not** recognize pycairo as an optional dependency, try running these two commands:
 
     $ poetry remove pycairo
 
