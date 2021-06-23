@@ -145,5 +145,9 @@ static
 # Examples romulo
 Examples/
 
+# VS code files and DS_STORE
+.vscode/
+.DS_Store
+
 #pycharm stuff
 .idea/

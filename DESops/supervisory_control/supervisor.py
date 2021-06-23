@@ -1,4 +1,5 @@
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing as mp
 from enum import Enum, auto
 from os import cpu_count
 from math import ceil
@@ -120,7 +121,7 @@ def check_normality(H: DFA, G_obs_names: DFA, max_processes: int) -> StateSet:
 
     bad_states = set()
     all_H_names = H.vs["name"]
-    with ProcessPoolExecutor(max_workers=max_processes) as executor:
+    with ProcessPoolExecutor(mp_context=mp.get_context('fork'),max_workers=max_processes) as executor:
         futures = []
         chk = ceil(H.vcount() / max_processes)
         for i, H_indecies in enumerate(pydash.chunk(range(H.vcount()), chk)):
@@ -175,7 +176,7 @@ def check_controllability(H: DFA, G: DFA, max_processes: int) -> StateSet:
     bad_states = set()
     Euc = G.Euc
 
-    with ProcessPoolExecutor(max_workers=max_processes) as executor:
+    with ProcessPoolExecutor(mp_context=mp.get_context('fork'),max_workers=max_processes) as executor:
         futures = []
         chk = ceil(len(H_all_states) / max_processes)
         for i, H_names in enumerate(pydash.chunk(list(H_all_states.keys()), chk)):
