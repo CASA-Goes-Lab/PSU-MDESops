@@ -13,7 +13,7 @@ def construct_bisimulation(g):
         g.vs["secret"] = False
     partition, table, e_dict = find_coarsest_bisimilar_partition(g, events)
 
-    h = NFA()
+    h = g.__class__()
     h.add_vertices(len(partition))
     h.vs["init"] = [any([g.vs[i]["init"] for i in block]) for block in partition]
     h.vs["secret"] = [any([g.vs[i]["secret"] for i in block]) for block in partition]

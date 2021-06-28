@@ -1,6 +1,6 @@
 import json
 import math
-import sys
+import warnings
 
 from DESops.automata import DFA
 
@@ -8,6 +8,77 @@ from DESops.automata import DFA
 
 smv_next = "next"
 ltl_next = "X"
+
+
+def write_bosy_hyper(path, event_var_maps, inf_vars, allow_insert):
+    """
+    Write a bosy file that defines the inputs, outputs, and a HyperLTL specification that denote
+    Assumptions and guarantees are not written, since the linear Buchi automaton is constructed outside of BoSy
+
+    Parameters:
+    path: the path/filename of the bosy file that should be written
+    event_var_maps: see the definition in run_bosy() in bosy_interface.py
+    inf_vars: a list of the names of the inference variables
+    allow_insert: a boolean indicating whether event insertions are allowed
+    """
+    # Encode states and events with boolean variables
+    event_vars_I = event_var_maps["event_vars_I"]
+    event_vars_O = event_var_maps["event_vars_O"]
+    try:
+        obs_event_vars_I = event_var_maps["obs_event_vars_I"]
+        obs_event_vars_O = event_var_maps["obs_event_vars_O"]
+    except KeyError:
+        # if observable vars are not defined, we assume full observability
+        obs_event_vars_I = None  # output can only depend on inputs regardless
+        obs_event_vars_O = event_vars_O
+    try:
+        cntr_event_vars_O = event_var_maps["cntr_event_vars_O"]
+    except KeyError:
+        # if controllable vars are not defined, we assume full controllability
+        cntr_event_vars_O = event_vars_O
+
+    # Setup bosy object (JSON)
+    bosy = {}
+    # Mealy means current outputs can depend on current inputs
+    bosy["semantics"] = "mealy"
+
+    # Set inputs and outputs for Bosy
+    bosy["inputs"] = event_vars_I
+    bosy["outputs"] = cntr_event_vars_O + inf_vars
+    if allow_insert:
+        bosy["outputs"].append("yield_out")
+
+    # Set LTL assumptions and guarantees for Bosy
+    bosy["assumptions"] = []
+    bosy["guarantees"] = []
+
+    # Setup HyperLTL constraints
+    # Formula for different current outputs for two runs
+    diff_output = " || ".join([f"!({e}[pi1] <-> {e}[pi2])" for e in obs_event_vars_O])
+    # Formula for same current inferences for two runs
+    same_inferences = [f"({var}[pi1] <-> {var}[pi2])" for var in inf_vars]
+    # HyperLTL formula representing consistency of secret assertion across two runs with the same outputs
+    secret_output_consistency = [
+        f"forall pi1 pi2. ({s}) W ({diff_output})" for s in same_inferences
+    ]
+
+    if obs_event_vars_I is not None:
+        # do same for making outputs based on observable input info
+        diff_obs = " || ".join([f"!({e}[pi1] <-> {e}[pi2])" for e in obs_event_vars_I])
+        same_outputs = [f"({e}[pi1] <-> {e}[pi2])" for e in cntr_event_vars_O]
+        based_on_observable = [
+            f"forall pi1 pi2. ({s}) W ({diff_obs})" for s in same_outputs
+        ]
+    else:
+        # output is fully observable, so nothing is needed here
+        based_on_observable = []
+
+    # Set HyperLTL constraints for Bosy
+    bosy["hyper"] = based_on_observable + secret_output_consistency
+
+    # json.dump(bosy, sys.stdout)
+    with open(path, "w") as f:
+        json.dump(bosy, f, indent=4)
 
 
 def write_bosy_insertion_system(
@@ -36,6 +107,10 @@ def write_bosy_insertion_system(
                 Required if inferences is not None
                 Default is that the secret behavior of the input automaton should be inferrable
     """
+    warnings.warn(
+        "The files written by this function are incompatible with the modified BoSy installation that uses a cutom Buchi automaton; Use write_bosy_hyper instead"
+    )
+
     if inferences and not guarantees:
         raise ValueError("Non-default inferences require non-default guarantees")
 

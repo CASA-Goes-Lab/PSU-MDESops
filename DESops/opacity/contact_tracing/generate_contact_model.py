@@ -10,7 +10,7 @@ from pydash.arrays import flatten_deep
 import DESops as d
 from DESops.basic_operations.composition import observer, product_linear
 from DESops.opacity.bisimulation import construct_bisimulation
-from DESops.opacity.edit_to_bosy import list_to_bool_vars
+from DESops.opacity.bosy.edit_to_bosy import list_to_bool_vars
 
 
 def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
@@ -245,6 +245,7 @@ def contact_event_maps(g, regions, secret_locs):
             f"{'' if x == '1' else '!'}{loc_vars[i]}"
             for i, x in enumerate(reversed(bin(loc_id)[2:]))
         ]
+        terms += [f"!{loc_vars[i]}" for i in range(len(terms), len(loc_vars))]
 
         for e, expr in tmp_map_I.items():
             event_map_I[e] = f"({reg} && {' && '.join(terms)} && {expr})"
