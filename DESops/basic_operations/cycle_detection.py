@@ -1,7 +1,6 @@
 """
 Funcions relevant to cycle detection.
 """
-#import DESops as d
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
