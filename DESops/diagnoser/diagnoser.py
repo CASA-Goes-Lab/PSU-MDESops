@@ -41,7 +41,7 @@ def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
 def create_GN(G: Automata_t, target: Event) -> Automata_t:
     G_N = delete_all_specific_edge(G, [target])
     bad_states = find_inacc(G)
-    G_N.delete_vertices(bad_states)
+    G_N.delete_vertices_no_warning(bad_states)
     return G_N
 
 def verifier(G_f: Automata_t, target: Event) -> Automata_t: 
@@ -162,7 +162,7 @@ def BFS_marked_states(G:Automata_t, prime_marked_vertices:list()):
 def polynomial_test(G: Automata_t, target: Event) -> bool:
     ver = verifier(G, target)
     unmarked_states = [v for v in ver.vs if v["marked"] != True]
-    ver.delete_vertices(unmarked_states)
+    ver.delete_vertices_no_warning(unmarked_states)
     try:
         ver.vs[0]["name"]
     except IndexError:
