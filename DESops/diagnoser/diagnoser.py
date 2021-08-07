@@ -18,7 +18,7 @@ Automata_t = Union[DFA, NFA]
 
 def diagnoser(G: Automata_t, target: Event) -> Automata_t:
     """
-    Computes the diagnoser automata of the input G based on the target event
+    Constructs the diagnoser automaton of the input G based on the target event
     """
     A_label = DFA()
     A_label.add_vertices(2, names = ["N","Y"])
@@ -29,6 +29,9 @@ def diagnoser(G: Automata_t, target: Event) -> Automata_t:
     return Obs
 
 def create_GN(G: Automata_t, target: Event) -> Automata_t:
+    """
+    Computes the GN, an automaton without the given target event. 
+    """
     G_N = delete_all_specific_edge(G, [target])
     bad_states = find_inacc(G)
     G_N.delete_vertices_no_warning(bad_states)
@@ -135,6 +138,9 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
     return Ver 
 
 def BFS_marked_states(G:Automata_t, prime_marked_vertices:list()):
+    """
+    Helper function for the verifier to make sure all appropriate states are marked.
+    """
     vertices = [v for v in G.vs]
     visited = [False] * len(vertices)
     for v in prime_marked_vertices:
@@ -150,6 +156,9 @@ def BFS_marked_states(G:Automata_t, prime_marked_vertices:list()):
                     G.vs[neighbor.index]["marked"] = True
 
 def polynomial_test(G: Automata_t, target: Event) -> bool:
+    """
+    Performs the polynomial test on a given automaton and event.
+    """
     ver = verifier(G, target)
     unmarked_states = [v for v in ver.vs if v["marked"] != True]
     ver.delete_vertices_no_warning(unmarked_states)
@@ -263,6 +272,9 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     return ext_diag
 
 def is_uncertain(dst_name) -> bool:
+    """
+    Returns a boolean value based on whether or not a given state is uncertain.
+    """
     if len(dst_name) == 1:
         return False 
     else:
@@ -354,6 +366,9 @@ def prime_automata(G: Automata_t, target: Event) -> list:
     return [prime,prev]
 
 def BFS_Euo_search(G:Automata_t, V, result) -> set:
+    """
+    Helper function for prime automata to find all reachable unobservable events.
+    """
     vertices = [v for v in G.vs]
     visited = dict()
     for i in range(0,len(vertices)):
@@ -377,9 +392,12 @@ def BFS_Euo_search(G:Automata_t, V, result) -> set:
 
 
 def ext_diag_test(G:Automata_t, target: Event) -> bool:
+    """
+    Performs extended diagnoser test based on given automaton and event.
+    """
     G_uo = delete_obs_events(G)
     if cycle_detection.contains_cycle(G_uo) == True:
-        print("Cycle of unobservable events detected. Cannot perform extended diagnoser test.")
+        print("Cycle of unobservable events detected. Does not meet the required assumption for extended diagnoser test. Please use the polynomial test.")
         return
     ext_diag = extended_diagnoser(G, target)
     test = johnsons_algorithm(ext_diag)
@@ -406,6 +424,9 @@ def ext_diag_test(G:Automata_t, target: Event) -> bool:
     return True
     
 def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
+    """
+    Returns a list of all cycles that solely contain 'Y'.
+    """
     v = cycle[start]
     for name in v["name"]:
         if name[0][0] == origin[1][0]:
@@ -424,6 +445,9 @@ def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
     return G_N
 
 def delete_obs_events(G:Automata_t) -> Automata_t:
+    """
+    Deletes all observable events in an automaton.
+    """
     obs_events = [e for e in G.events if e not in G.Euo]
     G_uo = delete_all_specific_edge(G,obs_events)
     return G_uo
