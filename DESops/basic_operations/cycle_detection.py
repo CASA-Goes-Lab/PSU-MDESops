@@ -217,7 +217,9 @@ def is_self_loop(vertex) -> bool:
     return False
 
 def contains_cycle(G:Automata_t):
-    # Returns true if graph is cyclic else false
+    """
+    Returns true if graph is cyclic otherwise it is false.
+    """
     vertices = [v for v in G.vs]
     visited = [False] * (len(vertices))
     stack = [False] * (len(vertices))
@@ -228,7 +230,9 @@ def contains_cycle(G:Automata_t):
     return False
 
 def contains_cycle_util(v, visited, stack):
-
+    """
+    Floyd's algorithm helper function.
+    """
     visited[v.index] = True
     stack[v.index] = True 
     for neighbor in v.successors():
