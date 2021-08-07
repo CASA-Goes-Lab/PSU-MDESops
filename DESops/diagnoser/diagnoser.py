@@ -28,16 +28,6 @@ def diagnoser(G: Automata_t, target: Event) -> Automata_t:
     Obs = composition.observer(GparA)
     return Obs
 
-
-def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
-    """
-    Deletes all instances of a specific event (target) in a given automata (G)
-    """
-    G_N = NFA(G)
-    deleted_edges = [v for v in G.es if v["label"] in target]
-    G_N.delete_edges(deleted_edges)
-    return G_N
-
 def create_GN(G: Automata_t, target: Event) -> Automata_t:
     G_N = delete_all_specific_edge(G, [target])
     bad_states = find_inacc(G)
@@ -423,6 +413,15 @@ def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
                 find_Y_cycle(cycle, name, start+1, result)
             else:
                 result.append(True)
+                
+def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
+    """
+    Deletes all instances of a specific event (target) in a given automata (G)
+    """
+    G_N = NFA(G)
+    deleted_edges = [v for v in G.es if v["label"] in target]
+    G_N.delete_edges(deleted_edges)
+    return G_N
 
 def delete_obs_events(G:Automata_t) -> Automata_t:
     obs_events = [e for e in G.events if e not in G.Euo]
