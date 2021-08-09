@@ -107,7 +107,7 @@ def generate(
         True by default
 
     prob_self_loop:
-    The probability a self loop is present from 0 to 1. Default value is 1. 
+        The probability a self loop is present from 0 to 1. Default value is 1. 
     """
     generator = randomAutomata(
         num_states,
