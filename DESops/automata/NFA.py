@@ -47,6 +47,17 @@ class NFA(automata._Automata):
 
         self.generate_out()
 
+    def delete_vertices_no_warning(self, vs):
+        """
+        Deletes vertex seq vs.
+        Uses igraph delete_vertices method.
+
+        No warnings.
+        """
+        self._graph.delete_vertices(vs)
+
+        self.generate_out()    
+
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}
 

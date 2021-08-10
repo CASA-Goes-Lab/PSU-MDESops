@@ -18,5 +18,6 @@ from DESops.opacity import opacity
 from DESops.supervisory_control import supervisor
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
+from DESops.diagnoser import diagnoser
 
 __version__ = "20.6.1a4"

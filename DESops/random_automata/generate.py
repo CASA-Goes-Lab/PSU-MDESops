@@ -25,6 +25,7 @@ def generate(
     filename=None,
     enforce_accesibility=True,
     enforce_max_trans_per_state=True,
+    prob_self_loop = 1
 ):
     """
     Returns a randomly generated automaton
@@ -104,6 +105,9 @@ def generate(
     enforce_max_trans_per_state:
         Ensures that the max_trans_per_state specification is satisfied at all vertices
         True by default
+
+    prob_self_loop:
+        The probability a self loop is present from 0 to 1. Default value is 1. 
     """
     generator = randomAutomata(
         num_states,
@@ -123,15 +127,41 @@ def generate(
     success = False
     while not success:
         success = generator.generate_automaton()
-
     generator.g.generate_out()
+    self_loop_modifier(generator.g,prob_self_loop)
 
     if filename:
         write_pickle(filename, generator.g)
 
     return generator.g
+    
+def self_loop_modifier(G,prob_self_loop):
+    delete = []
+    for v in G.vs:
+        if is_self_loop(v) == True:
+            num = randint(1,10)
+            if num > 10 * prob_self_loop:
+                start = G.es.select(_from = v.index)
+                end = start.select(_to = v.index)
+                for e in end:
+                    delete.append(e)
+    G.delete_edges(delete)
 
 
+def is_self_loop(vertex) -> bool:
+    """
+    Given an automata and vertex, returns True if the vertex contains
+    a self loop, and false if it does not
+    """
+    try:
+        vertex["out"][0][0]
+    except IndexError:
+        return False
+    else:
+        for out in vertex["out"]:
+            if vertex.index == out[0]:
+                return True
+    return False
 class randomAutomata:
     def __init__(
         self,
