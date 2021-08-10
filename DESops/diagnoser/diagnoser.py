@@ -437,7 +437,7 @@ def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
                 
 def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
     """
-    Deletes all instances of a specific event (target) in a given automata (G)
+    Deletes all instances of a specific event (target) in a copy of a given automata (G) and returns the copy.
     """
     G_N = NFA(G)
     deleted_edges = [v for v in G.es if v["label"] in target]
