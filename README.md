@@ -35,6 +35,7 @@ You can use `pip` to properly install `poetry`. Run the following command:
 Sometimes pip requires a different command depending on your operating system. If the command above did not work, try the following alternatives:
 
     $ python3 -m pip install --user poetry
+or
 
     $ python -m pip install --user poetry
 
