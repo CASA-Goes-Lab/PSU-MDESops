@@ -22,7 +22,7 @@ After running this command, a copy of this repository will be available in your 
 
 These packages are dependencies required to install `pycairo`. This is key for the later installation of `python-igraph`, which DESops uses to plot graphs.
 
-Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies. 
+Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies. Do **NOT** install pycairo yet. This will be done in step 4.
 
 ### Step 3: Install Poetry:
 
