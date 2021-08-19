@@ -4,6 +4,8 @@ implemented, including parallel/product compositions and observer computation. T
 
 ## Installation
 
+![README_diagram graph image](img/diagram.png)
+
 ### Poetry Installation:
 
 The package can be installed using [poetry](https://python-poetry.org/) and running the command:
