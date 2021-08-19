@@ -10,7 +10,19 @@ Below is a diagram that showcases the installation process. Before installing DE
 
 ### Step 1: Clone Repository
 
-On the right hand corner of this page, click on the blue box that says 'Clone'. Copy and paste the url 
+On the right hand corner of this page, click on the blue box that says `Clone`. Copy and paste the HTTPS url. 
+
+In your working directory, write the following command:
+    $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/desops.git
+
+After running this command, a copy of this repository will be available in your working directory. 
+
+### Step 2: Install pkg-config, cairo, and libxml2
+
+All of these packages are dependencies that have a more involved process than using pip. 
+
+`pkg-config` and `cairo` are the dependencies required for `pycairo`. Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
+
 
 ### Poetry Installation:
 
