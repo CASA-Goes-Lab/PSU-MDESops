@@ -13,6 +13,7 @@ Below is a diagram that showcases the installation process. Before installing DE
 On the right hand corner of this page, click on the blue box that says `Clone`. Copy and paste the HTTPS url. 
 
 In your working directory, write the following command:
+
     $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/desops.git
 
 After running this command, a copy of this repository will be available in your working directory. 
