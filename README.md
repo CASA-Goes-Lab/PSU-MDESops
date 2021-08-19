@@ -20,14 +20,31 @@ After running this command, a copy of this repository will be available in your 
 
 ### Step 2: Install pkg-config, cairo, and libxml2
 
-All of these packages are dependencies that have a more involved process than using pip. 
+These packages are dependencies required to install `pycairo`. This is key for the later installation of `python-igraph`, which DESops uses to plot graphs.
 
-`pkg-config` and `cairo` are the dependencies required for `pycairo`. Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
+Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
 
+### Step 3: Install Poetry:
 
-### Poetry Installation:
+You can use pip to properly install `poetry`. Run the following command:
 
-The package can be installed using [poetry](https://python-poetry.org/) and running the command:
+    $ pip install --user poetry
+
+### Common Error: Operating device does not recognize pip
+
+Sometimes pip requires a different command depending on your operating system. If the command above did not work, try the following alternatives:
+
+    $ python3 -m pip install --user poetry
+
+    $ python3 -m pip install --user poetry
+
+Different installation methods are available on the [poetry](https://python-poetry.org/) website if needed.
+
+### Step 4: Install DESops:
+
+Make sure you are in the same working directory as the `poetry.lock` file. This should be located where you cloned the repository.
+
+DESops can be installed using [poetry](https://python-poetry.org/) and running the command:
 
     $ poetry install
 
@@ -36,7 +53,6 @@ To use the `DESops.plot` submodule, install with pycairo as well:
 
     $ poetry install -E pycairo
 
-Note that this may only work on Linux (Mac untested but should work there as well).
 ### Common Error: Pycairo not recognized
 
 If poetry **does not** recognize pycairo as an optional dependency, try running these two commands:
