@@ -4,13 +4,13 @@ implemented, including parallel/product compositions and observer computation. T
 
 ## Installation
 
-## Installation Diagram 
-
 Below is a diagram that showcases the installation process. Before installing DESops, the first three steps must be completed first.  
 
 ![README_diagram graph image](img/diagram.png)
 
 ### Step 1: Clone Repository
+
+On the right hand corner of this page, click on the blue box that says 'Clone'. Copy and paste the url 
 
 ### Poetry Installation:
 
