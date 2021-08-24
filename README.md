@@ -28,15 +28,17 @@ Both `pkg-config` and `cairo` can be installed at once. Depending on your operat
 
 The recommended way to install poetry is writing the following commands in your terminal:
 
-### OS X / Linux / BashOnWindows Install Instructions
+### OS X / Linux / BashOnWindows:
 
     $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 -
 
-### Windows Powershell Install Instructions
+### Windows Powershell:
 
     $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -UseBasicParsing).Content | python3 -
 
-If this method does not work, you can use `pip` to properly install `poetry`. Run the following command:
+### Alternative Method
+
+If the method above does not work, you can use `pip` to properly install `poetry`. Run the following command:
 
     $ pip install --user poetry
 
