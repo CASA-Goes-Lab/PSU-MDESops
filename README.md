@@ -34,7 +34,7 @@ The recommended way to install poetry is writing the following commands in your 
 
 ### Windows Powershell Install Instructions
 
-    $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 -
+    $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -UseBasicParsing).Content | python3 -
 
 If this method does not work, you can use `pip` to properly install `poetry`. Run the following command:
 
