@@ -61,16 +61,6 @@ DESops can be installed using [poetry](https://python-poetry.org/) and running t
 
     $ poetry install
 
-### Common Error: Pycairo not recognized
-
-If poetry **does not** recognize pycairo as an optional dependency, try running these two commands:
-
-    $ poetry remove pycairo
-
-Removes pycairo from the list of dependencies.
-
-    $ poetry add "pycairo==1.11.1"
-
 Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
 ### Note for Windows Users:
 
