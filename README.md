@@ -59,11 +59,6 @@ DESops can be installed using [poetry](https://python-poetry.org/) and running t
 
     $ poetry install
 
-pycairo is used by `python-igraph` for plotting Graphs. `DESops` uses these methods for plotting as well.
-To use the `DESops.plot` submodule, install with pycairo as well:
-
-    $ poetry install -E pycairo
-
 ### Common Error: Pycairo not recognized
 
 If poetry **does not** recognize pycairo as an optional dependency, try running these two commands:
