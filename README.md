@@ -119,7 +119,7 @@ $ poetry run pytest -k example
 
 For other options of `pytest`, see `poetry run pytest --help`.
 
-### Other Resources
+### Additional Resources
 
 For tutorials, demonstrations, and further information about DESops, please check out the following resources:
 - [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_01.ipynb)
