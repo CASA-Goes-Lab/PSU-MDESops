@@ -155,3 +155,13 @@ class NFA(automata._Automata):
                     out = [self.Out(pair[1], label)]
                 out_list[pair[0]] = out
             self.vs["out"] = out_list
+
+    def trans(self, source, event):
+        """
+        Return the set of target vertex indices reached when the given event occurs from the given source vertex index
+        """
+        targets = set()
+        for out in self.vs[source]["out"]:
+            if out.label == event:
+                targets.add(out.target)
+        return targets

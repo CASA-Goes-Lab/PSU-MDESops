@@ -469,12 +469,51 @@ class _Automata:
         """
         return self._graph.ecount()
 
+    def next_states(self, index):
+        """
+        Return the set of vertex indices that can be reached from the given vertex index in a single event
+        """
+        return {o.target for o in self.vs[index]["out"]}
+
+    def active_events(self, index):
+        """
+        Return the set of events that can occur from the given vertex index
+        """
+        return {o.label for o in self.vs[index]["out"]}
+
+    def events_between(self, X1, X2):
+        """
+        Return the set of events that transition the system from X1 to X2
+        X1 and X2 should each be either a single vertex index, or iterable collections of vertex indices
+        """
+        # treat single states as singleton list
+        if not isinstance(X1, Iterable):
+            X1 = [X1]
+        if not isinstance(X2, Iterable):
+            X2 = [X2]
+
+        events = set()
+        for x1 in X1:
+            for x2 in X2:
+                events.update(o.label for o in self.vs[x1]["out"] if o.target == x2)
+
+        return events
+
+    def trans(self, source, event):
+        """
+        Return the target vertex index reached when the given event occurs from the given source vertex index
+        """
+        for out in self.vs[source]["out"]:
+            if out.label == event:
+                return out.target
+        return None
+
     # TODO: this is legacy, should replace instances of this
     # with the UR class method
     def unobservable_reach(self, from_state: State_or_StateSet) -> Set[int]:
         """
-            Finds the set of states in the unobservable reach from the given state.
-            """
+        Finds the set of states in the unobservable reach from the given state.
+        """
 
         if isinstance(from_state, set):
             states = set()
