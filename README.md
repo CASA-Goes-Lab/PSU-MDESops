@@ -122,6 +122,7 @@ For other options of `pytest`, see `poetry run pytest --help`.
 ### Additional Resources
 
 For tutorials, demonstrations, and further information about DESops, please check out the following resources:
+- [Installation Tutorial](https://www.youtube.com/watch?v=xZAt-nGIQ-E)
 - [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_01.ipynb)
 - [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_02.ipynb)
 - [Youtube Channel](https://www.youtube.com/channel/UCaoigOnm8eGMC7nslwd5-BA)
