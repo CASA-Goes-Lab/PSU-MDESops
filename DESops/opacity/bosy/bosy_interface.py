@@ -20,7 +20,7 @@ from DESops.opacity.bosy.spin import ltl2spin, read_spin, write_spin
 # Change the path to Bosy here appropriately
 bosy_path = "/".join([str(Path.home()), "libraries/bosy"])
 # Also ensure that Aiger is installed at the following path
-aiger_path = "/".join([str(Path.home()), "libraries/aiger-1.9.9"])
+aiger_path = "/".join([str(Path.home()), "libraries/aiger"])
 # Note there are currently some issues with non-absolute paths
 
 
@@ -167,17 +167,20 @@ def run_bosy(
     )
 
 
-def synthesize_bosy(bosy_path, aag_path):
+def synthesize_bosy(i_bosy_path, i_aag_path):
     """
     Synthesize a controller from hyperLTL specifications using bosy.
 
     Parameters:
-    bosy_path: the path for the input bosy file
-    aag_path: the path for the Aiger (.aag) file
+    i_bosy_path: the path for the input bosy file
+    i_aag_path: the path for the Aiger (.aag) file
     """
-    print(os.popen("echo $PATH").read())
+    #print(os.popen("echo $PATH").read())
+    #os.system(
+    #    f"swift run -c release BoSyHyper --synthesize {i_bosy_path} | sed -ne '/^aag.*/,$ p' > {i_aag_path}"
+    #)
     os.system(
-        f"swift run -c release BoSyHyper --synthesize {bosy_path} | sed -ne '/^aag.*/,$ p' > {aag_path}"
+        f".build/release/BoSyHyper --synthesize {i_bosy_path} | sed -ne '/^aag.*/,$ p' > {i_aag_path}"
     )
 
 
