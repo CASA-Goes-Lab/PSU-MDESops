@@ -20,4 +20,4 @@ from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 from DESops.diagnoser import diagnoser
 
-__version__ = "20.6.1a4"
+__version__ = "20.9.2"

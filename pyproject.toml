@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "DESops"
-version = "20.6.1a4"
+version = "20.9.2"
 description = ""
 authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>"]
 packages = [
@@ -8,7 +8,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 python-igraph = "^0.8.0"
 pycairo = {version="^1.19.1", optional=true}
 pydash = "^4.7.6"
