@@ -49,9 +49,9 @@ def test_observer():
     for out in obs.vs["out"][0]:
         names = obs.vs["name"][out[0]]
         if out[1] == d.Event("a"):
-            assert names == frozenset(("3", "4", "5"))
+            assert sorted(names) == ['3', '4', '5']
         if out[1] == d.Event("b"):
-            assert names == frozenset(("2", "5"))
+            assert sorted(names) == ['2','5']
 
 
 def test_observer_empty():
