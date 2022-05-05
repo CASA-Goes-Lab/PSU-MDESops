@@ -1,0 +1,68 @@
+commit 7aeca375e86946c2d3c395248bb549a9abaa9cc0
+Author: Andrew Wintenberg <awintenb@umich.edu>
+Date:   Thu May 5 11:56:37 2022 -0400
+
+    Customization for M-DESops
+
+diff --git a/Sources/Automata/Conversion.swift b/Sources/Automata/Conversion.swift
+index 6196783..73a83cc 100644
+--- a/Sources/Automata/Conversion.swift
++++ b/Sources/Automata/Conversion.swift
+@@ -20,6 +20,8 @@ public enum LTL2AutomatonConverter {
+                 return "ltl3ba"
+             case .spot(_):
+                 return "spot"
++            case .input:
++                return "input"
+         }
+     }
+ 
+@@ -29,10 +31,12 @@ public enum LTL2AutomatonConverter {
+             return try convertWithLtl3ba(ltl: ltl)
+         case let .spot(cliOpts):
+             return try convertWithSpot(ltl: ltl, hoaf: false, cliOpts: cliOpts)
++        case let .input:
++            return try useInputFile()
+         }
+     }
+ 
+-    public static let allValues: [LTL2AutomatonConverter] = [.ltl3ba, .spot("")]
++    public static let allValues: [LTL2AutomatonConverter] = [.ltl3ba, .spot(""), .input]
+ }
+ 
+ public func initAutomatonConverter(_ name: String, args: String) throws -> LTL2AutomatonConverter{
+@@ -41,6 +45,8 @@ public func initAutomatonConverter(_ name: String, args: String) throws -> LTL2A
+             return LTL2AutomatonConverter.spot(args)
+         case "ltl3ba":
+             return LTL2AutomatonConverter.ltl3ba
++        case "input":
++            return LTL2AutomatonConverter.input
+         default:
+             throw ParseError.toolNotFound(name) //throw error here, fix later
+     }
+@@ -75,6 +81,12 @@ func convertWithSpot(ltl: LTL, hoaf: Bool = false, cliOpts: String = "") throws
+     }
+ }
+ 
++func useInputFile() throws -> CoBüchiAutomaton {
++    let in_file = URL(fileURLWithPath: FileManager().currentDirectoryPath).appendingPathComponent("in.spin")
++    let input = try! String(contentsOf: in_file)
++    return try parseSpinNeverClaim(neverClaim: input)
++}
++
+ func parseSpinNeverClaim(neverClaim: String) throws -> CoBüchiAutomaton {
+     var states: Set<String> = Set()
+     var rejectingStates: Set<String> = Set()
+diff --git a/Sources/BoSyHyper/main.swift b/Sources/BoSyHyper/main.swift
+index f0e99e4..4d75b07 100644
+--- a/Sources/BoSyHyper/main.swift
++++ b/Sources/BoSyHyper/main.swift
+@@ -69,7 +69,7 @@ do {
+ 
+     if !searchEnvironment {
+         // build automaton for linear
+-        guard let linearAutomaton = try? CoBüchiAutomaton.from(ltl: !linear, using: .spot("")) else {
++        guard let linearAutomaton = try? CoBüchiAutomaton.from(ltl: !linear, using: .input) else {
+             Logger.default().error("could not construct automaton")
+             fatalError()
+         }
