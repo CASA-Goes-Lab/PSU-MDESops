@@ -151,3 +151,14 @@ Examples/
 
 #pycharm stuff
 .idea/
+
+# Edisyn tmp directory
+tests/edisyn/
+edisyn/
+
+# Bosy test directory
+tests/bosy/
+
+# temp
+temp.prism
+temp.props

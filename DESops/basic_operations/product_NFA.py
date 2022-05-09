@@ -10,7 +10,7 @@ from collections import OrderedDict
 from DESops.automata.NFA import NFA
 
 
-def product_NFA(g_list, save_state_names=True, save_marked_states=True):
+def product_NFA(g_list, save_state_names=True, save_marked_states=True, priorityOrder=False):
     """
     Computes the product composition of 2 (or more) Automata, and returns
     the resulting composition as an automata.

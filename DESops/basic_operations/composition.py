@@ -114,13 +114,23 @@ def product_linear(*automata: Automata_t) -> Automata_t:
     if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
 
+    # add init attribute to all automata so that both DFAs and NFAs will work
+    for g in automata:
+        if "init" not in g.vs.attributes():
+            g.vs["init"] = False
+            g.vs[0]["init"] = True
+
     G1 = automata[0]
     input_list = automata[1:]
 
     for G2 in tqdm(
         input_list, desc="Product Composition", disable=SHOW_PROGRESS is False
     ):
-        G_out = _Automata()
+        # result is nondeterministic if any input is nondeterministic
+        if any(isinstance(g, NFA) for g in automata):
+            G_out = NFA()
+        else:
+            G_out = DFA()
 
         num_G2_states = len(G2.vs)
         G_out_vertices = [
@@ -128,6 +138,7 @@ def product_linear(*automata: Automata_t) -> Automata_t:
                 "index": i * num_G2_states + j,
                 "name": (x1["name"], x2["name"]),
                 "marked": x1["marked"] is True and x2["marked"] is True,
+                "init": x1["init"] and x2["init"],
                 "indexes": (x1.index, x2.index),
             }
             for i, x1 in enumerate(G1.vs)
@@ -138,6 +149,7 @@ def product_linear(*automata: Automata_t) -> Automata_t:
             names=[v["name"] for v in G_out_vertices],
             marked=[v["marked"] for v in G_out_vertices],
             indexes=[v["indexes"] for v in G_out_vertices],
+            init=[v["init"] for v in G_out_vertices],
         )
         G1_vertices = [
             {
@@ -570,6 +582,8 @@ def observer(G: Automata_t) -> Automata_t:
     observer.Euc.update(G.Euc - G.Euo)
     observer.Euo.clear()
     observer.vs["marked"] = marked_list
+
+    observer.vs[0]["init"] = True
     observer.add_edges(
         transition_list, transition_label, check_DFA=False, fill_out=False
     )
