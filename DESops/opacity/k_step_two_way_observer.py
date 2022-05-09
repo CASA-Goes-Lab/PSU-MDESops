@@ -42,10 +42,11 @@ def verify_separate_k_step_opacity_TWO(
 
     # states of two-way observer are pairs of states in the forward and reverse observers
     opaque = True
+
     for v1 in g_obs.vs:
         for v2 in g_r_obs.vs:
             # opacity is violated if any nonempty intersection contains only secret states
-            common_states = v1["name"].intersection(v2["name"])
+            common_states = set(v1["name"]).intersection(set(v2["name"]))
             if common_states:
                 if all([g.vs[v]["secret"] for v in common_states]):
                     opaque = False
