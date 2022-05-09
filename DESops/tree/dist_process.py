@@ -1,6 +1,7 @@
 import itertools
 from collections import namedtuple
 
+
 class Pipeline:
 
     def __init__(self, in_type):
@@ -20,10 +21,10 @@ class Pipeline:
     def check_valid(self):
         if not self.process_list:
             return True
-        if not self.in_type.is_subtype(self.process_list[0]):
+        if not self.in_type.is_subtype(self.process_list[0].in_type):
             return False
         for p1, p2 in zip(self.process_list[:-1], self.process_list[1:]):
-            if not p1.out_type.is_subtype(p2.in_type):
+            if not p2.in_type.is_subtype(p1.out_type):
                 return False
         for i, p1 in enumerate(self.process_list):
             for p2 in self.process_list[i+1:]:
@@ -32,7 +33,6 @@ class Pipeline:
             if not p1.out_type.is_disjoint(self.in_type):
                 return False
         return True
-
 
 class Process:
 
@@ -48,6 +48,9 @@ class DataType:
         # self._var_value_dict = var_value_dict
         self._var_value_dict = {k: frozenset(v) for k, v in var_value_dict.items()}
         self.TupleClass = namedtuple('datatype', var_value_dict.keys())
+
+    def __str__(self):
+        return str(tuple(self.var_names()))
 
     def __call__(self, **kwargs):
         return self.TupleClass(**kwargs)
@@ -108,12 +111,6 @@ class DataType:
         for o_val in itertools.product(*[self.var_values(name) for name in new_names]):
             yield self.TupleClass(**(val_dict | dict(zip(new_names, o_val))))
 
-    '''
-    def possible_values(self):
-        values = itertools.product(*[self.var_values(name) for name in self.var_names()])
-        return {self.TupleClass._make(val) for val in values}
-    '''
-
     def from_subvalues(self, *subvalues):
         return self(**{k: v for sv in subvalues for k, v in sv._asdict().items()})
 
@@ -135,6 +132,12 @@ class DataType:
 
     def is_empty_type(self):
         return len(self.var_names()) == 0
+
+    def from_ordered_values(self, values):
+        if not type(values) == list and not type(values) == tuple:
+            values = (values,)
+        return self(**dict(zip(self.var_names(), values)))
+
 
 empty_type = DataType({})
 empty_value = empty_type()

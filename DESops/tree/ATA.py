@@ -4,10 +4,13 @@ Code modeling alternating tree automata.
 """
 import boolean
 import itertools
+from enum import Enum
 
 from DESops.tree.dist_process import DataType
 from DESops.tree.dist_process import empty_type, empty_value
 from DESops.automata.NFA import NFA
+from DESops.basic_operations import unary
+from DESops.tree.graph_algs import SCCHelper
 
 
 def _simplify_input(ata_func):
@@ -45,6 +48,14 @@ def _simplify_io(ata_func):
     return _simplify_output(_simplify_input(ata_func))
 
 
+class AcceptanceCondition(Enum):
+    RABIN = 0
+    STREETE = 1
+    PARITY = 2
+    BUCHI = 3
+    WEAK_BUCHI = 4
+
+
 class ATA:
     """
     Class representing alternating tree automata over infinite words
@@ -80,6 +91,27 @@ class ATA:
         # Construct the algebra over which the transition formulas are defined
         self.alg = boolean.BooleanAlgebra()
 
+    def __str__(self):
+        s = f"ATA over {self.in_type}-labeled {self.dir_type}-trees\n"
+        #s += f"Initial state: {self.init_state}\n"
+        #s += f"Accepting states: {self.acceptance}\n"
+        #s += f"States: {self.states}\n"
+        #s += f"Transitions: {self.transitions}\n"
+        for q in self.states:
+            mods = [("initial", q == self.init_state),
+                    ("accepting", q in self.acceptance)]
+            s += f"{q}: {'    '.join([mod_str for mod_str, cond in mods if cond])}\n"
+            for sigma in self.in_type:
+                if self.transitions[q, sigma] == False:
+                    trans_str = "False"
+                elif self.transitions[q, sigma] == True:
+                    trans_str = "True"
+                else:
+                    trans_str = str(self.transitions[q, sigma])
+                s += f"    {sigma} --> {trans_str}\n"
+        s += "\n"
+        return s
+
     def add_states(self, state_set):
         state_set = set(state_set)
         # add all states from a set to the automaton
@@ -101,18 +133,89 @@ class ATA:
         for key in transitions.keys():
             self.transitions[key] = self.alg.OR(self.transitions[key], (transitions[key]))
 
+    def add_simple_transitions(self, transitions):
+        """
+        Add a dict of transitions to the automaton
+        these transitions or OR'd with existing transitions so the resulting
+        language contains the original language
+
+        the transitions argument should be represented by a dict mapping states and input values
+        """
+        for (q, in_val), val in transitions.items():
+            key = (q, self.in_type.from_ordered_values(in_val))
+            self.transitions[key] = self.alg.OR(self.transitions[key],
+                              _OR_list(self.alg, [_AND_list(self.alg,
+                                                 [self.alg.Symbol((p, self.dir_type.from_ordered_values(out_val)))
+                                                  for p, out_val in dis_term])
+                                                  for dis_term in val]))
+
+    @_simplify_input
     def set_weak_buchi(self, accepting_set):
-        self.acceptance_type = "weak_buchi"
+        self.acceptance_type = AcceptanceCondition.WEAK_BUCHI
         self.acceptance = accepting_set
 
+    @_simplify_input
+    def is_weak_buchi(self):
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
+            return False
+        try:
+            self.compute_weak_partition()
+        except ValueError:
+            return False
+        return True
+
+    @_simplify_input
+    def compute_weak_partition(self):
+        """
+        Compute an ordered partition of the states using the accepting states
+        Partition is computed by combining strongly connected components of the ATA as a digraph.
+        First element of result is accepting, all further components alternate reject/accept.
+        """
+
+        # find strongly connected components, sorted by reverse topological order
+        sccList = SCCHelper(self.construct_transition_NFA()).computeSCC()
+
+        if not all(scc.issubset(self.acceptance) or scc.isdisjoint(self.acceptance) for scc in sccList):
+            raise ValueError("Automaton is not weak Buchi. Found alternating accepting/rejecting cycle.")
+
+        hier = []
+        tmp = set()
+        acc = True
+        # combine subsequent components of same type (accept/reject) and add to hierarchy
+        for scc in sccList:
+            if scc.isdisjoint(self.acceptance) != acc:
+                tmp |= scc
+                continue
+            hier.append(tmp)
+            acc = not acc
+            tmp = scc
+        hier.append(tmp)
+        return hier
+
     @_simplify_io
-    def copy(self, prefix=""):
+    def copy(self):
         """
         Create a copy of the automaton and prefix states with a string
         This requires changing the states to strings
         """
-        if self.acceptance_type != "weak_buchi":
+        copy_ata = ATA(self.in_type, self.dir_type)
+        copy_ata.states = self.states.copy()
+        copy_ata.init_state = self.init_state
+        copy_ata.transitions = self.transitions.copy()
+        copy_ata.acceptance_type = self.acceptance_type
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI or self.acceptance_type == AcceptanceCondition.BUCHI:
+            copy_ata.acceptance = self.acceptance.copy()
+        else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
+
+        return copy_ata
+
+    @_simplify_io
+    def copy_str(self, prefix=""):
+        """
+        Create a copy of the automaton and prefix states with a string
+        This requires changing the states to strings
+        """
         copy_ata = ATA(self.in_type, self.dir_type)
         copy_ata.states = {prefix + str(q) for q in self.states}
         copy_ata.init_state = prefix + str(self.init_state)
@@ -120,7 +223,11 @@ class ATA:
                                                                   lambda key: (prefix + str(key[0]), key[1]))
                                 for (q, sigma) in self.transitions.keys()}
         copy_ata.acceptance_type = copy_ata.acceptance_type
-        copy_ata.acceptance = {prefix + str(q) for q in self.acceptance}
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI or self.acceptance_type == AcceptanceCondition.BUCHI:
+            copy_ata.acceptance = {prefix + str(q) for q in self.acceptance}
+        else:
+            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
+
         return copy_ata
 
     @_simplify_io
@@ -128,7 +235,7 @@ class ATA:
         """
         Create a copy of the automaton and convert states to integers with an offset
         """
-        if self.acceptance_type != "weak_buchi":
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
 
         copy_ata = ATA(self.in_type, self.dir_type)
@@ -169,7 +276,7 @@ class ATA:
         ata_list = [self] + list(others)
         if widen:
             in_type = ata_list[0].in_type.product_type(*[other.in_type for other in ata_list[1:]])
-            ata_list = [ata.widen_output(in_type) for ata in ata_list]
+            ata_list = [ata.widen_input(in_type) for ata in ata_list]
 
         if len({ata.acceptance_type for ata in ata_list}) != 1:
             raise ValueError("Mismatch in ATA acceptance types")
@@ -201,7 +308,7 @@ class ATA:
             t = _AND_list(union_ata.alg, t_list) if operation == "AND" else _OR_list(union_ata.alg, t_list)
             union_ata.add_transitions({(union_init, sigma): t})
 
-        if copy_list[0].acceptance_type == "weak_buchi":
+        if copy_list[0].acceptance_type == AcceptanceCondition.WEAK_BUCHI:
             union_ata.set_weak_buchi(set().union(*[ata.acceptance for ata in copy_list]))
         else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
@@ -213,9 +320,10 @@ class ATA:
         """
         Alter the automaton to accept the complement of the language it accepts
         """
+        # complement is given by dualizing transition formulas
         self.transitions = {k: dualize(v)
                             for k, v in self.transitions.items()}
-        if self.acceptance_type == "weak_buchi":
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI:
             self.set_weak_buchi(self.states - self.acceptance)
         else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
@@ -230,24 +338,69 @@ class ATA:
         self.transitions = {key: _dnf(self.alg, val) for key, val in self.transitions.items()}
         return self
 
+    @_simplify_input
+    def is_language_subset(self, other):
+        """
+        Determine if tree language accepted by this automaton is a subset of the language
+        accepted by another automaton
+        """
+        # L1 is a subset of L2 iff L1 intersect the complement of L2 is empty
+        other_comp = other.copy().complement()
+        x = (self.AND(other_comp).to_nondet().copy_int())
+        return self.AND(other_comp).to_nondet().is_empty()
+
+    @_simplify_input
+    def is_language_equivalent(self, other):
+        """
+        Determine if the tree language of this and another automaton are equivalent
+        """
+        return self.is_language_subset(other) and other.is_language_subset(self)
+
+    @_simplify_input
+    def construct_transition_NFA(self):
+        """
+        Construct an NFA with the states of this automaton
+        Transitions of the NFA are labeled with the input and direction of alternating transitions
+        """
+        nfa = NFA()
+        state_map = {v: k for k, v in enumerate(self.states)}
+        nfa.add_vertices(len(self.states), names=list(self.states))
+        trans = [((state_map[q], state_map[p]), (sigma, upsilon)) for q in self.states for sigma in self.in_type
+                                                                  for p, upsilon in self.transitions[q, sigma].objects]
+
+        if trans:
+            pair_list, labels = zip(*trans)
+        else:
+            pair_list = labels = []
+        nfa.add_edges(list(pair_list), list(labels))
+        nfa.vs["init"] = False
+        nfa.vs[state_map[self.init_state]]["init"] = True
+
+        return nfa
+
     @_simplify_io
     def accessible_part(self):
-        reached_states = set()
+
+        """
+        acc_states = set()
         new_states = {self.init_state}
-        while new_states := new_states - reached_states:
+        while new_states := new_states - acc_states:
             state = new_states.pop()
-            reached_states.add(state)
+            acc_states.add(state)
             new_states.update({v[0] for sigma in self.in_type
                                for v in self.transitions[state, sigma].args
                                })
+        """
+        trans_nfa = self.construct_transition_NFA()
+        acc_states = self.states - set(trans_nfa.vs.select(unary.find_inacc(trans_nfa))["name"])
         acc_ata = ATA(self.in_type, self.dir_type)
-        acc_ata.add_states(reached_states)
+        acc_ata.add_states(acc_states)
         acc_ata.init_state = self.init_state
         acc_ata.add_transitions({(q, sigma): self.transitions[q, sigma]
-                                 for q in reached_states for sigma in self.in_type})
+                                 for q in acc_states for sigma in self.in_type})
 
-        if self.acceptance_type == "weak_buchi":
-            acc_ata.set_weak_buchi(self.acceptance & reached_states)
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI:
+            acc_ata.set_weak_buchi(self.acceptance & acc_states)
         else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
         return acc_ata
@@ -258,15 +411,15 @@ class ATA:
         Construct a non-deterministic (non-alternating) automaton accepting the same languages
         """
         nta = ATA(self.in_type, self.dir_type)
+        # new states represent sets of states universally chosen by the environment in the alternating automaton
         nta.init_state = frozenset([self.init_state])
         new_states = {nta.init_state}
         while new_states := (new_states - nta.states):
             q_set = new_states.pop()
-            # print(len(new_states))
-            # print(q_set)
             nta.add_states({q_set})
             for sigma in self.in_type:
                 q_list = []
+                # handle trivial transition cases
                 for q in q_set:
                     if self.transitions[q, sigma] == False:
                         nta.transitions[q_set, sigma] = nta.alg.FALSE
@@ -280,10 +433,12 @@ class ATA:
                     nta.transitions[q_set, sigma] = nta.alg.TRUE
                     continue
 
+                # conjunctively combine the original transitions representing universal choice by the environment
                 orig_trans = _dnf(nta.alg, _AND_list(nta.alg, [
                     self.transitions[q, sigma] for q in q_list
                 ]))
                 new_or_terms = []
+                # collect transitions to states by one direction into one transition to a set of states
                 for or_term in _or_terms(orig_trans):
                     dir_map = {}
                     for (q, nu) in or_term.objects:
@@ -297,7 +452,7 @@ class ATA:
                     new_states.update(dir_map.values())
                 nta.transitions[q_set, sigma] = _OR_list(nta.alg, new_or_terms)
 
-        if self.acceptance_type == "weak_buchi":
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI:
             nta.set_weak_buchi({s for s in nta.states if all(q in self.acceptance for q in s)})
         else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
@@ -335,9 +490,12 @@ class ATA:
 
     @_simplify_input
     def is_tree(self):
+        """
+        Check if the automaton is a complete labeled tree over direction set
+        """
         if not self.is_det():
             return False
-        return all(len([sigma for sigma in self.in_type if self.transitions[q, sigma] != False]) for q in self.states)
+        return all(len([sigma for sigma in self.in_type if self.transitions[q, sigma] != self.alg.FALSE]) == 1 for q in self.states)
 
     @_simplify_input
     def accepts_tree(self, tree_dta):
@@ -346,100 +504,144 @@ class ATA:
         """
         if not tree_dta.is_tree():
             raise ValueError("Tree must be represented by deterministic tree automaton")
-        empty, _ = self.AND(tree_dta).to_nondet().is_empty()
-        return not empty
+        # TODO - alternative algorithm does not require conversion to nondeterministic automaton, i.e., solve acceptance game
+        # Approach - take conjunction of automaton with tree - must use classic product construction instead of usual alternating one
+        # Solve the nonemptiness game as if it were nondet, nature of tree ensures state based strategy correspond to direction-based one.
+        # reduce complexity from exp to quadratic
+        return tree_dta.is_language_subset(self)
+
+    @_simplify_input
+    def construct_winning_set_emptiness(self):
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
+            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
+
+        if not self.is_nondet():
+            raise ValueError("Automaton is not nondeterministic")
+        # remove labels from automaton to create an alternating word automaton
+        ata = self.narrow_input(empty_type).narrow_direction(empty_type)
+        # adjust acceptance condition for terminal states
+        new_acceptance_set = {q for q in ata.acceptance
+                              if q in ata.acceptance and ata.transitions[q, empty_value] != ata.alg.FALSE
+                              or ata.transitions[q, empty_value] == ata.alg.TRUE}
+        ata.set_weak_buchi(new_acceptance_set)
+
+        # compute weak buchi partition of state set
+        part = ata.compute_weak_partition()
+
+        winning_states = dict()
+        losing_states = set()
+        count = 0
+        trans = ata.transitions.copy()
+        acc = False
+        # Find accepting cycles
+        for curSet in part:
+            acc = not acc
+            changed = True
+            while changed and curSet:
+                changed = False
+                for q in curSet.copy():
+                    trans[q, empty_value] = my_subs(trans[q, empty_value], ata.alg,
+                                                    lambda v: v if v[0] not in winning_states else None,
+                                                    none_value=True)
+                    trans[q, empty_value] = my_subs(trans[q, empty_value], ata.alg,
+                                                    lambda v: v if v[0] not in losing_states else None,
+                                                    none_value=False).simplify()
+
+                    if trans[q, empty_value] == ata.alg.FALSE:
+                        losing_states.add(q)
+                        curSet.remove(q)
+                        changed = True
+                    if trans[q, empty_value] == ata.alg.TRUE:
+                        winning_states[q] = count
+                        count += 1
+                        curSet.remove(q)
+                        changed = True
+
+            if acc:
+                winning_states |= dict.fromkeys(curSet, count)
+                count += 1
+                trans |= {(q, empty_value): ata.alg.TRUE for q in curSet}
+            else:
+                losing_states |= curSet
+                trans |= {(q, empty_value): ata.alg.FALSE for q in curSet}
+        return winning_states
+
+    @_simplify_io
+    def construct_tree_element(self, winning_set):
+        """
+        Construct a tree in the language of this automaton whose acceptance game is played over the provided
+        winning set of states of the automaton
+
+        This automaton must be nondeterministic
+        """
+        if not self.is_nondet():
+            raise ValueError("Automaton must be nondeterministic")
+
+        tree_ata = ATA(self.in_type, self.dir_type)
+        tree_ata.add_states({self.init_state})
+        tree_ata.init_state = self.init_state
+        new_states = {self.init_state}
+        while new_states:
+            q = new_states.pop()
+            found = False
+            for sigma in self.in_type:
+                terms = _or_terms(self.transitions[q, sigma])
+                # if transition is true, self-loop forever
+                if terms is None:
+                    found = True
+                    tree_ata.add_transitions({(q, sigma): _AND_list(self.alg, [self.alg.Symbol((q, nu))
+                                                                               for nu in self.dir_type])})
+                    break
+                if not terms:
+                    continue
+                for term in terms:
+                    if all(p in winning_set and (q in self.acceptance or winning_set[p] < winning_set[q])
+                           for p, _ in term.objects):
+                        found = True
+                        next_states, directions = zip(*term.objects)
+                        new_next_states = set(next_states) - tree_ata.states
+                        new_states |= new_next_states
+                        tree_ata.add_states(new_next_states)
+                        next_term = _AND_list(self.alg, [self.alg.Symbol((p, nu)) for p, nu in term.objects]) & \
+                                    _AND_list(self.alg, [self.alg.Symbol((q, nu)) for nu in self.dir_type if nu not in directions])
+                        tree_ata.add_transitions({(q, sigma): next_term})
+                        break
+                if found:
+                    break
+            if not found:
+                raise ValueError("Provided set is not winning")
+        tree_ata.set_weak_buchi(tree_ata.states)
+        return tree_ata
 
     @_simplify_input
     def is_empty(self):
         """
         Check if the language accepted by the automaton is empty.
         Automaton must be non-deterministic
+
+        As the automaton is non-deterministic, it is sufficient to consider state-based strategies in the nonemptiness game
         """
-        if self.acceptance_type != 'weak_buchi':
+        empty, _ = self.test_emptiness()
+        return empty
+
+    @_simplify_input
+    def test_emptiness(self):
+        """
+        Check if the language accepted by the automaton is empty.
+        Automaton must be non-deterministic
+
+        As the automaton is non-deterministic, it is sufficient to consider state-based strategies in the nonemptiness game
+        """
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
 
         if not self.is_nondet():
             raise ValueError("Automaton is not nondeterministic")
-        ata = self.copy_int()
-
-        good_accepting_states = ata.acceptance.copy()
-        good_accepting_trans = ata.transitions.copy()
-        # Find accepting cycles
-        while True:
-            # print("GOOD: ", good_accepting_states)
-            # set transitions outside of good_accepting_states to False
-            good_accepting_trans = {key: my_subs(val, ata.alg,
-                                                 lambda v: v if v[0] in good_accepting_states else None,
-                                                 none_value=False).simplify()
-                                    for key, val in good_accepting_trans.items()}
-            # Bad states have no transition to a good state
-            new_bad_states = {q for q in good_accepting_states if all(
-                good_accepting_trans[q, d] == False
-                for d in ata.in_type
-            )}
-            # If no new bad states were found, then we have found all accepting cycles
-            if not new_bad_states:
-                break
-            # Otherwise remove the bad states and continue iterating
-            good_accepting_states -= new_bad_states
-
-        good_seq = [good_accepting_states, good_accepting_states]
-        is_empty = None
-        # Determine if initial state can reach accepting cycles
-        while True:
-            good_states = good_seq[-1].copy()
-            # If initial state can reach accepting cycle, then language is non-empty
-            if ata.init_state in good_states:
-                is_empty = False
-                break
-            # Otherwise set transitions to good states to True
-            ata.transitions = {key: _dnf(ata.alg, my_subs(val, ata.alg,
-                                                          lambda v: None if v[0] in good_states else v,
-                                                          none_value=True))
-                               for key, val in ata.transitions.items()}
-
-            # New good states are those which have some True transition
-            new_good_states = {q for q in ata.states - good_states if any(
-                ata.transitions[q, d] == True
-                for d in ata.in_type
-            )}
-            # if no new good states were found, then language is empty
-            if not new_good_states:
-                is_empty = True
-                break
-            # otherwise add new good states
-            good_states |= new_good_states
-            good_seq.append(good_states)
-        if is_empty:
-            return True, None
-
-        # TODO - this is broken
-        """
-        dta = ATA(ata.in_type, ata.dir_type)
-        dta.add_states(ata.states)
-        dta.init_state = ata.init_state
-        dta.set_weak_buchi(ata.acceptance)
-        for source_set, target_set in zip(good_seq[1:], good_seq[:-1]):
-            if not source_set.issubset(target_set):
-                source_set -= target_set
-            for q in source_set:
-                for sigma in dta.in_type:
-                    if ata.transitions[q, sigma] == True:
-                        x = my_subs(self.transitions[q, sigma], dta.alg,
-                                    lambda v: v if v[0] in target_set else None,
-                                    none_value=False)
-                        dta.transitions[q, sigma] = _or_terms(
-                            _dnf(dta.alg, my_subs(self.transitions[q, sigma], dta.alg,
-                                                  lambda v: v if v[0] in target_set else None,
-                                                  none_value=False)))[0]  # pick any term (first for simplicity)
-                        break
-        dta = dta.accessible_part()
-        return False, dta
-        """
-        return False, None
+        winning_states = self.construct_winning_set_emptiness()
+        return self.init_state not in winning_states, winning_states
 
     @_simplify_io
-    def widen_output(self, in_supertype):
+    def widen_input(self, in_supertype):
         """
         Convert an automaton accepting  Sigma-labeled Nu-trees to
         an automaton accepting XiSigma-labeled Nu-trees (where XiSigma is
@@ -463,15 +665,39 @@ class ATA:
         return n_ata
 
     @_simplify_io
-    def narrow(self, dir_subtype):
+    def narrow_input(self, in_subtype):
+        """
+        Convert an nondeterministic automaton accepting SigmaXi-labeled Nu-trees to
+        an automaton accepting Sigma-labeled Nu-trees whose inputs can be augmented
+        with Xi labels to be accepted by the original.
+        This construction is only valid for nondeterministic automata.
+        """
+        assert self.is_nondet()
+        assert in_subtype.is_subtype(self.in_type)
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
+            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
+
+        n_ata = ATA(in_subtype, self.dir_type)
+        n_ata.states = self.states.copy()
+        n_ata.init_state = self.init_state
+        n_ata.transitions = {(q, in_val): _OR_list(self.alg, [self.transitions[q, sigma]
+                                                                for sigma in self.in_type.inverse_projection(in_val)])
+                               for q in n_ata.states for in_val in in_subtype}
+        n_ata.acceptance_type = self.acceptance_type
+        n_ata.acceptance = self.acceptance
+
+        return n_ata
+
+    @_simplify_io
+    def narrow_direction(self, dir_subtype):
         """
         Convert an automaton accepting  Sigma-labeled XiNu-trees to
         an automaton accepting Sigma-labeled Xi-trees (where Xi is a subtype of XiNu)
         whose Nu-widenings are accepted by the original
         """
         assert dir_subtype.is_subtype(self.dir_type)
-        # if self.acceptance_type != 'weak_buchi':
-        #    raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
+        if self.acceptance_type != AcceptanceCondition.WEAK_BUCHI:
+            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
 
         n_ata = ATA(self.in_type, dir_subtype)
         n_ata.states = self.states.copy()
@@ -509,48 +735,9 @@ class ATA:
         return cov_ata
 
     @_simplify_io
-    def delay_input(self):
-        cov_ata = ATA(self.in_type, self.dir_type)
-        cov_ata.states = {(q, nu) for q in self.states for nu in self.dir_type}
-        cov_ata.init_state = (self.init_state, next(iter(self.dir_type)))
-        cov_ata.transitions = {((q, nu), sigma): _AND_list(self.alg, [my_subs(
-            self.transitions[q, sigma], self.alg,
-            lambda v: ((v[0], nu_n), nu_n) if v[1] == nu else None,
-            none_value=True) for nu_n in self.dir_type])
-                               for q in self.states for nu in self.dir_type
-                               for sigma in self.in_type}
-
-        if self.acceptance_type == 'weak_buchi':
-            cov_ata.set_weak_buchi({(q, nu) for q in self.acceptance for nu in self.dir_type})
-        else:
-            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
-        return cov_ata
-
-    @_simplify_io
-    def delay_input_mod(self):
-        cov_ata = ATA(self.in_type, self.dir_type)
-        cov_ata.init_state = _get_unique_name(self.states, "d_")
-        cov_ata.add_states({(q, nu) for q in self.states for nu in self.dir_type})
-        cov_ata.add_states({cov_ata.init_state})
-        cov_ata.transitions |= {((q, nu), sigma): _AND_list(self.alg, [my_subs(
-            self.transitions[q, sigma], self.alg,
-            lambda v: ((v[0], nu_n), nu_n) if v[1] == nu else None,
-            none_value=True) for nu_n in self.dir_type])
-                                for q in self.states for nu in self.dir_type
-                                for sigma in self.in_type}
-        cov_ata.add_transitions({(cov_ata.init_state, sigma):
-                                     _AND_list(self.alg, [self.alg.Symbol(((self.init_state, nu), nu))
-                                                          for nu in self.dir_type])
-                                 for sigma in self.in_type})
-
-        if self.acceptance_type == 'weak_buchi':
-            cov_ata.set_weak_buchi({(q, nu) for q in self.acceptance for nu in self.dir_type})
-        else:
-            raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
-        return cov_ata
-
-    @_simplify_io
     def delay_in(self, in_subtype):
+        if not self.is_word_automata():
+            raise NotImplementedError("Only delay for word automata are supported for now")
         quotient_in_type = self.in_type.quotient_type(in_subtype)
         cov_ata = ATA(self.in_type, self.dir_type)
         cov_ata.init_state = _get_unique_name(self.states, "d_")
@@ -561,19 +748,18 @@ class ATA:
             lambda v: ((v[0], xip), v[1]))
             for q in self.states for xi in quotient_in_type
             for xip in quotient_in_type for sigma in in_subtype}
-        sigma_0 = next(iter(in_subtype))
 
-        cov_ata.add_transitions({(cov_ata.init_state, self.in_type.from_subvalues(xi, sigma_0)):
+        cov_ata.add_transitions({(cov_ata.init_state, self.in_type.from_subvalues(xi, sigma)):
                 _AND_list(self.alg, [self.alg.Symbol(((self.init_state, xi), nu)) for nu in self.dir_type])
-             for xi in quotient_in_type})
-        if self.acceptance_type == 'weak_buchi':
+             for xi in quotient_in_type for sigma in in_subtype})
+        if self.acceptance_type == AcceptanceCondition.WEAK_BUCHI:
             cov_ata.set_weak_buchi({(q, xi) for q in self.acceptance for xi in quotient_in_type})
         else:
             raise NotImplementedError("Only 'weak_buchi' acceptance conditions are supported for now")
         return cov_ata
 
     @_simplify_io
-    def change_pipeline(self, in_to_dir_type, mode='OR', delay=False):
+    def change_pipeline(self, in_to_dir_type, mode='OR'):
         """
         For pipeline architectures
         Convert a non-deterministic automaton accepting XiSigma-labeled Theta trees
@@ -582,14 +768,8 @@ class ATA:
         is a subtype of XiSigma) to yield a tree accepted by the original
         """
         if mode == 'AND':
-            if not delay:
-                remaining_in_type = self.in_type.quotient_type(in_to_dir_type)
-                ata = self.delay_in(remaining_in_type).complement()
-            else:
-                ata = self.complement()
-            ata = ata.change_pipeline(in_to_dir_type, mode="OR", delay=True).complement()
-            if delay:
-                self.complement()
+            ata = self.copy().complement()
+            ata = ata.change_pipeline(in_to_dir_type, mode="OR").complement()
             return ata
         if mode != 'OR':
             raise ValueError("Mode must be AND or OR")
@@ -599,28 +779,16 @@ class ATA:
 
         ata = self if self.is_nondet() else self.to_nondet()
 
-        #remaining_in_type = ata.in_type.subtype(ata.in_type.var_names() - in_to_dir_type.var_names())
         remaining_in_type = ata.in_type.quotient_type(in_to_dir_type)
-        # TODO make it more clear which way we delay, maybe use more descriptive name
-        if not delay:
-            ata = ata.delay_in(remaining_in_type)
 
         c_ata = ATA(remaining_in_type, in_to_dir_type)
         c_ata.add_states(ata.states)
         c_ata.init_state = ata.init_state
 
-        for q in ata.states:
-            for sigma in remaining_in_type:
-                or_terms = []
-                for xi in in_to_dir_type:
-                    f = _or_terms(ata.transitions[q, ata.in_type.from_subvalues(xi, sigma)])
-                    if f is None:
-                        or_terms = None
-                        break
-                    for term in f:
-                        or_terms.append(_AND_list(ata.alg,
-                                                  [ata.alg.Symbol((fq, xi)) for (fq, theta) in term.objects]))
-                c_ata.transitions[q, sigma] = _OR_list(ata.alg, or_terms)
+        c_ata.transitions = {(q, sigma): _OR_list(ata.alg,
+                                                  [my_subs(ata.transitions[q, ata.in_type.from_subvalues(xi, sigma)], ata.alg,
+                                                           lambda v: (v[0], xi)) for xi in in_to_dir_type])
+                             for q in ata.states for sigma in remaining_in_type}
 
         c_ata.acceptance_type = ata.acceptance_type
         c_ata.acceptance = ata.acceptance
@@ -640,10 +808,13 @@ class ATA:
         Convert a word automaton accepting paths to a tree automaton
         accepting trees over the provided direction where every branch
         of the tree augmented with the direction is a path accepted
-        by the original automaton
+        by the original automaton.
 
         This converts a linear specification over inputs and outputs
         to a specification over output-labeled input-trees.
+        Moore semantics are used, i.e., the path (i0,o0)(i1,o1)...
+        becomes the path on a tree with root labeled by o0 transitioning
+        in the direction i0 to a node labeled by o1 ...
         """
         if not self.is_word_automata():
             raise ValueError("Must be word automaton")
@@ -694,22 +865,6 @@ class ATA:
                     g.add_edges(*zip(*[((state_map[q], state_map[term.obj[0]]), sigma) for term in suc_terms]))
 
         return g
-
-
-class AWA(ATA):
-    """
-    Class representing alternating word automata
-    Convenience for now, might remove later.
-    """
-
-    def __init__(self, in_type):
-        dir_type = DataType({})
-        super().__init__(in_type, dir_type)
-
-    @staticmethod
-    def from_Buchi_NFA(g):
-        g_awa = AWA()
-        pass
 
 
 def dualize(expr):

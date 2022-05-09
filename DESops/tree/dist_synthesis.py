@@ -1,6 +1,6 @@
-import dist_process
+from DESops.tree import dist_process
 
-def pipeline_synthesis(pipe, spec_ata, delay=False):
+def pipeline_synthesis(pipe, spec_ata):
     """
     Perform synthesis on a pipeline architecture for the given specification automaton
     The automaton should have input type given by the non-environmental (input) variables of the pipeline
@@ -16,7 +16,7 @@ def pipeline_synthesis(pipe, spec_ata, delay=False):
     for i, p in enumerate(pipe.process_list):
         print(f"Reducing process {i}")
         # Narrow the directions of the specification to the input of the current process
-        A.append(B[-1].narrow(p.in_type).copy_int())
+        A.append(B[-1].narrow_direction(p.in_type).copy_int())
         # Make the result nondeterministic for change operation / nonemptiness check
         N.append(A[-1].to_nondet().copy_int())
         # No need to compute change operation for last process
@@ -24,15 +24,29 @@ def pipeline_synthesis(pipe, spec_ata, delay=False):
             break
         # Nondeterministically implement the current process
         # Change the direction type of the specification to the output of the current process
-        B.append(N[-1].change_pipeline(p.out_type, delay=delay).copy_int())
+        B.append(N[-1].change_pipeline(p.out_type).copy_int())
 
     # check emptiness for last automaton and find an implementation if one exists
     print("Checking emptiness")
-    empty, member_ata = N[-1].is_empty()
-    return empty
-    if empty:
-        return {"realizable": not empty, "solution": None}
+    realizable = not N[-1].is_empty()
+    return realizable, N
+
+
+def construct_pipeline_realization(pipe, N):
+
+    strats = []
+    previous = None
+    for i, joint_ata in reversed(enumerate(N)):
+        if i < len(N):
+            joint_ata = joint_ata.AND(previous.inverse_change())
+        winning_set = joint_ata.construct_winning_set_emptiness()
+        joint_strat = joint_ata.construct_tree_element(winning_set)
+        strat = joint_strat.narrow_input(pipe.process_list[i].out_type)
+        strats.append(strat)
+        previous = joint_strat
+
     """
+
     # iterate and find implementation for the previous processes
     ata_list = [member_ata]
     lifted_ata_list = [member_ata]
@@ -54,37 +68,24 @@ def pipeline_synthesis(pipe, spec_ata, delay=False):
     """
 
 
-def linear_to_tree_specification(g, dir_type, mode="mealy"):
-    if mode == "mealy":
-        delay = False
-    elif mode == "moore":
-        delay = True
-    else:
-        raise ValueError("Mode must be mealy/moore")
-    return g.change_pipeline(dir_type, mode='AND', delay=delay)
 
-
-def linear_to_tree_specification_pipeline(g, pipe):
+def pipeline_linear_to_tree_spec(pipe, awa, delay=False):
     """
-    This method takes the word automaton g and appropriately shifts variables according to the pipeline arch
+    This method takes the word automaton awa and appropriately shifts variables according to the pipeline arch
     so that strategies composed with delay have traces accepted by the shifted version correspond
     to strategies composed without delay have traces accepted by g.
     This method then takes this shifted word automaton and converts it into a tree automaton
     with directions given by the input to the architecture
-
-    TODO - for efficiency, shifting should be done inbetween each step of synthesis rather than all at the beginning
     """
-    empty_type = dist_process.empty_type
-    augmented_output_types = [empty_type.product_type(*[proc.out_type for proc in pipe.process_list[i:]])
-                              for i in range(len(pipe.process_list))]
-    # TODO this is buggy
-    """
-    for t1, t2 in zip(augmented_output_types[:-1], augmented_output_types[1:]):
-        g = g.delay_in(t1)
-        g = g.delay_in(t2)
-    """
-    for t in augmented_output_types:
-        g = g.delay_in(t)
 
+    # TODO - for efficiency, shifting should be done inbetween each step of synthesis rather than all at the beginning
+    ata = awa
+    if not delay:
+        delay_type = dist_process.empty_type
+        # delay the outputs of the nth the last process by n
+        for proc in reversed(pipe.process_list):
+            delay_type = delay_type.product_type(proc.out_type)
+            ata = ata.delay_in(delay_type)
 
-    return g.change_pipeline(pipe.in_type, mode='AND', delay=False)
+    return ata.change_pipeline(pipe.in_type, mode="AND")
+

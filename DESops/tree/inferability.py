@@ -2,13 +2,12 @@ import DESops.tree.ATA as ATA
 import DESops.tree.ATA as ASA
 import DESops.tree.dist_process as dist_process
 import DESops.tree.dist_synthesis as dist_synthesis
+from DESops.tree.dist_process import empty_type, empty_value
 import DESops
 from DESops import NFA
 
 from itertools import chain
 
-empty_type = dist_process.DataType({})
-empty_val = empty_type()
 
 
 def inferability(pipe):
@@ -146,7 +145,7 @@ def create_dist_problem(g, info_attr="info"):
     A_plant_dyn = plant_dyn(pipe, g).complement().simplify()
 
     A_spec = A_block_guarantee.AND((A_inf.AND(A_sec)).OR(A_block_assumption, A_plant_dyn)).simplify()
-    A_spec = A_spec.widen_output(master_type)
+    A_spec = A_spec.widen_input(master_type)
 
     #A_spec = dist_synthesis.linear_to_tree_specification(A_spec, pipe.in_type, mode="mealy")
     A_spec = dist_synthesis.linear_to_tree_specification_pipeline(A_spec, pipe)
