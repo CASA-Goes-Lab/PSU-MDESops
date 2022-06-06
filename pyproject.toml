@@ -16,6 +16,7 @@ requests = "^2.24.0"
 dd = "^0.5.6"
 tqdm = "^4.46.1"
 colorama = {version = "^0.4.3", platform = "windows"}
+"boolean.py" = "^4.0"
 
 # Optional dependencies for opacity verification and enforcement
 # Edisyn
