@@ -1,9 +1,18 @@
 import DESops as d
 import DESops.SDA.event_extensions as ee
-from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn
+
+try:
+    from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn
+    edisyn_available = True
+except ImportError:
+    edisyn_available = False
+
 from DESops.opacity.secret_observer import construct_secret_observer_label_transform, tmp_verify_edit_opacity
 from DESops.opacity.observation_map import StaticMask, NonDetDynamicMask
 from DESops.opacity.language_functions import language_inclusion
+
+import pytest
+
 
 def test_edit_auto():
     g = d.NFA()
@@ -48,6 +57,7 @@ def test_edit_auto():
     assert language_inclusion(edited_g, target_auto, target_auto.events - target_auto.Euo)
 
 
+@pytest.mark.skipif(not edisyn_available, reason="EdiSyn not available")
 def test_edisyn_edit():
     g = d.NFA()
     g.add_vertices(4)
