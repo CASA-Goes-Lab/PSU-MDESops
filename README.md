@@ -86,7 +86,7 @@ python library [EdiSyn](https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn). To in
 
     $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn.git
 
-Then edit `pyproject.toml` to point to this directory. For development EdiSyn can be used in the editable mode.
+Then edit `pyproject.toml` to point to this directory. You will need to uncomment this line. For development EdiSyn can be used in the editable mode.
 Finally, to use this optional dependency, use the command:
 
     $ poetry install --extras "opacity_enf"

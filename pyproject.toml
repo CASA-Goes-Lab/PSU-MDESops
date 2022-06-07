@@ -20,8 +20,8 @@ colorama = {version = "^0.4.3", platform = "windows"}
 
 # Optional dependencies for opacity verification and enforcement
 # Edisyn
-#edisyn = { version="^1.0.0", optional = true}
-edisyn = {path = "../edisyn", optional = true, develop = true}
+# uncomment the next line if you have installed edisyn locally
+# edisyn = {path = "../edisyn", optional = true, develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
