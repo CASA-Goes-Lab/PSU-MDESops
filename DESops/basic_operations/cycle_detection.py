@@ -1,5 +1,5 @@
 """
-Funcions relevant to cycle detection.
+Functions relevant to cycle detection.
 """
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -53,7 +53,7 @@ class tarjans_algorithm:
         time += 1
         self.OnStack[i] = True
         self.st.append(i)
-        try: 
+        try:
             DFS_vertices[i].successors()
         except:
             pass
@@ -71,11 +71,11 @@ class tarjans_algorithm:
                     w = self.st.pop()
                     scc.append((DFS_vertices[w],w))
                     self.OnStack[w] = False
-                self.result.append(scc)       
- 
+                self.result.append(scc)
+
     def DFS(self, V) -> list:
         """
-        Depth first search algorithm that returns 
+        Depth first search algorithm that returns
         the order in which vertices were visited
         """
         d = []
@@ -95,7 +95,7 @@ class tarjans_algorithm:
 
 class johnsons_algorithm:
     """
-    Computes johnson's algorithm, returns a list of 
+    Computes johnson's algorithm, returns a list of
     all cycles in a given automata.
     """
     def __init__(self, G):
@@ -156,11 +156,16 @@ class johnsons_algorithm:
         Given a starting index, creates a new subgraph excluding
         vertices with a DFS index less than the index
         """
-        result = NFA(G)
+        result = G.copy()
+        result.vs[index]["init"] = True
+        """
+        Needs further debugging due to edge case on ext_diag_test.
+        """
         deleted_vertices = list()
         for x in range(0, index):
             deleted_vertices.append(DFS_vertices[x])
-        result.delete_vertices(deleted_vertices)
+        if deleted_vertices:
+            result.delete_vertices(deleted_vertices)
         return result
 
     def simple_cycles_util(self, start, current):
@@ -180,7 +185,7 @@ class johnsons_algorithm:
             elif neighbor not in self.blocked_set:
                 gotcycle = self.simple_cycles_util(start, neighbor)
                 foundCycle = gotcycle or foundCycle
-            
+
         if foundCycle == True:
             self.unblock(current)
         else:
@@ -192,7 +197,7 @@ class johnsons_algorithm:
         if(len(self.stack) > 0):
             self.stack.pop()
         return foundCycle
-    
+
     def unblock(self, vertex):
         self.blocked_set.remove(vertex)
         if self.blocked_map.get(vertex,-1) != -1:
@@ -234,7 +239,7 @@ def contains_cycle_util(v, visited, stack):
     Floyd's algorithm helper function.
     """
     visited[v.index] = True
-    stack[v.index] = True 
+    stack[v.index] = True
     for neighbor in v.successors():
         if visited[neighbor.index] == False:
             if contains_cycle_util(neighbor, visited, stack) == True:
