@@ -2,7 +2,7 @@
 name = "DESops"
 version = "20.9.2"
 description = ""
-authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>"]
+authors = ["Jack Weitze <jweitze@umich.edu>", "Romulo Meira Goes <r.meiragoes@gmail.com>", "Shoma Matsui <smatsui@umich.edu>", "Andrew Wintenberg <awintenb@umich.edu>"]
 packages = [
     { include = "DESops" },
 ]
@@ -16,6 +16,12 @@ requests = "^2.24.0"
 dd = "^0.5.6"
 tqdm = "^4.46.1"
 colorama = {version = "^0.4.3", platform = "windows"}
+"boolean.py" = "^4.0"
+
+# Optional dependencies for opacity verification and enforcement
+# Edisyn
+# uncomment the next line if you have installed edisyn locally
+# edisyn = {path = "../edisyn", optional = true, develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -35,4 +41,5 @@ requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry.extras]
-caching=["pycairo"]
+caching = ["pycairo"]
+opacity_enf = ["edisyn"]

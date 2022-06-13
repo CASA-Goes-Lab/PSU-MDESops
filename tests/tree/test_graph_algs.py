@@ -13,4 +13,7 @@ def test_graph_algs():
     ata_inf.set_weak_buchi(ata_inf.states)
     ata_inf.simplify()
 
-    print(graph_algs.SCCHelper(ata_inf).computeSCC())
+    scc = graph_algs.SCCHelper(ata_inf.construct_transition_NFA()).computeSCC()
+    assert len(scc) == 2
+    assert {"p"} in scc
+    assert {"q"} in scc

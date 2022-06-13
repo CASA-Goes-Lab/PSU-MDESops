@@ -4,19 +4,19 @@ implemented, including parallel/product compositions and observer computation. T
 
 ## Installation
 
-Below is a diagram that showcases the installation process. Before installing DESops, the first three steps must be completed first.  
+Below is a diagram that showcases the installation process. Before installing DESops, the first three steps must be completed first.
 
 ![README_diagram graph image](img/diagram.png)
 
 ### Step 1: Clone Repository
 
-On the right hand corner of this page, click on the blue box that says `Clone`. Copy and paste the HTTPS url. 
+On the right hand corner of this page, click on the blue box that says `Clone`. Copy and paste the HTTPS url.
 
 In your working directory, write the following command:
 
     $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/desops.git
 
-After running this command, a copy of this repository will be available in your working directory. 
+After running this command, a copy of this repository will be available in your working directory.
 
 ### Step 2: Install pkg-config and cairo
 
@@ -77,6 +77,21 @@ The following is only relevant for using the `random_DFA` submodule.
 
 There are detailed instructions for compiling the source code in the file `random_DFA/regal-1.08.0929/regal_readme.txt`
 There are several required libraries, and a c++ compiler is needed to build the REGAL executables. The script `build.py` (only for Linux systems with a g++ compiler) automates the build process after the preqrequisite libraries are installed.
+
+#### Opacity enforcement
+
+Two methods for synthesizing enforcement mechanisms for opacity are currently supported. The first requires the optional
+python library [EdiSyn](https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn). To install EdiSyn in an appropriate directory
+, run:
+
+    $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn.git
+
+Then edit `pyproject.toml` to point to this directory. You will need to uncomment this line. For development EdiSyn can be used in the editable mode.
+Finally, to use this optional dependency, use the command:
+
+    $ poetry install --extras "opacity_enf"
+
+The second method for opacity enforcement uses the library BoSy. See (/DESops/opacity/bosy) for more details.
 
 ## Contributing to DESops
 
