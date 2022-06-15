@@ -3,6 +3,7 @@
 Function to transform an fsm with secret states and unobservable events into a nondeterminstic fsm without
  unobservable events while preserving the secrecy of trajectories
 """
+
 from DESops.automata.NFA import NFA
 from DESops.basic_operations.ureach import (
     unobservable_reach,
@@ -10,7 +11,7 @@ from DESops.basic_operations.ureach import (
     ureach_ignore_states,
 )
 
-
+# TODO make unobervable events consistent with the rest of the project
 def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
     """
     Function contracting unobservable events while preserving secrecy properties.
@@ -29,20 +30,22 @@ def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
         ii) the i^th sequence of unobservable transitions (separated by observable transitions) in 'q'  is secret if and
             only if the the i^th state visited in 'h' is secret.
 
-    Parameters:
-    g: given automaton with secret states
-
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is 1
-
-    h: where to put the result of the construction
-        if not specified, a new automaton will be constructed and returned
-
-    Euo: set of unobservable events
+    :param g: The automaton with secret states
+    :type g: Automaton
+    :param secret_type: What behavior marks an observation period as secret
+                        1: an observation period is secret if it contains ANY secret state
+                        2: an observation period is secret if it contains ONLY secret states
+    :type secret_type: int
+    :param h: Where to put the result of the construction
+              if not specified, a new automaton will be constructed and returned
+    :type h: Automaton or None
+    :param Euo: The set of unobservable events
         if not specified, Euo will be determined from g.Euo
+    :type Euo: set or None
+    :return: The automaton with contracted traces
+    :rtype: Automaton
     """
+    
     h_defined = True
     if h is None:
         h = NFA()
@@ -146,5 +149,5 @@ def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
 
     h.generate_out()
 
-    if not h_defined:
-        return h
+    #if not h_defined:
+    return h

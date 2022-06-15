@@ -18,13 +18,19 @@ def apply_edisyn(path, plant, utility, insertion_bound=1, allow_deletions=True):
     nonsecret state NS in the estimate so that (S, NS) is in the utility constraints.
     Furthermore, the obfuscator will not insert more events than the given bound.
 
-    Parameters:
-    path: A directory where intermediate Edisyn files can be stored
-    plant: A DFA reperesenting the system with secret states marked
-    utility: A list of admissible pairs of states estimations of the plant
-    insertion_bound: The bound on the number of events the obfuscator can insert
 
-    Returns: A obfuscator automaton. An event 'a/b/c' denotes that 'a' should be replaced by 'bc'
+    :param path: A directory where intermediate Edisyn files can be stored
+    :type path: str
+    :param plant: An automaton reperesenting the system with secret states marked
+    :type plant: DFA
+    :param utility: A list of admissible pairs of states estimations of the plant
+    :type utility: list
+    :param insertion_bound: The bound on the number of events the obfuscator can insert
+    :type insertion_bound: int
+    :param allow_deletions: Whether or not to allow deletions
+    :type allow_deletions: bool
+    :return: A obfuscator automaton. An event 'a/b/c' denotes that 'a' should be replaced by 'bc'
+    :rtype: Automaton
     """
     # Create working directory for Edisyn if it does not already exist
     makedirs(path, exist_ok=True)
@@ -55,14 +61,14 @@ def apply_edisyn(path, plant, utility, insertion_bound=1, allow_deletions=True):
 
 
 def trivial_utility(g):
-    '''
+    """
     Construct trivial utility constraints over the states of g
 
-    Parameters:
-    g: A DFA
-
-    Returns: A list of all pairs of states of g
-    '''
+    :param g: An automaton
+    :type g: Automaton
+    :return: A list of all pairs of states of g
+    :rtype: list[tuple]
+    """
     utility = [(v.index, u.index) for v in g.vs for u in g.vs]
     return utility
 
@@ -71,11 +77,12 @@ def _automata_to_edisyn_fsm(g, out_fsm_path):
     """
     Convert an automaton to an fsm file expected by Edisyn
 
-    Parameters:
-    g: A DFA representing the system with marked states representing secrets
-    out_fsm_path: A path to write the converted fsm to
-
-    Returns: a map from the events of g to the events of the fsm
+    :param g: A DFA representing the system with marked states representing secrets
+    :type g: DFA
+    :param out_fsm_path: A path to write the converted fsm to
+    :type out_fsm_path: str
+    :return: A map from the events of g to the events of the fsm
+    :rtype: dict
     """
     fout = open(out_fsm_path, 'w')
 
@@ -106,17 +113,19 @@ def _automata_to_edisyn_fsm(g, out_fsm_path):
     fout.close()
     return event_map
 
+
 def _edisyn_fsm_to_automata(in_path, event_map):
     """
         Convert the edit function from the fsm file from Edisyn to an automaton encoding it
         The events of the converted automaton are tuples (e1, e2, ..., en) representing
         the event e1 getting replaced by the string e2...en
 
-        Parameters:
-        in_path: A path to read the fsm from
-        event_map: A dictionary mapping events of the input automaton for Edisyn to the events of the fsm output
-
-        Returns: An automaton converted from the fsm file
+        :param in_path: A path to read the fsm from
+        :type in_path: str
+        :param event_map: A dictionary mapping events of the input automaton for Edisyn to the events of the fsm output
+        :type event_map: dict
+        :return: An automaton converted from the fsm file
+        :rtype: NFA
     """
     obf = None
 
@@ -177,9 +186,10 @@ def _utility_to_spc(utility, out_utility_path):
     """
     Convert a utility constraint list to a spc file expected by Edisyn
 
-    Parameters:
-    utility: A list of pairs of admissible states
-    out_utility_path: The path to write the spc file to
+    :param utility: A list of pairs of admissible states
+    :type utility: list[tuple]
+    :param out_utility_path: The path to write the spc file to
+    :type out_utility_path: str
     """
     fout = open(out_utility_path, 'w')
 
@@ -200,16 +210,26 @@ def enforce_state_based_opacity_edisyn(g, utility, notion='CSO', joint=False,
     The provided utility constraints over the states of g are mapped into
     utility constraints over the states of the secret observer.
 
-    Parameters:
-    g: An NFA representing the plant
-    utility: A list of admissible pairs of states of g
-    notion: The notion of opacity to use, i.e., 'CSO','ISO','KSTEP','INFSTEP'
-    joint: If true, then interpret opacity jointly. If false, then interpret opacity separately
-    secret_type: The type of secrets for K-step and infinite step opacity
-    k: The value of K for K-step opacity
-    working_dir: Where to put intermediate Edisyn files
-    obs_map: The observation map for g
-    insertion_bound: The bound on the number of insertions for the obfuscator
+
+    :param g: An NFA representing the plant
+    :type g: NFA
+    :param utility: A list of admissible pairs of states of g
+    :type utility: list[tuple]
+    :param notion:  The notion of opacity to use, i.e., 'CSO','ISO','KSTEP','INFSTEP'
+    :type notion: str
+    :param joint: If true, then interpret opacity jointly. If false, then interpret opacity separately
+    :type joint: bool
+    :param working_dir: Where to put intermediate Edisyn files
+    :type working_dir: str
+    :param obs_map: The observation map for g
+    :type obs_map: ObservationMap
+    :param insertion_bound: The bound on the number of insertions for the obfuscator
+    :type insertion_bound: int
+    :param allow_deletions: Whether or not to allow deletions
+    :type allow_deletions: bool
+    :param spec_kwargs: Additional keyword arguments for specifying the kind of secret behavior
+    :return: The obfuscator as an automaton
+    :rtype: Automaton
     """
     # Construct the secret observer of the label transform of the provided system g
     a_so = construct_secret_observer_label_transform(g, obs_map, notion, joint=joint, **spec_kwargs)
@@ -233,12 +253,15 @@ def _state_based_utility(a_so, utility):
     there is a state qu from u so that (qv,qu) is admissible in the provided utility constraints for the
     original system.
 
-    Parameters:
-    a_so: The secret observer for the original system
-    utility: The utility constraints for the original system
 
-    Returns: utility constraints over the secret observer
+    :param a_so: The secret observer for the original system
+    :type a_so: Automaton
+    :param utility: The utility constraints for the original system
+    :type utility: list[tuple]
+    :return: utility constraints over the secret observer
+    :rtype: list[tuple]
     """
+
     # The artificial initial state added to the secret observer can only be explained by iteself.
     so_utility = [(v.index, u.index) for v in a_so.vs for u in a_so.vs if
                   (all([any([(sv[0], su[0]) in utility for su in u['name']]) for sv in v['name']])# and
@@ -290,10 +313,10 @@ def _edisyn_obf_to_edit(obf):
     Convert an automaton with edit tuple events to a transducer with edit pair events
     For example the event (a, b, c, d) gets mapped to the string of events (a, b)('',c)('',d)
 
-    Parameters:
-    obf: The automaton with edit tuple events
-
-    Returns: a transducer style edit automaton
+    :param obf: The automaton with edit tuple events
+    :type obf: Automaton
+    :return: A transducer style edit automaton
+    :rtype: Automaton
     """
 
     if not obf:
