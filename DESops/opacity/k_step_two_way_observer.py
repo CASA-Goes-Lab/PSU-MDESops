@@ -18,13 +18,18 @@ def verify_separate_k_step_opacity_TWO(
     """
     Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
-    Returns: opaque(, num_states)(, violating_path)
-
-    Parameters:
-    g: the automaton
-    k: the number of steps. If k == "infinite", then infinite-step opacity will be checked
-    return_num_states: if True, the number of states in the constructed observers is returned as an additional value
-    return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
+    :param g: The automaton
+    :type g: Automata
+    :param k: The number of steps. If k == "infinite", then infinite-step opacity will be checked
+    :type k: int or str
+    :param secret_type: Type 1 or type 2
+    :type secret_type: int
+    :param return_num_states: if True, the number of states in the constructed observers is returned as an additional value
+    :type return_num_states: bool
+    :param return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
+    :type return_violating_path: bool
+    :return:
+    :rtype: opaque(, num_states)(, violating_path)
     """
     g = contract_secret_traces(g, secret_type)
 
@@ -75,14 +80,21 @@ def verify_separate_k_step_opacity_TWO(
         return tuple(return_list)
 
 
-def first_k_observer(G, k) -> DFA:
+def first_k_observer(g, k) -> DFA:
     """
     Modified version of observer_comp function
 
     Partially constructs the observer of G; only state estimates reachable within k steps are included
+
+    :param g: The automaton
+    :type g: Automata
+    :param k: The number of steps
+    :type k: int
+    :return: The modified observer
+    :rtype: DFA
     """
     observer = DFA()
-    if not G.vcount():
+    if not g.vcount():
         warnings.warn(
             "Observer operation with an empty automaton-return an empty automaton"
         )
@@ -104,18 +116,18 @@ def first_k_observer(G, k) -> DFA:
     # computing ureach for every singleton states
     # states_ureach = preprocessing_ureach(G)
 
-    if isinstance(G, NFA):
-        init_states = {v.index for v in G.vs if v["init"]}
+    if isinstance(g, NFA):
+        init_states = {v.index for v in g.vs if v["init"]}
     else:
         init_states = {0}
 
     # v0 = states_ureach[0]
     states_ureach = dict()
-    v0 = frozenset(ureach_from_set_adj(init_states, G, G.Euo))
+    v0 = frozenset(ureach_from_set_adj(init_states, g, g.Euo))
     states_ureach[frozenset(init_states)] = v0
     # name_v0 = "{" + ",".join(flatten_deep([G.vs["name"][v] for v in v0])) + "}"
-    name_v0 = frozenset([G.vs["name"][v] for v in v0])
-    marking = any([G.vs["marked"][v] for v in v0])
+    name_v0 = frozenset([g.vs["name"][v] for v in v0])
+    marking = any([g.vs["marked"][v] for v in v0])
     vertice_names.insert(index, name_v0)
     vertice_number[v0] = index
     marked_list.insert(index, marking)
@@ -132,10 +144,10 @@ def first_k_observer(G, k) -> DFA:
             # finding observable adjacent from v
             adj_states = dict()
             for vert in v:
-                for target, event in G.vs["out"][vert]:
-                    if event in adj_states and event not in G.Euo:
+                for target, event in g.vs["out"][vert]:
+                    if event in adj_states and event not in g.Euo:
                         adj_states[event].add(target)
-                    elif event not in adj_states and event not in G.Euo:
+                    elif event not in adj_states and event not in g.Euo:
                         s = set()
                         s.add(target)
                         adj_states[event] = s
@@ -149,7 +161,7 @@ def first_k_observer(G, k) -> DFA:
                     next_state = states_ureach[next_state]
                 else:
                     key = next_state
-                    next_state = frozenset(ureach_from_set_adj(key, G, G.Euo))
+                    next_state = frozenset(ureach_from_set_adj(key, g, g.Euo))
                     states_ureach[key] = next_state
 
                 # updating lists for igraph construction
@@ -162,11 +174,11 @@ def first_k_observer(G, k) -> DFA:
                     # name_next_state = (
                     # "{" + ",".join(flatten_deep([G.vs["name"][v] for v in next_state])) + "}"
                     # )
-                    name_next_state = frozenset([G.vs["name"][v] for v in next_state])
+                    name_next_state = frozenset([g.vs["name"][v] for v in next_state])
                     transition_list.append((vertice_number[v], index))
                     transition_label.append(ev)
                     vertice_number[next_state] = index
-                    marking = any([G.vs["marked"][v] for v in next_state])
+                    marking = any([g.vs["marked"][v] for v in next_state])
                     marked_list.insert(index, marking)
                     vertice_names.insert(index, name_next_state)
                     next_queue.append(next_state)
@@ -177,8 +189,8 @@ def first_k_observer(G, k) -> DFA:
 
     # constructing DFA: igraph and events sets
     observer.add_vertices(index, vertice_names)
-    observer.events = G.events - G.Euo
-    observer.Euc.update(G.Euc - G.Euo)
+    observer.events = g.events - g.Euo
+    observer.Euc.update(g.Euc - g.Euo)
     observer.Euo.clear()
     if observer.ecount():
         observer.vs["out"] = outgoing_list

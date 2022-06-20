@@ -5,19 +5,25 @@ Functions related to the mapping-based method of verifying K-step opacity
 from DESops.automata.DFA import DFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
-
+# TODO refactor this file to use new Automata conventions (secret and inital state labels)
 def verify_k_step_opacity_trajectory_based(
     g, k, joint=True, secret_type=None, return_num_states=False
 ):
     """
     Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
-    Returns opaque(, num_states)
-
-    Parameters:
-    g: the automaton
-    k: the number of steps
-    return_num_states: if True, the number of states in the constructed estimator is returned as an additional value
+    :param g: the automaton
+    :type g: Automaton
+    :param k: the number of steps
+    :type k: int
+    :param joint: Whether or not to verify joint opacity
+    :type joint: bool
+    :param secret_type: Type 1 or type 2
+    :type secret_type: int
+    :param return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
+    :type return_num_states: bool
+    :return: is_opaque (, num_states)
+    :rtype: tuple
     """
     if secret_type is None:
         if joint:
@@ -30,7 +36,7 @@ def verify_k_step_opacity_trajectory_based(
 
     traj_auto, induced_trajectories = construct_k_delay_estimator(g_c, k)
 
-    opaque = verify_k_step_opacity_from_estimator(
+    opaque = _verify_k_step_opacity_from_estimator(
         induced_trajectories, secret_states, k, joint
     )
 
@@ -44,36 +50,42 @@ def construct_k_delay_estimator(g, k):
     """
     Construct the k-delay estimator for automaton g with the specified secret type
 
-    g: the contracted automaton
-    k: the number of steps
-
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is type 1 for joint opacity and type 2 for separate opacity
+    :param g: The automaton
+    :type g: Automata
+    :param k: The number of steps
+    :type k: int
+    :return: The k-delay estimator
+    :rtype: DFA
     """
     traj_auto = DFA()
     induced_trajectories = []
     num_steps = k
     events = set(g.es["label"])
-    state_mappings = construct_induced_state_mappings(g, events)
+    state_mappings = _construct_induced_state_mappings(g, events)
     initial_states = g.vs.select(init=True).indices
-    construct_induced_state_trajectory_automata(
+    _construct_induced_state_trajectory_automata(
         traj_auto, induced_trajectories, num_steps, state_mappings, initial_states
     )
 
     return traj_auto, induced_trajectories
 
 
-def verify_k_step_opacity_from_estimator(
+def _verify_k_step_opacity_from_estimator(
     induced_trajectories, secret_states, k, joint=True
 ):
     """
     Returns whether the automaton that produced the induced trajectories is k-step opaque with respect to the given secret states
 
-    Parameters:
-    induced_trajectories: the list of estimator trajectories returned by the construct_k_delay_estimator function
-    secret_states: the list of indices that were secret in the contracted automaton
+    :param induced_trajectories: The list of estimator trajectories returned by the construct_k_delay_estimator function
+    :type induced_trajectories: list
+    :param secret_states: the list of indices that were secret in the contracted automaton
+    :type secret_states: list
+    :param k: The number of steps
+    :type k: int
+    :param joint: Whether or not to verify joint opacity
+    :type joint: bool
+    :return: Whether or not the system is opaque
+    :rtype: bool
     """
     if joint:
         # opacity requires that every trajectory contains a path that does not visit any secret state
@@ -97,15 +109,18 @@ def verify_k_step_opacity_from_estimator(
         return True
 
 
-def construct_induced_state_mappings(g, events):
+def _construct_induced_state_mappings(g, events):
     """
     Construct the state mappings induced by the given automata for each of the given events.
     Each state mapping is a dictionary that maps a source vertex to a set of target vertices.
     Returns a dictionary of state mappings indexed by events.
 
-    Parameters:
-    g: the contracted automata to compute the induced state mappings for
-    events: the events of the automata to compute induced state mappings for
+    :param g: The automaton
+    :type g: Automaton
+    :param events: the events of the automata to compute induced state mappings for
+    :type events: set
+    :return: The induced state mapping
+    :rtype: set
     """
     sm = dict()
     for e in events:
@@ -118,18 +133,24 @@ def construct_induced_state_mappings(g, events):
     return sm
 
 
-def construct_induced_state_trajectory_automata(
+def _construct_induced_state_trajectory_automata(
     traj_auto, induced_trajectories, num_steps, state_mappings, initial_states
 ):
     """
     Construct the induced state trajectory automaton from the provided state mapping dictionary.
 
-    Parameters:
-    traj_auto: the automaton to store the resulting automaton in
-    induced_trajectories: a list of induced trajectories indexed by the states of traj_auto
-    num_steps: the number of steps in the trajectories considered
-    state_mappings: a dictionary of state_mappings of the original system indexed by events
-    initial_states: a collection of initial states of the original system
+    :param traj_auto: the automaton to store the resulting automaton in
+    :type traj_auto: Automaton
+    :param induced_trajectories: a list of induced trajectories indexed by the states of traj_auto
+    :type induced_trajectories: list
+    :param num_steps: the number of steps in the trajectories considered
+    :type num_steps: int
+    :param state_mappings: a dictionary of state_mappings of the original system indexed by events
+    :type state_mappings: dict
+    :param initial_states: a collection of initial states of the original system
+    :type initial_states: set
+    :return: None
+    :rtype: NoneType
     """
     initial_trajectory = set()
     for i in initial_states:
@@ -145,7 +166,7 @@ def construct_induced_state_trajectory_automata(
     while unexplored:
         current_index = unexplored.pop()
         for event in events:
-            new_traj = compose_state_trajectory_and_mapping(
+            new_traj = _compose_state_trajectory_and_mapping(
                 induced_trajectories[current_index], state_mappings[event], num_steps
             )
             if not new_traj:
@@ -160,15 +181,20 @@ def construct_induced_state_trajectory_automata(
             traj_auto.add_edge(current_index, new_index, label=event)
 
 
-def compose_state_trajectory_and_mapping(st, sm, num_steps):
+def _compose_state_trajectory_and_mapping(st, sm, num_steps):
     """
     Return the composition of a state trajectory and a state mapping. The resulting state trajectory structure consists
     of trajectories of the original state trajectory structure followed by a transition from the state mapping, with the
     original step pruned to preserve the number of steps.
 
-    Parameters:
-    st: the state trajectory to compose
-    sm: the state mapping to compose
+    :param st: The state trajectory to compose
+    :type st: set
+    :param sm: The state mapping to compose
+    :type sm: dict
+    :param num_steps:
+    :type num_steps:
+    :return: The trajectories resulting from the composition
+    :rtype: set
     """
     new_traj = set()
     for path in st:

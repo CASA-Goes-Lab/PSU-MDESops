@@ -86,38 +86,6 @@ def moore_to_standard(g):
     return h
 
 
-def concatenate_union(g, h):
-    """
-    Constructs an automaton that marks any string in either in h, or in the concatenation of g and h
-
-    The resulting automaton overwrites the original g
-    """
-    offset = g.vcount() - 1
-    g.add_vertices(h.vcount() - 1)
-
-    for t in h.es:
-        if t.source == 0:
-            # transitions from the initial state of h use marked states of g as their source
-            for v in g.vs:
-                if v["marked"]:
-                    g.add_edge(v.index, t.target + offset, t["label"], fill_out=True)
-        else:
-            g.add_edge(t.source + offset, t.target + offset, t["label"], fill_out=True)
-
-    # marked states correpsond to initial states in h
-    for v in g.vs:
-        if v["marked"]:
-            v["init"] = True
-        # fix vertices that didn't get marked as initial or non-initial
-        if v["init"] is None:
-            v["init"] = False
-
-    # new marked states are those that are marked in h
-    g.vs["marked"] = False
-    for v in h.vs:
-        if v["marked"]:
-            g.vs[v.index + offset]["marked"] = True
-
 
 def construct_H_NS(k, joint, secret_type, events, Euo):
     if k == "infinite":

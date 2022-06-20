@@ -12,6 +12,18 @@ from DESops.opacity.k_step_trajectory_estimator import (
 )
 from DESops.opacity.k_step_two_way_observer import verify_separate_k_step_opacity_TWO
 from DESops.opacity.language_functions import find_path_between
+from enum import Enum
+
+
+class OpacityNotion(Enum):
+    """
+    The supported notions of opacity
+    """
+    CSO = 1
+    ISO = 2
+    KSTEP = 3
+    KDELAY = 4
+    INFSTEP = 5
 
 
 def verify_current_state_opacity(
@@ -20,12 +32,14 @@ def verify_current_state_opacity(
     """
     Returns whether the given automaton with unobservable events and secret states is current-state opaque
 
-    Returns: opaque(, num_states)(, violating_path)
-
-    Parameters:
-    g: the automaton
-    return_num_states: if True, the number of states in the constructed observer is returned as an additional value
-    return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
+    :param g: The automaton
+    :type g: Automata
+    :param return_num_states: if True, the number of states in the constructed observer is returned as an additional value
+    :type return_num_states: bool
+    :param return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
+    :type return_violating_path: bool
+    :return: opaque(, num_states)(, violating_path)
+    :rtype: tuple
     """
     # names need to be indices so we can find them from observer
     g.vs["name"] = g.vs.indices
@@ -58,7 +72,10 @@ def verify_initial_state_opacity(g):
     """
     Returns whether the given automaton with unobservable events and secret states is inital-state opaque
 
-    g: the automaton
+    :param g: The automaton
+    :type g: Automata
+    :return: Whether the given automaton is opaque
+    :rtype: bool
     """
     g_r = reverse(g, use_marked_states=False)
     # names need to be indices so we can find them from observer
@@ -86,33 +103,28 @@ def verify_k_step_opacity(
 ):
     """
     Returns whether the given automaton with unobservable events and secret states is k-step opaque
+    Uses given method for verification (default is "language")
 
-    Returns: opaque(, num_states)(, violating_path)
-
-    Parameters:
-    g: the automaton
-    k: the number of steps. If k == "infinite", then infinite-step opacity will be checked
-
-    joint: whether joint or separate opacity will be determined:
-        joint opacity is violated if an observer can determine that secret behavior occurred
-        separate opacity is violated if an observer can determine WHEN the secret behavior occurred
-    default is joint
-
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is 1 for joint opacity and 2 for separate opacity
-
-    method: the method by which opacity will be determined:
+    :param g: The automaton
+    :type g: Automata
+    :param k: The number of steps (or "infinite")
+    :type k: int or str
+    :param joint: Whether or not to consider joint opacity
+    :type joint: bool
+    :param secret_type: Type 1 or type 2
+    :type secret_type: int
+    :param method: The verification method
         "language" uses the language-comparison method
         "trajectory" uses the trajectory estimator method
         "state" uses the state observer method
         "TWO" uses the two-way observer method
-    default is "language"
-
-    return_num_states: if True, the number of states in the constructed observer is returned as an additional value
-
-    return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
+    :type method: str
+    :param return_num_states: if True, the number of states in the constructed observer is returned as an additional value
+    :type return_num_states: bool
+    :param return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
+    :type return_violating_path: bool
+    :return: opaque(, num_states)(, violating_path)
+    :rtype: tuple
     """
     if k == "infinite":
         return verify_infinite_step_opacity(
@@ -167,27 +179,23 @@ def verify_infinite_step_opacity(
 ):
     """
     Returns whether the given automaton with unobservable events and secret states is joint infinite-step opaque
+    Uses given method for verification (default is "unified")
 
-    Returns: opaque(, num_states)(, violating_path)
-
-    Parameters:
-    g: the automaton
-
-    joint: not implemented
-
-    secret_type: what behavior marks an observation period as secret
-        1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is 1 for joint opacity and 2 for separate opacity
-
-    method: the method by which opacity will be determined:
+    :param g: The automaton
+    :type g: Automata
+    :param joint: Whether or not to consider joint opacity (separate is not implemented)
+    :type joint: bool
+    :param secret_type: Type 1 or type 2
+    :type secret_type: int
+    :param method: The verification method
         "language" uses the language-inclusion method
         "unified" uses the unified framework method
-    default is "unified"
-
-    return_num_states: if True, the number of states in the constructed observer is returned as an additional value
-
-    return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
+    :type method: str
+    :param return_num_states: if True, the number of states in the constructed observer is returned as an additional value
+    :type return_num_states: bool
+    :param return_violating_path: if True, a list of edge IDs representing a path that violates opacity is returned as an additional value
+    :type return_violating_path: bool:return: opaque(, num_states)(, violating_path)
+    :rtype: tuple
     """
     if secret_type is None:
         if joint:

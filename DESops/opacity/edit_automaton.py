@@ -1,6 +1,6 @@
 """
 Functions relating to edit automata
-Depracated?!?!?!?!
+Depracated - replaced by Observation Map?
 """
 from DESops.automata.NFA import NFA
 from DESops.opacity.secret_observer import verify_opacity_secret_observer

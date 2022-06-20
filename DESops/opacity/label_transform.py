@@ -8,13 +8,14 @@ def label_transform(g, attribute_list, attributes_to_label):
     """
     Transform an automaton with state attributes to an automaton with events augmented by these labels
 
-    Parameters:
-    g: The automaton with secret states to transform
-    attribute_list: Vertex attributes of the automaton to transform
-    attributes_to_label: Function mapping attribute values to label
-
-    Returns:
-    a: The transformed automaton
+    :param g: The automaton with secret states to transform
+    :type g: Automata
+    :param attribute_list: Vertex attributes of the automaton to transform
+    :type attribute_list: list
+    :param attributes_to_label: Function mapping attribute values to label
+    :type attributes_to_label: Callable
+    :return: The transformed automaton
+    :rtype: NFA
     """
     a = NFA()
     a.add_vertices(g.vcount() + 1)
@@ -44,12 +45,10 @@ def transform_secret_labels(g):
     """
     Transform the secret state labels of an automaton to its events
 
-    Parameters:
-    g: The automaton with secret states to transform
-
-    Returns:
-    a: The transformed automaton
-    Ens: The secret events
+    :param g: The automaton with secret states to transform
+    :type g: Automata
+    :return: The transformed automaton, nonsecret events, and initial events
+    :rtype: (NFA, set, set)
     """
 
     a = label_transform(g, ['secret'], lambda secret: 'S' if secret else 'NS')
@@ -61,13 +60,15 @@ def transform_secret_labels(g):
 def induced_observation_map(a, obs_map):
     """
     Map an observation map on an automaton g to an observation map on it label transform a
+
     The provided observation map on g is assumed to only depend on events of g
 
-    Parameters:
-    a: The label transform of the system
-    obs_map: The observation map of the original system
-
-    Returns: An induced observation map on the label transformed system
+    :param a: The label transform of the system
+    :type a: Automata
+    :param obs_map: The observation map of the original system
+    :type obs_map: ObservationMap
+    :return: An induced observation map on the label transformed system
+    :rtype: ObservationMap
     """
     input_projection = StaticMask({e: e[0] for e in a.es['label']})
     tmp = obs_map.copy()

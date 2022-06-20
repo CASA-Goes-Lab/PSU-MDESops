@@ -24,17 +24,18 @@ def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
 
     The first two sections of code should be easily editable to implement additional maps
 
-    Parameters:
-    map_file: the path to an fsm file that defines the map
-              physical paths between locations should be defined in both directions as a transition labeled "t"
-              self-loops are implicitly assumed, and should not be present in the fsm file
-    num_agents: the number of users that will be modeled in the system
-    debug: if True, print information about the size of the system and whether CSO is already satisfied
-
-    Returns:
-    b: the automaton of the model, after it has been determinzed and reduced to a bisimilar partition
-    event_var_maps: a dict containing the the var lists and maps for the event encodings
+    :param map_file: The path to an fsm file that defines the map
+                      physical paths between locations should be defined in both directions as a transition labeled "t"
+                      self-loops are implicitly assumed, and should not be present in the fsm file
+    :type map_file: str
+    :param num_agents: The number of users that will be modeled in the system
+    :type num_agents: int
+    :param debug: if True, print information about the size of the system and whether CSO is already satisfied
+    :type debug: bool
+    :return: b - the automaton of the model, after it has been determinzed and reduced to a bisimilar partition
+             event_var_maps - a dict containing the the var lists and maps for the event encodings
                     (see "contact_event_maps" function in this file for details)
+    :rtype: tuple
     """
 
     # Regions and secret locations of additional maps can be defined in this section
@@ -116,7 +117,20 @@ def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
 
 def generate_model(map_automaton, regions, secret_locs, num_agents, ids=None):
     """
-    Generate the nondeterminisitc system representing the contact tracing model
+    Generate the nondeterministic system representing the contact tracing model
+
+    :param map_automaton: The automaton representing the map
+    :type map_automaton: Automata
+    :param regions: Map from map locations/states to their region
+    :type regions: dict
+    :param secret_locs: The secret locations/states of the map
+    :type secret_locs: list
+    :param num_agents: The number of agents moving about the map
+    :type num_agents: int
+    :param ids: The list of identifiers, one for each agent
+    :type ids: list
+    :return: The generated model over the map
+    :rtype: Automata
     """
     if ids is None:
         ids = list(range(num_agents))

@@ -8,6 +8,8 @@ from DESops.opacity.secret_specification import construct_nonsecret_spec
 from DESops.opacity.label_transform import transform_secret_labels, induced_observation_map
 from DESops.opacity.observation_map import observable_projection_map, StaticMask, SetValuedStaticMask, NonDetDynamicMask
 from DESops.opacity.language_functions import language_inclusion
+from DESops.opacity.opacity import OpacityNotion
+
 
 def construct_secret_observer(
     g,
@@ -19,17 +21,6 @@ def construct_secret_observer(
     """
     Constructs the secret observer of the system, an automaton marking admissible observations
 
-    Parameters:
-    g: the automaton modeling the original system
-    h_ns: the nonsecret specification automaton
-    ns_state_sets: sets of states of h_ns corresponding to the different notions of nonsecrecy
-    secret_type: "joint" or "separate"
-    obs_map: the observation map
-
-    Returns:
-    g_so: The secret observer automaton
-    """
-    '''
     Here state markings represent behavior that we want to consider.
     Runs that do not end at marked states in both g and h_ns are not used as
     counterexamples or explanations for opacity.
@@ -37,10 +28,24 @@ def construct_secret_observer(
     The secrecy of runs is defined entirely by ns_state_sets.
 
     The marking of g_so on the other hand represents observations that violate opacity.
-    '''
+
+    :param g: The automaton modeling the original system
+    :type g: Automata
+    :param h_ns: The nonsecret specification automaton
+    :type h_ns: Automata
+    :param ns_state_sets: Sets of states of h_ns corresponding to the different notions of nonsecrecy
+    :type ns_state_sets: set
+    :param joint: Whether or not to consider joint opacity (or separate)
+    :type joint: bool
+    :param obs_map:
+    :type obs_map: ObservationMap
+    :return: The secret observer automaton
+    :rtype: DFA
+    """
     g_ns = product_NFA([g, h_ns], save_marked_states=True)
     g_ns_obs = obs_map.apply_obs_map(g_ns)
     g_so = composition.observer(g_ns_obs)
+    # TODO - check effect of marking in input automata
     '''
     if not joint:
         """
@@ -82,13 +87,13 @@ def verify_opacity_secret_observer(g_so, return_violating=False):
     """
     Verify the system corresponding to the given secret observer is opaque
 
-    Parameters:
-    g_so: The secret observer automaton marking secrets
-    return_violating: Whether or not to return the index of a violating state if one exists
-
-    Returns:
-    is_opaque: whether the system is opaque or not
-    violating_index: the index of a state violating opacity if one exists else -1
+    :param g_so: The secret observer automaton marking secrets
+    :type g_so: DFA
+    :param return_violating: Whether or not to return the index of a violating state if one exists
+    :type return_violating: bool
+    :return: opaque (, violating_index)
+             the index of a state violating opacity if one exists else -1
+    :rtype: bool or tuple
     """
     try:
         violating_state = next(v for v in g_so.vs if v["marked"])
@@ -103,13 +108,22 @@ def verify_opacity_secret_observer(g_so, return_violating=False):
             return True
 
 
-def construct_secret_observer_label_transform(g, obs_map=None, notion='CSO', joint=False, **spec_kwargs,):
-    '''
-    Parameters:
-    g: The automaton modeling the system
-    obs_map: The static mask observation map used for the system
-    '''
+def construct_secret_observer_label_transform(g, obs_map=None, notion=OpacityNotion.CSO, joint=False, **spec_kwargs):
+    """
+    Construct the secret observer of the label transformed automaton for the given notion of opacity
 
+    :param g: The automaton
+    :type g: Automata
+    :param obs_map: The observation map for the automaton
+    :type obs_map: ObservationMap
+    :param notion: The notion of opacity
+    :type notion: OpacityNotion
+    :param joint: Whether or not to consider joint opacity (or separate)
+    :type joint: bool
+    :param spec_kwargs: Additional arguments for the notion of opacity
+    :return: The secret observer
+    :rtype: DFA
+    """
     a, Ens, Einit = transform_secret_labels(g)
     if not obs_map:
         obs_map = observable_projection_map(g)
@@ -136,6 +150,18 @@ def construct_secret_observer_label_transform(g, obs_map=None, notion='CSO', joi
 
 
 def is_obs_state_secret(state, ns_state_sets, joint):
+    """
+    Check if the given state of the secret observer is secret or not
+
+    :param state: The state of the secret observer
+    :type state: object
+    :param ns_state_sets: The sets of nonsecret states
+    :type ns_state_sets: set
+    :param joint: Whether or not to consider joint opacity
+    :type joint: bool
+    :return: Whether or not the state is secret
+    :rtype: bool
+    """
     if joint:
         return state['marked'] and all([any([all([
             (pair[1] not in ns_states)
@@ -149,8 +175,30 @@ def is_obs_state_secret(state, ns_state_sets, joint):
                 for ns_states in ns_state_sets])
 
 
-def tmp_verify_edit_opacity(g, edit, public=False, obs_map=None, notion='CSO', joint=False,
+# TODO - make not temporary?
+def tmp_verify_edit_opacity(g, edit, public=False, obs_map=None, notion=OpacityNotion.CSO, joint=False,
                             k=1, **spec_kwargs):
+    """
+    Temporary function for verifying if the given automaton under the given edit function is opaque.
+
+    :param g: The automata (with secret state labels)
+    :type g: Automata
+    :param edit: The edit function
+    :type edit: Automata
+    :param public: Whether or not to check public opacity (or private)
+    :type public: bool
+    :param obs_map: The observation map of original system g
+    :type obs_map: ObservationMap
+    :param notion: The notion of opacity
+    :type notion: OpacityNotion
+    :param joint: Whether or not to consider joint opacity
+    :type joint: bool
+    :param k: The number of steps for K-step opacity
+    :type k: int
+    :param spec_kwargs: Additional parameters for the notion of opacity
+    :return: Whether or not the system is opaque
+    :rtype: bool
+    """
 
     if not obs_map:
         obs_map = observable_projection_map(g)

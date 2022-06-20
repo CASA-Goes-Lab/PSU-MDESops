@@ -3,7 +3,7 @@ Class representing observation maps of automata systems.
 For now only static masks are implemented
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from DESops.basic_operations.transducers import transducer_transducer_product, transducer_auto_product, transducer_input_automaton
 from DESops.opacity.language_functions import language_inclusion
@@ -12,26 +12,65 @@ from DESops.automata import NFA
 class ObservationMap(ABC):
     """
     An abstract class representing an observation map that can be applied to an automaton
+    This maps the behavior of an automaton as a string to observations of this behavior
     """
-
+    # TODO - make global definition of empty event?
     epsilon = ''
 
     # abstract methods
 
-    # Check if the observation map is applicable to the given system
+    @abstractmethod
     def check_applicable(self, g):
+        """
+        Check if the observation map is applicable to the given system
+        i.e., if the behavior of the automaton is contained in the input behavior of the map
+
+        :param g: The automaton
+        :type g: Automata
+        :return: Whether or not the map is applicable to the given automaton
+        :rtype: bool
+        """
         pass
 
-    # Construct an automaton encoding observations of the given system
+    @abstractmethod
     def apply_observation_map(self, g):
+        """
+        Construct an automaton encoding observations of the given system
+
+        :param g: The input automaton
+        :type g: Automata
+        :return: An automaton representing the observed or output behavior through the map
+        :rtype: Automata
+        """
         pass
 
-    # Construct an observation map resulting from applying this map first followed by another map
+    @abstractmethod
     def compose(self, other):
+        """
+        Construct an observation map resulting from applying this map first, followed by another map
+
+        :param other: The second observation map
+        :type other: ObservationMap
+        :return: The composed map
+        :rtype: ObservationMap
+        """
         pass
 
-    # Modify this observation map by prepending the given observation
+    @abstractmethod
     def prepend_observation(self, event, obs):
+        """
+        Modify this observation map to accept its normal input behavior prepended by the given event
+        and output prepended by the given observation
+
+        Useful if the observed automaton is modified with a new initial state, for example as in the label transform
+
+        :param event: The prepended event
+        :type event: object
+        :param obs: The prepended observation
+        :type obs: object
+        :return: The modified map
+        :rtype: ObservationMap
+        """
         pass
 
 
@@ -57,15 +96,6 @@ class StaticMask(ObservationMap):
         return g.events.issubset(self._event_map.keys())
 
     def apply_obs_map(self, g):
-        """
-        Construct an automaton marking observations of the given system.
-
-        Parameters:
-        g: The automaton under observation
-
-        Returns: An automaton marking observations of g
-        """
-
         g_obs = g.copy()
         g_obs.es['label'] = [self[e] for e in g_obs.es['label']]
         g_obs.events = set(g_obs.es['label'])
@@ -136,14 +166,6 @@ class SetValuedStaticMask(ObservationMap):
         return g.events.issubset(self._nd_event_map.keys())
 
     def apply_obs_map(self, g):
-        """
-        Construct an automaton marking observations of the given system.
-
-        Parameters:
-        g: The automaton under observation
-
-        Returns: An automaton marking observations of g
-        """
         g_obs = g.copy()
         g_obs.delete_edges(g_obs.es)
         pair_list = [(e.source, e.target) for e in g.es for obs in self[e['label']]]
@@ -205,19 +227,11 @@ class NonDetDynamicMask(ObservationMap):
         return language_inclusion(g, transducer_input_automaton(self.transducer), g.events - g.Euo)
 
     def apply_obs_map(self, g):
-        """
-        Construct an automaton marking observations of the given system.
-
-        Parameters:
-        g: The automaton under observation
-
-        Returns: An automaton marking observations of g
-        """
-
         g_attr_list = set()
         if 'secret' in g.vs.attributes():
             g_attr_list.add('secret')
         g_obs = transducer_auto_product(self.transducer, g, g_attr_list=g_attr_list)
+        # TODO - use dedicated empty event
         g_obs.Euo = {""}
         return g_obs
 
@@ -249,4 +263,12 @@ class NonDetDynamicMask(ObservationMap):
 
 
 def observable_projection_map(g):
+    """
+    Create an observation map representing the projection of observable events for the given automaton
+
+    :param g: The automaton
+    :type g: Automata
+    :return: The map representing projection
+    :rtype: StaticMask
+    """
     return StaticMask({e: '' if e in g.Euo else e for e in g.events})
