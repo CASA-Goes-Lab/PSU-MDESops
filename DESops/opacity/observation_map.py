@@ -9,6 +9,7 @@ from DESops.basic_operations.transducers import transducer_transducer_product, t
 from DESops.opacity.language_functions import language_inclusion
 from DESops.automata import NFA
 
+
 class ObservationMap(ABC):
     """
     An abstract class representing an observation map that can be applied to an automaton
@@ -33,7 +34,7 @@ class ObservationMap(ABC):
         pass
 
     @abstractmethod
-    def apply_observation_map(self, g):
+    def apply_obs_map(self, g):
         """
         Construct an automaton encoding observations of the given system
 

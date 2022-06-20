@@ -6,7 +6,17 @@ Construction of specification automata as described in
 by Andrew Wintenberg, Matthew Blischke, Stéphane Lafortune, Necmiye Ozay
 """
 from DESops.automata.NFA import NFA
-from DESops.opacity.opacity import OpacityNotion
+from enum import Enum
+
+class OpacityNotion(Enum):
+    """
+    The supported notions of opacity
+    """
+    CSO = 1
+    ISO = 2
+    KSTEP = 3
+    KDELAY = 4
+    INFSTEP = 5
 
 initial_event = 'e_init'
 

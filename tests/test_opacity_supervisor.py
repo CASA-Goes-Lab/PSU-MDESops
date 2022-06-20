@@ -1,11 +1,11 @@
 import DESops as d
 from DESops.opacity.secret_observer import construct_secret_observer_label_transform
 from DESops.supervisory_control.supervisor import supremal_sublanguage
-
+from DESops.opacity.secret_specification import OpacityNotion
 
 def compute_opacity_supervisor(g):
 
-    a_so = construct_secret_observer_label_transform(g, notion="KSTEP", k=1, secret_type=1, joint=True)
+    a_so = construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=1, secret_type=1, joint=True)
 
     plant = a_so.copy()
     plant.vs['marked'] = True

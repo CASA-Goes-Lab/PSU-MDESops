@@ -12,18 +12,7 @@ from DESops.opacity.k_step_trajectory_estimator import (
 )
 from DESops.opacity.k_step_two_way_observer import verify_separate_k_step_opacity_TWO
 from DESops.opacity.language_functions import find_path_between
-from enum import Enum
-
-
-class OpacityNotion(Enum):
-    """
-    The supported notions of opacity
-    """
-    CSO = 1
-    ISO = 2
-    KSTEP = 3
-    KDELAY = 4
-    INFSTEP = 5
+from DESops.opacity.secret_specification import OpacityNotion
 
 
 def verify_current_state_opacity(

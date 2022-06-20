@@ -10,6 +10,7 @@ except ImportError:
 from DESops.opacity.secret_observer import construct_secret_observer_label_transform, tmp_verify_edit_opacity
 from DESops.opacity.observation_map import StaticMask, NonDetDynamicMask
 from DESops.opacity.language_functions import language_inclusion
+from DESops.opacity.secret_specification import OpacityNotion
 
 import pytest
 
@@ -76,10 +77,10 @@ def test_edisyn_edit():
     obs_map = StaticMask({'a': 'a', 'b': 'b', 'c': 'c'})
 
     utility = [(0,0),(1,1),(1,2),(2,2),(3,1),(3,2),(3,3)]
-    edit = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=2, obs_map=obs_map)
+    edit = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.CSO, insertion_bound=2, obs_map=obs_map)
 
-    assert (tmp_verify_edit_opacity(g=g, edit=edit, public=False, notion='CSO', obs_map=obs_map, joint=True))
-    assert (tmp_verify_edit_opacity(g=g, edit=edit, public=True, notion='CSO', obs_map=obs_map, joint=True))
+    assert (tmp_verify_edit_opacity(g=g, edit=edit, public=False, notion=OpacityNotion.CSO, obs_map=obs_map, joint=True))
+    assert (tmp_verify_edit_opacity(g=g, edit=edit, public=True, notion=OpacityNotion.CSO, obs_map=obs_map, joint=True))
 
 
 def test_edit_auto_pub_priv():
@@ -143,7 +144,7 @@ def test_edit_auto_pub_priv():
     edit.add_edge(8, 8, ('c', 'c'))
     edit.add_edge(8, 8, ('d', 'd'))
 
-    privately_opaque = tmp_verify_edit_opacity(g=g, edit=edit, public=False, notion='KSTEP', k=1, obs_map=obs_map, joint=False)
+    privately_opaque = tmp_verify_edit_opacity(g=g, edit=edit, public=False, notion=OpacityNotion.KSTEP, k=1, obs_map=obs_map, joint=False)
     #publicly_opaque = tmp_verify_edit_opacity(g=g, edit=edit, public=True, notion='KSTEP', k=1, obs_map=obs_map, joint=False)
     assert privately_opaque
     #assert not publicly_opaque

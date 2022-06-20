@@ -8,7 +8,7 @@ from DESops.automata.NFA import NFA
 from DESops.basic_operations import composition
 from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.product_NFA import product_NFA
-
+from DESops.opacity.secret_specification import _concatenate_union
 
 def language_inclusion(g, h, Eo, return_num_states=False, return_unincluded_path=False):
     """
@@ -99,14 +99,14 @@ def construct_H_NS(k, joint, secret_type, events, Euo):
         if joint:
             # no secret behavior is allowed in final K+1 steps
             for _ in range(0, k + 1):
-                concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
+                _concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
 
         else:
             # nonsecret bahvaior must occur K epochs ago
-            concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
+            _concatenate_union(h, H_epoch_NS(secret_type, events, Euo))
             # epochs 0 to K-1 steps ago don't matter
             for _ in range(0, k):
-                concatenate_union(h, H_epoch_all(events, Euo))
+                _concatenate_union(h, H_epoch_all(events, Euo))
 
     h.Euo = Euo
     return h
