@@ -8,10 +8,9 @@ by Andrew Wintenberg, Matthew Blischke, Stéphane Lafortune, Necmiye Ozay
 from DESops.automata.NFA import NFA
 from enum import Enum
 
+
 class OpacityNotion(Enum):
-    """
-    The supported notions of opacity
-    """
+    """The supported notions of opacity"""
     CSO = 1
     ISO = 2
     KSTEP = 3
@@ -21,15 +20,20 @@ class OpacityNotion(Enum):
 initial_event = 'e_init'
 
 def current_state_spec(Ens, E):
-    """
-    Construct a current-state opacity specification automaton over the given event sets
+    """Construct a current-state opacity specification automaton over the given event sets
 
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param E: All events
-    :type E: set
-    :return: An automaton encoding nonsecret behavior
-    :rtype: NFA
+    Parameters
+    ----------
+    Ens : set
+        The nonsecret events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        An automaton encoding nonsecret behavior
+
     """
     Es = E - Ens
 
@@ -50,15 +54,20 @@ def current_state_spec(Ens, E):
 
 
 def initial_state_spec(Ens, E):
-    """
-    Construct an initial-state opacity specification automaton over the given event sets
+    """Construct an initial-state opacity specification automaton over the given event sets
 
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param E: All events
-    :type E: set
-    :return: An automaton encoding nonsecret behavior
-    :rtype: NFA
+    Parameters
+    ----------
+    Ens : set
+        The nonsecret events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        An automaton encoding nonsecret behavior
+
     """
     Es = E - Ens
 
@@ -79,21 +88,26 @@ def initial_state_spec(Ens, E):
 
 
 def k_delay_spec(secret_type, k, Ens, Eo, E):
-    """
-    Construct a specification automaton over the given event sets for the k-delayed nonsecret language
+    """Construct a specification automaton over the given event sets for the k-delayed nonsecret language
 
-    :param secret_type: type 1 or type 2
-    :type secret_type: int
-    :param k: the delay
-    :type k: int
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param Eo: The observable events
-    :type Eo: set
-    :param E: All events
-    :type E: set
-    :return: An automaton encoding nonsecret behavior
-    :rtype: NFA
+    Parameters
+    ----------
+    secret_type : int
+        type 1 or type 2
+    k : int
+        the delay
+    Ens : set
+        The nonsecret events
+    Eo : set
+        The observable events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        An automaton encoding nonsecret behavior
+
     """
 
     h = _H_star(E)
@@ -111,19 +125,24 @@ def k_delay_spec(secret_type, k, Ens, Eo, E):
 
 
 def joint_infinite_step_spec(secret_type, Ens, Eo, E):
-    """
-    Construct a joint infinite step opacity specification automaton over the given event sets
+    """Construct a joint infinite step opacity specification automaton over the given event sets
 
-    :param secret_type: type 1 or type 2
-    :type secret_type: int
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param Eo: The observable events
-    :type Eo: set
-    :param E: All events
-    :type E: set
-    :return: An automaton encoding nonsecret behavior
-    :rtype: NFA
+    Parameters
+    ----------
+    secret_type : int
+        type 1 or type 2
+    Ens : set
+        The nonsecret events
+    Eo : set
+        The observable events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        An automaton encoding nonsecret behavior
+
     """
 
     Es = E - Ens
@@ -167,17 +186,22 @@ def joint_infinite_step_spec(secret_type, Ens, Eo, E):
 
 
 def _concatenate_union(g, h):
-    """
-    Constructs an automaton that marks any string in either in h, or in the concatenation of g and h
+    """Constructs an automaton that marks any string in either in h, or in the concatenation of g and h
 
     The resulting automaton overwrites the original g
 
-    :param g: The first automaton
-    :type g: Automata
-    :param h: The second automaton
-    :type h: Automata
-    :return: The marked states of the resulting automaton
-    :rtype: set
+    Parameters
+    ----------
+    g : Automata
+        The first automaton
+    h : Automata
+        The second automaton
+
+    Returns
+    -------
+    set
+        The marked states of the resulting automaton
+
     """
     offset = g.vcount() - 1
     g.add_vertices(h.vcount() - 1)
@@ -211,13 +235,18 @@ def _concatenate_union(g, h):
 
 
 def _H_star(E):
-    """
-    Returns an automaton with a single state that marks all strings over the given event set
+    """Returns an automaton with a single state that marks all strings over the given event set
 
-    :param E: All events
-    :type E: set
-    :return: The universal automaton
-    :rtype: NFA
+    Parameters
+    ----------
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        The universal automaton
+
     """
     h = NFA()
     h.add_vertex()
@@ -231,15 +260,20 @@ def _H_star(E):
 
 
 def _H_epoch_all(Eo, E):
-    """
-    Construct an automaton marking all epochs over the event sets
+    """Construct an automaton marking all epochs over the event sets
 
-    :param Eo: The observable events
-    :type Eo: set
-    :param E: All events
-    :type E: set
-    :return: An automaton that marks any single epoch
-    :rtype: NFA
+    Parameters
+    ----------
+    Eo : set
+        The observable events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        An automaton that marks any single epoch
+
     """
 
     Euo = E - Eo
@@ -257,19 +291,24 @@ def _H_epoch_all(Eo, E):
 
 
 def _H_epoch_NS(secret_type, Ens, Eo, E):
-    """
-    Construct an automaton marking nonsecret epochs
+    """Construct an automaton marking nonsecret epochs
 
-    :param secret_type: type 1 or type 2
-    :type secret_type: int
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param Eo: The observable events
-    :type Eo: set
-    :param E: All events
-    :type E: set
-    :return: an automaton that marks any single epoch in which nonsecret behavior occurs
-    :rtype: NFA
+    Parameters
+    ----------
+    secret_type : int
+        type 1 or type 2
+    Ens : set
+        The nonsecret events
+    Eo : set
+        The observable events
+    E : set
+        All events
+
+    Returns
+    -------
+    NFA
+        an automaton that marks any single epoch in which nonsecret behavior occurs
+
     """
     Euo = E - Eo
     Enso = Ens & Eo
@@ -303,25 +342,30 @@ def _H_epoch_NS(secret_type, Ens, Eo, E):
 # functions are spread out between this file and language_functions.py
 def construct_nonsecret_spec(notion, E, Ens=None, Eo=None,
                              joint=False, k=1, secret_type=1):
-    """
-    Construct a specification automaton for the given notion of nonsecret behavior and other parameters
+    """Construct a specification automaton for the given notion of nonsecret behavior and other parameters
 
-    :param notion: The corresponding type of opacity
-    :type notion: OpacityNotion
-    :param Ens: The nonsecret events
-    :type Ens: set
-    :param Eo: The observable events
-    :type Eo: set
-    :param E: All events
-    :type E: set
-    :param joint: Whether or not to interpret classes jointly (vs. separately)
-    :type joint: bool
-    :param k: the number of steps for K-step or k-delay opacity
-    :type k: int
-    :param secret_type: type 1 or type 2 (for K-step and infinite step opacity)
-    :type secret_type: int
-    :return: The nonsecret specification automaton
-    :rtype: NFA
+    Parameters
+    ----------
+    notion : OpacityNotion
+        The corresponding type of opacity
+    Ens : set
+        The nonsecret events (Default value = None)
+    Eo : set
+        The observable events (Default value = None)
+    E : set
+        All events
+    joint : bool
+        Whether or not to interpret classes jointly (vs. separately) (Default value = False)
+    k : int
+        the number of steps for K-step or k-delay opacity (Default value = 1)
+    secret_type : int
+        type 1 or type 2 (for K-step and infinite step opacity) (Default value = 1)
+
+    Returns
+    -------
+    NFA
+        The nonsecret specification automaton
+
     """
     h_ns = None
     ns_state_sets = None

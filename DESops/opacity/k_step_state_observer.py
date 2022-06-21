@@ -16,31 +16,36 @@ def verify_k_step_opacity_state_observer(
     return_num_states=False,
     return_violating_path=False,
 ):
-    """
-    Returns whether the given automaton with unobservable events and secret states is k-step opaque
-
+    """Returns whether the given automaton with unobservable events and secret states is k-step opaque
+    
     Parameters:
     g: the automaton
     k: the number of steps. If k == "infinite", then infinite-step opacity will be checked
     return_num_states: if True, the number of states in the state observer is returned as an additional value
     return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
 
-    :param g: the automaton
-    :type g: Automaton
-    :param k: the number of steps. If k == "infinite", then infinite-step opacity will be checked
-    :type k: int or str
-    :param joint: Whether or not to verify joint opacity
-    :type joint: bool
-    :param secret_type: Type 1 or type 2
-    :type secret_type: int
-    :param return_num_states: if True, the number of states in the product used for checking language inclusion is returned as an additional value
-    :type return_num_states: bool
-    :param return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
-    :type return_violating_path: list
-    :param use_reverse_comparison: if True, the reverse languages are compared; otherwise the forward languages are compared
-    :type use_reverse_comparison: bool
-    :return: is_opaque (, num_states)(, violating_path)
-    :rtype: tuple
+    Parameters
+    ----------
+    g : Automaton
+        the automaton
+    k : int or str
+        the number of steps. If k == "infinite", then infinite-step opacity will be checked
+    joint : bool
+        Whether or not to verify joint opacity (Default value = True)
+    secret_type : int
+        Type 1 or type 2 (Default value = None)
+    return_num_states : bool
+        if True, the number of states in the product used for checking language inclusion is returned as an additional value (Default value = False)
+    return_violating_path : list
+        if True, a list of observable events representing an opacity-violating path is returned as an additional value (Default value = False)
+    use_reverse_comparison : bool
+        if True, the reverse languages are compared; otherwise the forward languages are compared
+
+    Returns
+    -------
+    tuple
+        is_opaque (, num_states)(, violating_path)
+
     """
     e_ext = Event("e_ext")
     e_init = Event("e_init")

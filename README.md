@@ -47,6 +47,7 @@ If the method above does not work, you can use `pip` to properly install `poetry
 Sometimes pip requires a different command depending on your operating system. If the command above did not work, try the following alternatives:
 
     $ python3 -m pip install --user poetry
+
 or
 
     $ python -m pip install --user poetry
@@ -92,6 +93,23 @@ Finally, to use this optional dependency, use the command:
     $ poetry install --extras "opacity_enf"
 
 The second method for opacity enforcement uses the library BoSy. See (/DESops/opacity/bosy) for more details.
+
+## Documentation
+
+Documentation for most functions are provided as docstings in the code.
+Additional documentation is managed by sphinx. To enable this run the command `poetry install --extras docs`.
+The documentation can then be built with the commands
+
+    $ cd docs
+    $ poetry run make html
+
+View the documentation at `docs/build/html/index.html` with a web browser.
+
+To update or add the documentation for a module or file, in the `docs` directory run the command
+
+    $ poetry run sphinx-apidoc -f -o source/ ../DESops/path/to/file
+
+Note that this generates new docs, overwriting existing docs.
 
 ## Contributing to DESops
 

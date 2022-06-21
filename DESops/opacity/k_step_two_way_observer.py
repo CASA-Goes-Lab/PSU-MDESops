@@ -15,21 +15,26 @@ from DESops.opacity.language_functions import find_path_between
 def verify_separate_k_step_opacity_TWO(
     g, k, secret_type=2, return_num_states=False, return_violating_path=False
 ):
-    """
-    Returns whether the given automaton with unobservable events and secret states is k-step opaque
+    """Returns whether the given automaton with unobservable events and secret states is k-step opaque
 
-    :param g: The automaton
-    :type g: Automata
-    :param k: The number of steps. If k == "infinite", then infinite-step opacity will be checked
-    :type k: int or str
-    :param secret_type: Type 1 or type 2
-    :type secret_type: int
-    :param return_num_states: if True, the number of states in the constructed observers is returned as an additional value
-    :type return_num_states: bool
-    :param return_violating_path: if True, a list of observable events representing an opacity-violating path is returned as an additional value
-    :type return_violating_path: bool
-    :return:
-    :rtype: opaque(, num_states)(, violating_path)
+    Parameters
+    ----------
+    g : Automata
+        The automaton
+    k : int or str
+        The number of steps. If k == "infinite", then infinite-step opacity will be checked
+    secret_type : int
+        Type 1 or type 2 (Default value = 2)
+    return_num_states : bool
+        if True, the number of states in the constructed observers is returned as an additional value (Default value = False)
+    return_violating_path : bool
+        if True, a list of observable events representing an opacity-violating path is returned as an additional value (Default value = False)
+
+    Returns
+    -------
+    type
+        rtype: opaque(, num_states)(, violating_path)
+
     """
     g = contract_secret_traces(g, secret_type)
 
@@ -81,17 +86,22 @@ def verify_separate_k_step_opacity_TWO(
 
 
 def first_k_observer(g, k) -> DFA:
-    """
-    Modified version of observer_comp function
-
+    """Modified version of observer_comp function
+    
     Partially constructs the observer of G; only state estimates reachable within k steps are included
 
-    :param g: The automaton
-    :type g: Automata
-    :param k: The number of steps
-    :type k: int
-    :return: The modified observer
-    :rtype: DFA
+    Parameters
+    ----------
+    g : Automata
+        The automaton
+    k : int
+        The number of steps
+
+    Returns
+    -------
+    DFA
+        The modified observer
+
     """
     observer = DFA()
     if not g.vcount():

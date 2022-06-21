@@ -5,15 +5,20 @@ from DESops.automata.NFA import NFA
 
 
 def construct_bisimulation(g, attribute="secret"):
-    """
-    Constructs and returns a minimal-state automaton that is bisimilar to g and that preserves given attribute
+    """Constructs and returns a minimal-state automaton that is bisimilar to g and that preserves given attribute
 
-    :param g: The automaton to minimize
-    :type g: Automaton
-    :param attribute: The name of the attribute to preserve
-    :type attribute: str
-    :return: The minimized automaton
-    :rtype: Automaton
+    Parameters
+    ----------
+    g : Automaton
+        The automaton to minimize
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+
+    Returns
+    -------
+    Automaton
+        The minimized automaton
+
     """
     events = set(g.es["label"])
     if attribute not in g.vs.attributes():
@@ -40,20 +45,25 @@ def construct_bisimulation(g, attribute="secret"):
 
 # TODO why does this need events?
 def _find_coarsest_bisimilar_partition(g, events, attribute="secret"):
-    """
-    Finds the coarsest partition of states of g that will produce an automaton that
+    """Finds the coarsest partition of states of g that will produce an automaton that
     is bisimilar to g and whose behavior is identical to that of g over the given attribute
 
-    :param g: The automaton
-    :type g: Automaton
-    :param attribute: The name of the attribute to preserve
-    :type attribute: str
-    :param events: Relevant events of the automaton
-    :type events: set
-    :return: a tuple of the partition as a list of sets of state indices,
-             a table whose (i,j) entry is the set of block indices reached by block i via event j,
-             a dict mapping events to their column in the table
-    :rtype: (list, list[list], dict)
+    Parameters
+    ----------
+    g : Automaton
+        The automaton
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+    events : set
+        Relevant events of the automaton
+
+    Returns
+    -------
+    list, list[list], dict)
+        a tuple of the partition as a list of sets of state indices,
+        a table whose (i,j) entry is the set of block indices reached by block i via event j,
+        a dict mapping events to their column in the table
+
     """
     e_dict = dict()
     for i, e in enumerate(events):
@@ -108,15 +118,20 @@ def _find_coarsest_bisimilar_partition(g, events, attribute="secret"):
 
 
 def construct_simulation(g, attribute="secret"):
-    """
-    Constructs and returns a minimal-state automaton that is similar to g and that preserves the behavior of g over the given attribute
+    """Constructs and returns a minimal-state automaton that is similar to g and that preserves the behavior of g over the given attribute
 
-    :param g: The automaton to minimize
-    :type g: Automaton
-    :param attribute: The name of the attribute to preserve
-    :type attribute: str
-    :return: The minimized automaton
-    :rtype: Automaton
+    Parameters
+    ----------
+    g : Automaton
+        The automaton to minimize
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+
+    Returns
+    -------
+    Automaton
+        The minimized automaton
+
     """
     events = set(g.es["label"])
     partition, table, e_dict = find_coarsest_similar_partition(g, events)
@@ -139,20 +154,25 @@ def construct_simulation(g, attribute="secret"):
 
 
 def find_coarsest_similar_partition(g, events, attribute="secret"):
-    """
-    Finds the coarsest partition of states of g that will produce an automaton that
+    """Finds the coarsest partition of states of g that will produce an automaton that
     is similar to g and whose behavior is identical to that of g over the given attribute
 
-    :param g: The automaton
-    :type g: Automaton
-    :param attribute: The name of the attribute to preserve
-    :type attribute: str
-    :param events: Relevant events of the automaton
-    :type events: set
-    :return: a tuple of the partition as a list of sets of state indices,
-             a table whose (i,j) entry is the set of block indices reached by block i via event j,
-             a dict mapping events to their column in the table
-    :rtype: (list, list[list], dict)
+    Parameters
+    ----------
+    g : Automaton
+        The automaton
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+    events : set
+        Relevant events of the automaton
+
+    Returns
+    -------
+    list, list[list], dict)
+        a tuple of the partition as a list of sets of state indices,
+        a table whose (i,j) entry is the set of block indices reached by block i via event j,
+        a dict mapping events to their column in the table
+
     """
     e_dict = dict()
     for i, e in enumerate(events):

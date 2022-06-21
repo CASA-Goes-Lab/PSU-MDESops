@@ -12,6 +12,20 @@ from DESops.opacity.observation_map import StaticMask
 def construct_edited_system(g, edit, obs_map, editPriority=True):
     """
 
+    Parameters
+    ----------
+    g :
+        
+    edit :
+        
+    obs_map :
+        
+    editPriority :
+         (Default value = True)
+
+    Returns
+    -------
+
     """
     if not is_valid_edit_automaton(edit):
         raise ValueError('Not a valid edit automaton')
@@ -34,6 +48,17 @@ def construct_edited_system(g, edit, obs_map, editPriority=True):
     next_states_to_check = []
 
     def add_state_pair(new_pair):
+        """
+
+        Parameters
+        ----------
+        new_pair :
+            
+
+        Returns
+        -------
+
+        """
         if new_pair not in g_comp_vert:
             # this is a new vertex pair: add it to the dict with value 'index'
             # index just makes it easier later to map edge names from key to index
@@ -50,6 +75,21 @@ def construct_edited_system(g, edit, obs_map, editPriority=True):
             return g_comp_vert.index(new_pair)
 
     def add_pair_edge(source_ind, dest_pair, label):
+        """
+
+        Parameters
+        ----------
+        source_ind :
+            
+        dest_pair :
+            
+        label :
+            
+
+        Returns
+        -------
+
+        """
         new_ind = add_state_pair(dest_pair)
         g_comp_edges.append((source_ind, new_ind))
         g_comp_edge_labels.append(label)
@@ -112,6 +152,17 @@ def construct_edited_system(g, edit, obs_map, editPriority=True):
 
 
 def is_valid_edit_automaton(edit):
+    """
+
+    Parameters
+    ----------
+    edit :
+        
+
+    Returns
+    -------
+
+    """
 
     return not any([any([ee.is_deleted(e['label']) or ee.is_unedited(e['label']) for e in edit.es(_source=v)]) and
                     any([ee.is_inserted(e['label']) for e in edit.es(_source=v)]) for v in edit.vs])
@@ -121,6 +172,31 @@ def is_valid_edit_automaton(edit):
 def verify_opacity_edit(g, edit, obs_map, public=True,
                         notion='CSO', joint=True,
                         k=1, secret_type=1):
+    """
+
+    Parameters
+    ----------
+    g :
+        
+    edit :
+        
+    obs_map :
+        
+    public :
+         (Default value = True)
+    notion :
+         (Default value = 'CSO')
+    joint :
+         (Default value = True)
+    k :
+         (Default value = 1)
+    secret_type :
+         (Default value = 1)
+
+    Returns
+    -------
+
+    """
 
     g_edit, obs_map_edit = construct_edited_system(g, edit, obs_map)
     if public:

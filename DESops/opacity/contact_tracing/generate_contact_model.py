@@ -14,8 +14,7 @@ from DESops.opacity.bosy.edit_to_bosy import list_to_bool_vars
 
 
 def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
-    """
-    Construct and return an automaton representing a contact tracing example.
+    """Construct and return an automaton representing a contact tracing example.
     The model is determinized, and then reduced in size by constructing a bisimulation.
     The events of the system include the malicious observer's location, the other
     individual's regions, and the contact pairs. The event "_2RS_02", for example,
@@ -24,18 +23,24 @@ def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
 
     The first two sections of code should be easily editable to implement additional maps
 
-    :param map_file: The path to an fsm file that defines the map
-                      physical paths between locations should be defined in both directions as a transition labeled "t"
-                      self-loops are implicitly assumed, and should not be present in the fsm file
-    :type map_file: str
-    :param num_agents: The number of users that will be modeled in the system
-    :type num_agents: int
-    :param debug: if True, print information about the size of the system and whether CSO is already satisfied
-    :type debug: bool
-    :return: b - the automaton of the model, after it has been determinzed and reduced to a bisimilar partition
-             event_var_maps - a dict containing the the var lists and maps for the event encodings
-                    (see "contact_event_maps" function in this file for details)
-    :rtype: tuple
+    Parameters
+    ----------
+    map_file : str
+        The path to an fsm file that defines the map
+        physical paths between locations should be defined in both directions as a transition labeled "t"
+        self-loops are implicitly assumed, and should not be present in the fsm file (Default value = "map1.fsm")
+    num_agents : int
+        The number of users that will be modeled in the system (Default value = 2)
+    debug : bool
+        if True, print information about the size of the system and whether CSO is already satisfied (Default value = True)
+
+    Returns
+    -------
+    tuple
+        b - the automaton of the model, after it has been determinzed and reduced to a bisimilar partition
+        event_var_maps - a dict containing the the var lists and maps for the event encodings
+        (see "contact_event_maps" function in this file for details)
+
     """
 
     # Regions and secret locations of additional maps can be defined in this section
@@ -103,7 +108,7 @@ def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
         return b, event_var_maps
 
     # check opacity on the bisimulation
-    opaque, path = d.opacity.verify_current_state_opacity(b, return_violating_path=True)
+    opaque, path = d.opacity_verification.verify_current_state_opacity(b, return_violating_path=True)
     # print debug information
     print(f"System has {g.vcount()} states and {g.ecount()} transitions")
     print(f"Observer has {o.vcount()} states and {o.ecount()} transitions")
@@ -116,21 +121,26 @@ def contact_example(map_file="map1.fsm", num_agents=2, debug=True):
 
 
 def generate_model(map_automaton, regions, secret_locs, num_agents, ids=None):
-    """
-    Generate the nondeterministic system representing the contact tracing model
+    """Generate the nondeterministic system representing the contact tracing model
 
-    :param map_automaton: The automaton representing the map
-    :type map_automaton: Automata
-    :param regions: Map from map locations/states to their region
-    :type regions: dict
-    :param secret_locs: The secret locations/states of the map
-    :type secret_locs: list
-    :param num_agents: The number of agents moving about the map
-    :type num_agents: int
-    :param ids: The list of identifiers, one for each agent
-    :type ids: list
-    :return: The generated model over the map
-    :rtype: Automata
+    Parameters
+    ----------
+    map_automaton : Automata
+        The automaton representing the map
+    regions : dict
+        Map from map locations/states to their region
+    secret_locs : list
+        The secret locations/states of the map
+    num_agents : int
+        The number of agents moving about the map
+    ids : list
+        The list of identifiers, one for each agent (Default value = None)
+
+    Returns
+    -------
+    Automata
+        The generated model over the map
+
     """
     if ids is None:
         ids = list(range(num_agents))
@@ -190,17 +200,35 @@ def generate_model(map_automaton, regions, secret_locs, num_agents, ids=None):
 
 def contact_event_maps(g, regions, secret_locs):
     """
-    Returns:
-    a dict object containing the following:
-        event_vars_I: a list of boolean input event variables
-        event_vars_O: a list of boolean output event variables that includes input terms that are carried through to the output
-        obs_event_vars_I: a list of of boolean input event variables that only contains the bits that can be observed by the obfuscator
-                          (the malicious observer's region is included, but their precise location is not)
-        obs_event_vars_O: a list of of boolean output event variables that only contains the bits that can be observed by the inferrer
-                          (the malicious observer's region is included, but their precise location is not)
-        cntr_event_vars_O: a list of of boolean output event variables that only contains those bits that can be modified by the inferrer
-                           (neither the maicious observer's region nor precise location is included)
-    each entry also has a corresponding map (e.g. event_map_I) that is a dict mapping events to the corresponding boolean formula over the boolean variables
+
+    Parameters
+    ----------
+    g :
+
+    regions :
+
+    secret_locs :
+
+
+    Returns
+    -------
+    a dict object containing the following
+
+    event_vars_I
+        a list of boolean input event variables
+    event_vars_O
+        a list of boolean output event variables that includes input terms that are carried through to the output
+    obs_event_vars_I
+        a list of of boolean input event variables that only contains the bits that can be observed by the obfuscator
+        (the malicious observer's region is included, but their precise location is not)
+    obs_event_vars_O
+        a list of of boolean output event variables that only contains the bits that can be observed by the inferrer
+        (the malicious observer's region is included, but their precise location is not)
+    cntr_event_vars_O
+        a list of of boolean output event variables that only contains those bits that can be modified by the inferrer
+        (neither the maicious observer's region nor precise location is included)
+        each entry also has a corresponding map (e.g. event_map_I) that is a dict mapping events to the corresponding boolean formula over the boolean variables
+
     """
     ret = dict()
 
