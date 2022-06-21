@@ -21,9 +21,10 @@ project = 'MDESops'
 copyright = '2022, Jack Weitze'
 author = 'Jack Weitze'
 
-# The full version, including alpha/beta/rc tags
-release = '20.9.2'
 
+from DESops import __version__ as version
+# The full version, including alpha/beta/rc tags
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -34,17 +35,13 @@ extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.napoleon'
 ]
 
-napoleon_google_docstring = False
-napoleon_use_param = False
-napoleon_use_ivar = True
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['api/DESops.rst']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -62,3 +59,7 @@ html_static_path = ['_static']
 
 
 # -- Extension configuration -------------------------------------------------
+
+napoleon_google_docstring = False
+napoleon_use_param = False
+napoleon_use_ivar = True

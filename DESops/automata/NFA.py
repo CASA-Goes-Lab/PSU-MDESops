@@ -4,7 +4,7 @@ from DESops.automata import automata
 from DESops.automata.event import Event
 
 
-class NFA(automata._Automata):
+class NFA(automata.Automata):
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         super(NFA, self).__init__(init, Euc, Euo, E)
 
@@ -56,7 +56,7 @@ class NFA(automata._Automata):
         """
         self._graph.delete_vertices(vs)
 
-        self.generate_out()    
+        self.generate_out()
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}

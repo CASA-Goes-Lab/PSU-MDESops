@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import pydash
 from tqdm import tqdm
 
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA

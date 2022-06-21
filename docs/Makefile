@@ -5,6 +5,7 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
+SPHINXAPIDOC   ?= sphinx-apidoc
 SOURCEDIR     = source
 BUILDDIR      = build
 
@@ -18,3 +19,7 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+buildapi:
+	sphinx-apidoc -fMeT "$(SOURCEDIR)/../../DESops" -o "$(SOURCEDIR)/api"
+	@echo "Auto-generation of API documentation finished. The generated files are in 'api/'"

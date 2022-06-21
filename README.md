@@ -105,11 +105,12 @@ The documentation can then be built with the commands
 
 View the documentation at `docs/build/html/index.html` with a web browser.
 
-To update or add the documentation for a module or file, in the `docs` directory run the command
+To update or add to the documentation, in the `docs` directory run the command
 
-    $ poetry run sphinx-apidoc -f -o source/ ../DESops/path/to/file
+    $ poetry run make buildapi
 
 Note that this generates new docs, overwriting existing docs.
+Additionally, the documentation will need to be rebuilt after this step.
 
 ## Contributing to DESops
 

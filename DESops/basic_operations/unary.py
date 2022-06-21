@@ -5,13 +5,13 @@ Functions relevant to unary operations
 import warnings
 from collections import deque
 
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 
 ### This is just functions related to trim/accessibility
 # Rename to trim.py?
 
 
-def trim(G: _Automata) -> set:
+def trim(G: Automata) -> set:
     """
     Returns a list of vertex indices of G that are inaccessible and/or incoaccessible.
     """
@@ -21,7 +21,7 @@ def trim(G: _Automata) -> set:
     return bad_states
 
 
-def find_inacc(G: _Automata, states_removed=set()) -> set:
+def find_inacc(G: Automata, states_removed=set()) -> set:
     """
     Returns a list of vertex indices of G that are inaccessible and should be removed.
 
@@ -56,7 +56,7 @@ def find_inacc(G: _Automata, states_removed=set()) -> set:
     return bad_states
 
 
-def find_incoacc(G: _Automata, states_removed=set()) -> set:
+def find_incoacc(G: Automata, states_removed=set()) -> set:
     """
     Returns a list of vertex indices of G that are not incoaccessible and should be removed.
 

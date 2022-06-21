@@ -1,7 +1,7 @@
 import igraph as ig
 
 from DESops import error
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 from DESops.automata.event import Event
 from DESops.basic_operations.language_equivalence import compare_language
 
@@ -11,7 +11,7 @@ from DESops.basic_operations.language_equivalence import compare_language
 # IF THERE IS NONDETERMINISM THEN OUTPUTS THE DETERMINIZING OF NFA
 
 
-class DFA(_Automata):
+class DFA(Automata):
     """docstring for """
 
     def __init__(
@@ -62,8 +62,10 @@ class DFA(_Automata):
 
     def copy(self):
         """
-        Copy from self to other, as in:
-        >>> other = self.copy()
+        Copy from self to other, as in::
+
+            other = self.copy()
+
         """
         A = DFA(self)
         return A
@@ -100,26 +102,7 @@ class DFA(_Automata):
 
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         """
-        Add an iterable of edges to the DFA instance.
-        Calls the igraph Graph add_edges() method on the underlying graph
-        object.
-        Additionally adds label information as
-        edge attributes.
-        It checks if all transitions are deterministic
-
-        Parameters:
-        pair_list:
-            an iterable to be passed to the igraph Graph add_edges() method,
-            which accepts iterables of pairs or an EdgeSeq (see igraph documentation
-            for more details on what is acceptable here).
-        labels:
-            provide an iterable of labels to attach as
-            keyword attributes. Should be parallel to pair_list (e.g., pair n of
-            pair_list corresponding to label n of labels). To be stored in the "label" edge keyword attribute.
-
-        check_DFA: (defalt True) ensure that the transitions won't violate determinism. Exits with error if
-            adding these transitions would cause nondeterminism.
-        Returns nothing.
+        Test
         """
         # WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
         # IF THE CALLER IS PARALLEL COMP, OBSERVER, ETC, THEN NOT WARNING SHOULD BE PRINTED
