@@ -8,7 +8,7 @@ implemented, including parallel/product compositions and observer computation. T
 Table of Contents
 =================
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 2
    :caption: Contents:
 
    api
