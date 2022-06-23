@@ -18,8 +18,9 @@ sys.path.insert(0, os.path.abspath('../../DESops'))
 # -- Project information -----------------------------------------------------
 
 project = 'MDESops'
-copyright = '2022, Jack Weitze'
-author = 'Jack Weitze'
+copyright = '2022, The Regents of the University of Michigan'
+author = 'Romulo Meira Goes <r.meiragoes@gmail.com>, Jack Weitze <jweitze@umich.edu>,' \
+         ' Shoma Matsui <smatsui@umich.edu>, Andrew Wintenberg <awintenb@umich.edu>'
 
 
 from DESops import __version__ as version

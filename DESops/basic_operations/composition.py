@@ -106,7 +106,7 @@ def product(*automata: DFA) -> DFA:
 
     return G_out
 
-
+# TODO Is this bugged?
 def product_linear(*automata: Automata_t) -> Automata_t:
     """
     Computes the product composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
@@ -356,7 +356,10 @@ def parallel_linear(*automata: Automata_t) -> Automata_t:
     for G2 in tqdm(
         input_list, desc="Parallel Composition", disable=SHOW_PROGRESS is False
     ):
-        G_out = Automata()
+        if any(isinstance(g, NFA) for g in automata):
+            G_out = NFA()
+        else:
+            G_out = DFA()
         E1 = set(G1.es["label"])
         E2 = set(G2.es["label"])
 
