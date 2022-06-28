@@ -1,5 +1,6 @@
 import DESops as d
 import tests.util as util
+from DESops.basic_operations.language_equivalence import compare_language
 
 
 def test_type():
@@ -114,3 +115,19 @@ def test_complement():
     assert g.ecount() == 12
     assert (3, d.Event("b")) in g.vs[0]["out"]
     assert g.vs["marked"] == [False, True, False, True]
+
+def test_compare_language():
+    g = d.DFA()
+    a = d.Event("a")
+    b = d.Event("b")
+    c = d.Event("c")
+    g.add_vertices(3, marked=[False, True, False])
+    g.add_edges([(0,1),(0,2),(1,0),(1,2),(2,1)], [a,b,c,a,b])
+    f = d.DFA()
+    f.add_vertices(3, marked=[False, True, True])
+    f.add_edges([(0,1),(0,2),(1,0),(1,2),(2,1)], [a,b,c,a,b])
+
+    assert compare_language(g,f)
+    assert compare_language(g,g,type="marked")
+    assert not compare_language(g,f,type="marked")
+    assert not compare_language(g,f,type="both")

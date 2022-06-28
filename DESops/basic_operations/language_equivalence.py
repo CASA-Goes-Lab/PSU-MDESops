@@ -1,8 +1,11 @@
 import DESops.automata as automata
 from DESops import error
+from .composition import observer
+from .construct_complement import complement
+from .product_NFA import product_NFA
 
 
-def compare_language(g1, g2):
+def compare_language_generated(g1, g2):
     # https://cs.stackexchange.com/questions/48136/testing-two-dfas-generate-the-same-language-by-trying-all-strings-upto-a-certain
     # https://cs.stackexchange.com/questions/81813/is-the-equality-of-two-dfas-a-decidable-problem/81815#81815
     """
@@ -97,3 +100,34 @@ def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
         index = index + 1
     marking = nx_v1["marked"] and nx_v2["marked"]
     return name, transition, index, marking, new
+
+
+def inclusion(g, h, Eo):
+    h_det = observer(h)
+    complement(h_det, inplace=True, events=Eo)
+    prod = product_NFA([g, h_det], save_marked_states=True)
+    opaque = True
+    for v in prod.vs:
+        if v["marked"]:
+            opaque = False
+            break
+    return opaque
+
+def compare_language_marked(g1, g2, Eo1=None, Eo2=None):
+    #active_events must be provided if there exists any observable event that doesn't appear in any transition
+    if Eo1 == None:
+        Eo1 = g1.events.difference(g1.Euo)
+    if Eo2 == None:
+        Eo2 = g2.events.difference(g2.Euo)
+    if Eo1 != Eo2:
+        return False
+    return inclusion(g1, g2, Eo1) and inclusion(g2, g1, Eo1)
+
+def compare_language(g1, g2, Eo1=None, Eo2=None, type="generated"):
+    if(type == "generated"):
+        return compare_language_generated(g1, g2)
+    elif(type == "marked"):
+        return compare_language_marked(g1, g2, Eo1, Eo2)
+        # pass
+    elif(type == "both"):
+        return compare_language_generated(g1, g2) and compare_language_marked(g1, g2, Eo1, Eo2)

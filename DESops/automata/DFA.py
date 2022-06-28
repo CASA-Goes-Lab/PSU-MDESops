@@ -3,7 +3,7 @@ import igraph as ig
 from DESops import error
 from DESops.automata.automata import _Automata
 from DESops.automata.event import Event
-from DESops.basic_operations.language_equivalence import compare_language
+# from DESops.basic_operations.language_equivalence import compare_language
 
 # MUST HAVE A DEFINITION NFA TO DFA
 # CHECKS IF THERE IS NONDETERMINISM
@@ -180,5 +180,5 @@ class DFA(_Automata):
         out_event = lambda v: {el[1] for el in v}
         return [len(out_event(v)) == len(v) for v in self._graph.vs["out"]]
 
-    def __eq__(self, other):
-        return isinstance(other, DFA) and compare_language(self, other)
+    # def __eq__(self, other):
+    #     return isinstance(other, DFA) and compare_language(self, other)
