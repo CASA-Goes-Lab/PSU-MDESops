@@ -10,25 +10,27 @@ from DESops.basic_operations.construct_complement import complement
 from DESops.basic_operations.product_NFA import product_NFA
 from DESops.opacity.secret_specification import _concatenate_union
 
+
 def language_inclusion(g, h, Eo, return_num_states=False, return_unincluded_path=False):
     """Returns whether the language marked by g is a subset of the language marked by h
-    
+
     Returns: opaque(, num_states)(, unincluded_path)
-    
+
     Note: Only use this if the event sets are the same for both automata
-    
+
     g, h: the two automata
     Eo: the set of observable events
     return_num_states: if True, the number of states in the product g x det(h)^c is returned as an additional value
 
     Parameters
     ----------
-    g :
-        
-    h :
-        
-    Eo :
-        
+    g : Automata
+        The automaton on the left side of the inclusion
+    h : Automata
+        The automaton on the right side of the inclusion
+    Eo : set
+        The event set to perform the inclusion over
+
     return_num_states :
          (Default value = False)
     return_unincluded_path :
@@ -37,19 +39,24 @@ def language_inclusion(g, h, Eo, return_num_states=False, return_unincluded_path
     Returns
     -------
     type
-        
+
 
     """
     h_det = composition.observer(h)
-    complement(h_det, inplace=True, events=Eo)
+    # TODO The complement cannot be made in place as the observer is a DFA.
+    #      Can we automatically convert it to an NFA in this case in the complement construction?
+    # in place complementation (no longer works)
+    # complement(h_det, g_comp=h_det, events=Eo)
+    # TODO use observable events from g, h
+    h_det = complement(h_det, events=Eo)
 
     prod = product_NFA([g, h_det], save_marked_states=True)
 
     opaque = True
-    for v in prod.vs:
-        if v["marked"]:
+    for index, marked in enumerate(prod.vs["marked"]):
+        if marked:
             opaque = False
-            violating_id = v.index
+            violating_id = index
             break
 
     return_list = [opaque]
@@ -78,7 +85,7 @@ def moore_to_standard(g):
     Parameters
     ----------
     g :
-        
+
 
     Returns
     -------
@@ -118,15 +125,15 @@ def construct_H_NS(k, joint, secret_type, events, Euo):
     Parameters
     ----------
     k :
-        
+
     joint :
-        
+
     secret_type :
-        
+
     events :
-        
+
     Euo :
-        
+
 
     Returns
     -------
@@ -158,13 +165,13 @@ def construct_H_NS(k, joint, secret_type, events, Euo):
 
 def H_star(events):
     """Returns an automaton that marks all strings
-    
+
     events: set of (e, S/NS) pairs
 
     Parameters
     ----------
     events :
-        
+
 
     Returns
     -------
@@ -184,16 +191,16 @@ def H_star(events):
 
 def H_epoch_all(events, Euo):
     """Returns an automaton that marks any single epoch
-    
+
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
 
     Parameters
     ----------
     events :
-        
+
     Euo :
-        
+
 
     Returns
     -------
@@ -216,18 +223,18 @@ def H_epoch_all(events, Euo):
 
 def H_epoch_NS(secret_type, events, Euo):
     """Returns an automaton that marks any single epoch in which nonsecret behavior occurs
-    
+
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
 
     Parameters
     ----------
     secret_type :
-        
+
     events :
-        
+
     Euo :
-        
+
 
     Returns
     -------
@@ -270,18 +277,18 @@ def H_epoch_NS(secret_type, events, Euo):
 
 def H_infinite_NS(secret_type, events, Euo):
     """Returns an automaton that marks strings that exhibit no secret behavior at any point
-    
+
     events: set of (e, S/NS) pairs
     Euo: set of (e, S/NS) pairs that are unobservable
 
     Parameters
     ----------
     secret_type :
-        
+
     events :
-        
+
     Euo :
-        
+
 
     Returns
     -------
@@ -337,21 +344,21 @@ def find_path_between(g, source, target):
     Returns the list of event labels associated with the path
     If any vertex is in both a source and a target, returns an empty list
     If no target vertex can be reached from any source vertex, returns None
-    
+
     g: the automaton
     source: a vertex ID or a list of vertex IDs
     target: a vertex ID or a list of vertex IDs
-    
+
     Only one of source and target can be a list
 
     Parameters
     ----------
     g :
-        
+
     source :
-        
+
     target :
-        
+
 
     Returns
     -------
@@ -400,3 +407,25 @@ def find_path_between(g, source, target):
                 path_labels.append(t)
 
         return path_labels
+
+
+if __name__ == "__main__":
+    import DESops as d
+    from tests.util import load_model
+
+    # methods for k-step opacity
+    k_joint_methods = ["language", "state", "trajectory"]
+    k_separate_methods = k_joint_methods + ["TWO"]
+
+    # methods for infinite-step opacity
+    infinite_joint_methods = ["language", "state"]
+    infinite_separate_methods = ["TWO"]
+    g = load_model("models/opacity1.fsm")
+    g.vs["init"] = False
+    g.vs[0]["init"] = True
+    g.vs["secret"] = False
+    g.vs[1, 5]["secret"] = True
+
+    for m in k_joint_methods:
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 1, m) is False
+

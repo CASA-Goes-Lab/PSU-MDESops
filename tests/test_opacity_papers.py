@@ -2,6 +2,9 @@ from DESops.automata import NFA
 from DESops.opacity import secret_observer as so
 from DESops.opacity.secret_specification import OpacityNotion
 
+# TODO - convert to using files instead of building the automata here
+# TODO - convert references to doc format
+
 def saboori_07_fig1a():
     """
     Automaton from Figure 1-a in "Notions of security and opacity in discrete event systems"

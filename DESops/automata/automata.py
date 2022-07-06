@@ -115,6 +115,7 @@ State_or_StateSet = Union[int, Set[int]]
 # TODO: We need to decide if we want to use type hints (i.e., `print(msg: str)`)
 # TODO: Should we maintain a list of todo tasks and bugs with GitLab issues (can use confidential mode if we do not want to disclose them to the public)
 # TODO: The _Automata class was renamed to Automata to facilitate documentation, can it be changed back
+# TODO: should init become a mandatory attribute. I don't think the convention that state 0 is initial is a good one.
 
 class Automata(ABC):
     """Used to represent finite-state automata, by means of a directed

@@ -5,11 +5,14 @@ from DESops.automata.automata import Automata
 from DESops.automata.event import Event
 from DESops.basic_operations.language_equivalence import compare_language
 
+# TODO see below
 # MUST HAVE A DEFINITION NFA TO DFA
 # CHECKS IF THERE IS NONDETERMINISM
 # IF NO NONDETERMINISM THEN OUTPUTS A COPY OF THE NFA
 # IF THERE IS NONDETERMINISM THEN OUTPUTS THE DETERMINIZING OF NFA
 
+# TODO how do we incorporate documentation from the superclass Automata into the one for DFA?
+# TODO as we ultimately represent the DFA as a directed graph, should we view DFA as a type of NFA? This would simplify some implementations
 
 class DFA(Automata):
     """docstring for """
@@ -101,10 +104,7 @@ class DFA(Automata):
             self.vs[source].update_attributes({"out": out})
 
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
-        """
-        Test
-        """
-        # WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
+        # TODO WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
         # IF THE CALLER IS PARALLEL COMP, OBSERVER, ETC, THEN NOT WARNING SHOULD BE PRINTED
         # THIS CAN BE DONE BY CHECKING THE FUNCTION CALLER
 
@@ -160,6 +160,16 @@ class DFA(Automata):
             self.vs["out"] = out_list
 
     def check_DFA(self):
+        """
+        Check if the automaton is deterministic.
+
+        An instance of `DFA` can become nondeterministic if the `check_DFA` option in `add_edges` is disabled, or
+        if the underlying graph was edited through other means.
+
+        Returns
+        -------
+        True, if the automaton is deterministic
+        """
         out_event = lambda v: {el[1] for el in v}
         return [len(out_event(v)) == len(v) for v in self._graph.vs["out"]]
 
