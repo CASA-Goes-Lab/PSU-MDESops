@@ -101,7 +101,7 @@ def supremal_sublanguage(
         if prefix_closed:
             bad_states_to_trim = unary.find_inacc(H)
         else:
-            bad_states_to_trim = unary.trim(H)
+            bad_states_to_trim = unary.find_non_trim(H)
         H.delete_vertices(bad_states_to_trim)
         deleted_states |= bad_states_to_trim
 

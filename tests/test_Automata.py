@@ -68,7 +68,7 @@ def test_trim():
     incoacc_states = {G.vs[i]["name"] for i in d.unary.find_incoacc(G)}
     assert incoacc_states == {"3", "4", "5"}
 
-    bad_states = {G.vs[i]["name"] for i in d.unary.trim(G)}
+    bad_states = {G.vs[i]["name"] for i in d.unary.find_non_trim(G)}
     assert bad_states == inacc_states | incoacc_states
 
 
@@ -83,7 +83,6 @@ def test_reverse():
 
     g = d.NFA(g)
     # should d.replace(g, inplace=True) ensure that g is an NFA (or convert?)
-
     # reverse transition tuples (source, target, label):
     a = d.Event("a")
     b = d.Event("b")
@@ -102,6 +101,7 @@ def test_reverse():
 
 def test_complement():
     g = util.load_model("models/textbook/fig_2-1.fsm")
+    g = d.NFA(g)
 
     g_c = d.complement(g)
     assert g_c.vcount() == 4
@@ -109,6 +109,7 @@ def test_complement():
     assert (3, d.Event("b")) in g_c.vs[0]["out"]
     assert g_c.vs["marked"] == [False, True, False, True]
 
+    g = d.NFA(g)
     d.complement(g, inplace=True)
     assert g.vcount() == 4
     assert g.ecount() == 12
