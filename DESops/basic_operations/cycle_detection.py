@@ -26,7 +26,7 @@ class TarjansAlgorithm:
     Attributes
     ----------
     g : Automata or igraph.Graph
-        The automaton or graph
+        The automaton or graph used in the algorithm
     """
     def __init__(self, g):
         """
@@ -35,7 +35,7 @@ class TarjansAlgorithm:
         Parameters
         ----------
         g : Automata or igraph.Graph
-            The automaton or graph
+            The automaton or graph used in the algorithm
         """
         self.g = g
         self._result = list()
@@ -71,10 +71,10 @@ class TarjansAlgorithm:
         id_dict = dict(zip(DFS_vertices, order))
         for i in range(0, self._size):
             if self._disc[i] == -1:
-                self.scc_util(i, time, id_dict, DFS_vertices)
+                self._scc_util(i, time, id_dict, DFS_vertices)
         return self._result
 
-    def scc_util(self, i, time, id_dict, DFS_vertices):
+    def _scc_util(self, i, time, id_dict, DFS_vertices):
         self._disc[i] = time
         self._low[i] = time
         time += 1
@@ -87,7 +87,7 @@ class TarjansAlgorithm:
         else:
             for v in DFS_vertices[i].successors():
                 if self._disc[id_dict.get(v, -1)] == -1:
-                    self.scc_util(id_dict.get(v), time, id_dict, DFS_vertices)
+                    self._scc_util(id_dict.get(v), time, id_dict, DFS_vertices)
                     self._low[i] = min(self._low[i], self._low[id_dict.get(v)])
                 elif self._OnStack[id_dict.get(v)] == True:
                     self._low[i] = min(self._low[i], self._disc[id_dict.get(v)])
@@ -100,6 +100,7 @@ class TarjansAlgorithm:
                     self._OnStack[w] = False
                 self._result.append(scc)
 
+    # TODO - rename
     def DFS(self, initial) -> list:
         """
         Depth first search algorithm that returns
@@ -129,6 +130,7 @@ class TarjansAlgorithm:
         for neighbor in v.successors():
             if neighbor not in visited:
                 self._DFSUtil(neighbor, visited, d)
+
 
 class JohnsonsAlgorithm:
     """

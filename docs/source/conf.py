@@ -33,8 +33,10 @@ release = version
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc', 'sphinx.ext.napoleon'
+    'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'm2r2'
 ]
+source_suffix = ['.rst', '.md']
+# TODO <awintenb@umich.edu> images from markdown (as in readme) not rendered correctly in documentation
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
