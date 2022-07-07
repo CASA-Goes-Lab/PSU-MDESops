@@ -104,18 +104,18 @@ except ImportError:
 # TODO: Legacy, to be removed with unobservable_reach method
 State_or_StateSet = Union[int, Set[int]]
 
-# TODO: replace mutable default args with E=None and assign E=set() in method body
-# TODO: create a standard, obvious method for analyzing adjacent edges and vertices -> replace fill_out?
-# TODO: document g.OUT and g.UR
-# TODO: Should we put g.events and g.Euc/g.Euo in the same style (i.e. g.E instead of g.events)
-# TODO: enforce type constraints on vertex names and edge labels - Should we require these to be strings
-# TODO: should **kwargs be used to set vertex and edge attributes? Currently not implemented for vertex attributes
-# TODO: should critical states be replaced with a vertex attribute (i.e., g.vs["critical"] = True)
-# TODO: Unify convention used to describe vertices or states (IGraph uses vertices, DES uses states)
-# TODO: We need to decide if we want to use type hints (i.e., `print(msg: str)`)
-# TODO: Should we maintain a list of todo tasks and bugs with GitLab issues (can use confidential mode if we do not want to disclose them to the public)
-# TODO: The _Automata class was renamed to Automata to facilitate documentation, can it be changed back
-# TODO: should init become a mandatory attribute. I don't think the convention that state 0 is initial is a good one.
+# TODO: <awintenb@umich.edu> replace mutable default args with E=None and assign E=set() in method body
+# TODO: <awintenb@umich.edu> create a standard, obvious method for analyzing adjacent edges and vertices -> replace fill_out?
+# TODO: <awintenb@umich.edu> document g.OUT and g.UR
+# TODO: <awintenb@umich.edu> Should we put g.events and g.Euc/g.Euo in the same style (i.e. g.E instead of g.events)
+# TODO: <awintenb@umich.edu> enforce type constraints on vertex names and edge labels - Should we require these to be strings
+# TODO: <awintenb@umich.edu> should **kwargs be used to set vertex and edge attributes? Currently not implemented for vertex attributes
+# TODO: <awintenb@umich.edu> should critical states be replaced with a vertex attribute (i.e., g.vs["critical"] = True)
+# TODO: <awintenb@umich.edu> Unify convention used to describe vertices or states (IGraph uses vertices, DES uses states)
+# TODO: <awintenb@umich.edu> We need to decide if we want to use type hints (i.e., `print(msg: str)`)
+# TODO: <awintenb@umich.edu> Should we maintain a list of todo tasks and bugs with GitLab issues (can use confidential mode if we do not want to disclose them to the public)
+# TODO: <awintenb@umich.edu> The _Automata class was renamed to Automata to facilitate documentation, can it be changed back
+# TODO: <awintenb@umich.edu> should init become a mandatory attribute. I don't think the convention that state 0 is initial is a good one.
 
 class Automata(ABC):
     """Used to represent finite-state automata, by means of a directed
@@ -333,22 +333,25 @@ class Automata(ABC):
         object. Additionally adds label and probability information as
         edge attributes, if they are optionally provided as parallel iterables.
 
-        Parameters:
-        pair_list: an iterable to be passed to the igraph Graph add_edges() method,
+        Parameters
+        ----------
+        pair_list: Iterable[tuple] or EdgeSeq
+            an iterable to be passed to the igraph Graph `add_edges` method,
             which accepts iterables of pairs or an EdgeSeq (see igraph documentation
             for more details on what is acceptable here).
-        labels: optionally provide an iterable of labels to attach as
+        labels: Iterable
+            An iterable of labels to attach as
             keyword attributes. Should be parallel to pair_list (e.g., pair n of
             pair_list corresponding to label n of labels). To be stored in the "label"
             edge keyword attribute.
-        probs: (default None) optionally provide an iterable of probabilities to attach
+        probs: Iterable[float]
+            (default None) optionally provide an iterable of probabilities to attach
             as keyword attributes (indicating stochastic transitions). Should be
             parallel to pair_list (e.g., pair n of pair_list corresponds to probability
             n of probs). To be stored in the "prob" edge keyword attribute.
         fill_out : bool
             If true, then add the outgoing edges to the source in the "out" vertex attribute.
 
-        Returns nothing.
         """
         # Abstract method
         pass
@@ -365,7 +368,7 @@ class Automata(ABC):
             The name of the vertex
         marked : bool or None
             If true, the vertex is marked
-        **kwargs : dict
+        kwargs : dict
             Names and values assigned to the vertex attributes (not implemented)
 
         """
@@ -450,20 +453,20 @@ class Automata(ABC):
         for key, val in extra_attrs.items():
             self._graph.vs[key] = val
 
-    # TODO - does this need to exist? Can it just be replaced by the assignment in the body
+    # TODO <awintenb@umich.edu> - does this need to exist? Can it just be replaced by the assignment in the body
     def update_names(self, names):
         # update vertex names from list of names
         self.vs["name"] = names
 
-    # TODO Should we instead use __copy__ and __deepcopy__?
-    # TODO Should we keep this if it is overridden by DFA, NFA
+    # TODO <awintenb@umich.edu>  Should we instead use __copy__ and __deepcopy__?
+    # TODO <awintenb@umich.edu> Should we keep this if it is overridden by DFA, NFA
     def copy(self):
         """
         Copy from self to other, as in::
 
             other = self.copy()
 
-        TODO: This needs to be an abstract method?
+        TODO <awintenb@umich.edu> This needs to be an abstract method?
         """
         A = Automata(self)
         return A
@@ -551,7 +554,7 @@ class Automata(ABC):
     def __str__(self):
         return self.summary(use_state_names=True)
 
-    # TODO should this be here?
+    # TODO <awintenb@umich.edu> should this be here or basic_operations?
     def compute_state_costs(self, starting_states=None, Euc=None):
         """
         Computes the uncontrollable traces preceding states in starting_states.
