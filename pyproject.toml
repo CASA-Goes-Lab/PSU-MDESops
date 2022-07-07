@@ -16,14 +16,15 @@ requests = "^2.24.0"
 dd = "^0.5.6"
 tqdm = "^4.46.1"
 colorama = {version = "^0.4.3", platform = "windows"}
-"boolean.py" = "^4.0"
+
 Sphinx = {version="^5.0", optional=true}
+sphinx-rtd-theme = {version="^1.0.0", optional=true}
+pyment = {version="^0.3.3", optional=true}
+
 
 # Optional dependencies for opacity verification and enforcement
 # Edisyn
 # uncomment the next line if you have installed edisyn locally
-pyment = "^0.3.3"
-sphinx-rtd-theme = "^1.0.0"
 # edisyn = {path = "../edisyn", optional = true, develop = true}
 
 [tool.poetry.dev-dependencies]
@@ -46,4 +47,4 @@ build-backend = "poetry.masonry.api"
 [tool.poetry.extras]
 caching = ["pycairo"]
 opacity_enf = ["edisyn"]
-docs = ["Sphinx"]
+docs = ["Sphinx", "sphinx-rtd-theme", "pyment"]
