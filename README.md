@@ -22,7 +22,10 @@ After running this command, a copy of this repository will be available in your 
 
 These packages are dependencies required to install `pycairo`. This is key for the later installation of `python-igraph`, which DESops uses to plot graphs.
 
-Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies. Do **NOT** install pycairo yet. This will be done in step 4.
+Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
+Do **NOT** install pycairo yet. This will be done in step 4.
+
+Windows users can skip this step if they use the pre-compiled wheel for pycairo discussed in step 4.
 
 ### Step 3: Install Poetry:
 
@@ -62,12 +65,15 @@ DESops can be installed using [poetry](https://python-poetry.org/) and running t
     $ poetry install
 
 Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
+
 ### Note for Windows Users:
 
-When using Windows, pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
-https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
+If you skipped step 2, pycairo can be installed from a pre-compiled wheel. downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo.
+You should download the version named  `pycairo-1.21.0-cp<python-version>-cp<python-version>-<windows-version>.whl`.
+For example, if your python version is 3.8 and you are on 64-bit plat form, you should install `pycairo‑1.21.0‑cp38‑cp38‑win_amd64.whl`.
 
-Then install using `pip install <path_to>\pycairo‑1.19.1‑cp38‑cp38‑<win_version>.whl`
+Then install using `pip install <path_to>\<pycairo>.whl`.
+You will then need to run `poetry install` as described above.
 
 #### Random Automata Generation
 
