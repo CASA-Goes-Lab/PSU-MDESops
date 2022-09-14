@@ -82,8 +82,8 @@ The simplest way is to run `poetry run python`.
 This will open a python environment with all of the dependencies for DESops.
 You can test the installation by running:
 
->>> import DESops as d
->>> g = d.DFA()
+    >>> import DESops as d
+    >>> g = d.DFA()
 
 Alternatively in your terminal, you can create a shell where the `python` command refers to the poetry environment by running `poetry shell`.
 Any python commands you after this step will run with the DESops environment.
