@@ -75,6 +75,23 @@ For example, if your python version is 3.8 and you are on 64-bit plat form, you 
 Then install using `pip install <path_to>\<pycairo>.whl`.
 You will then need to run `poetry install` as described above.
 
+### Step 5: Using DESops:
+
+Once you have installed DESops with poetry, you can use the library in a number of ways.
+The simplest way is to run `poetry run python`.
+This will open a python environment with all of the dependencies for DESops.
+You can test the installation by running:
+
+>>> import DESops as d
+>>> g = d.DFA()
+
+Alternatively in your terminal, you can create a shell where the `python` command refers to the poetry environment by running `poetry shell`.
+Any python commands you after this step will run with the DESops environment.
+
+Finally, many IDEs like PyCharm and VSCode have plugins available for working with poetry environments.
+
+Once you have a working environment, you can follow the tutorials linked at the bottom of this page to get started using DESops.
+
 #### Random Automata Generation
 
 Generating random automata using the `random_DFA` submodule requires the REGAL software package, with source code bundled in this repository.
@@ -144,6 +161,6 @@ For other options of `pytest`, see `poetry run pytest --help`.
 
 For tutorials, demonstrations, and further information about DESops, please check out the following resources:
 - [Installation Tutorial](https://www.youtube.com/watch?v=xZAt-nGIQ-E)
-- [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_01.ipynb)
-- [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_02.ipynb)
+- [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_01.ipynb)
+- [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_02.ipynb)
 - [Youtube Channel](https://www.youtube.com/channel/UCaoigOnm8eGMC7nslwd5-BA)
