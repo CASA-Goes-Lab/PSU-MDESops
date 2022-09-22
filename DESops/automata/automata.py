@@ -230,7 +230,7 @@ class _Automata:
         self._graph.delete_edges(es)
         self.generate_out()
 
-    def add_edge(self, source, target, label, prob=None, fill_out=False):
+    def add_edge(self, source, target, label, prob=None, fill_out=False, **kwargs):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
         of vertex indices according to the igraph Graph add_edge() method.
@@ -246,6 +246,8 @@ class _Automata:
             in the "label" edge keyword attribute.
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
+
+        Returns the added edge
         """
 
         # Abstract method
@@ -271,7 +273,7 @@ class _Automata:
             parallel to pair_list (e.g., pair n of pair_list corresponds to probability
             n of probs). To be stored in the "prob" edge keyword attribute.
 
-        Returns nothing.
+        Returns the edge sequence of added edges.
         """
 
         # Abstract method
