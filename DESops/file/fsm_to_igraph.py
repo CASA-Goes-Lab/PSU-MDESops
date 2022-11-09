@@ -16,6 +16,8 @@ into an igraph Graph object.
 """
 
 
+# TODO - fix docstring format
+# TODO - change `type_aut` to be a class instead of string
 def read_fsm(fsm_filename, g=None, type_aut=""):
     """
     fsm_filename: filename to write output to, e.g. "name_text.fsm"
