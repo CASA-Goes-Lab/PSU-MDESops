@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import pydash
 from tqdm import tqdm
 
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
@@ -18,82 +18,121 @@ from DESops import diagnoser
 EventSet = Set[Event]
 Automata_t = Union[DFA, NFA]
 
-class tarjans_algorithm:
+class TarjansAlgorithm:
     """
-    Computes tarjans algorithm, returns a list of strongly connected components
-    along with their DFS index.
+    A data structure for computing tarjans algorithm.
+    This constructs a list of strongly connected components along with their DFS index.
+
+    Attributes
+    ----------
+    g : Automata or igraph.Graph
+        The automaton or graph used in the algorithm
     """
-    def __init__(self, G):
-        self.G = G
-        self.result = list()
-        self.vertices = [v for v in G.vs]
-        self.size = len(self.vertices)
-        self.disc = [-1] * self.size
-        self.low = [-1] * self.size
-        self.OnStack = [False] * self.size
-        self.st = []
+    def __init__(self, g):
+        """
+        Initialize the algorithm with the given automaton or graph
+
+        Parameters
+        ----------
+        g : Automata or igraph.Graph
+            The automaton or graph used in the algorithm
+        """
+        self.g = g
+        self._result = list()
+        self._vertices = [v for v in g.vs]
+        self._size = len(self._vertices)
+        self._disc = [-1] * self._size
+        self._low = [-1] * self._size
+        self._OnStack = [False] * self._size
+        self._st = []
 
     def strongly_connected_components(self, initial):
         """
         Driver function for tarjan's algorithm.
-        """
-        vertice_names = [v["name"] for v in self.vertices ]
-        time = 0
-        DFS_vertices = self.DFS(self.vertices[vertice_names.index(initial)])
-        order = range(0, self.size)
-        id_dict = dict(zip(DFS_vertices, order))
-        for i in range(0, self.size):
-            if self.disc[i] == -1:
-                self.scc_util(i, time, id_dict, DFS_vertices)
-        return self.result
+        Computes the strongly connected components of the graph.
 
-    def scc_util(self, i, time, id_dict, DFS_vertices):
-        self.disc[i] = time
-        self.low[i] = time
+        Parameters
+        ----------
+        initial : object
+            The name of the vertex to initialize the algorithm at.
+            Note components not reachable from here will not be found.
+
+        Returns
+        -------
+        list[list[tuple[igraph.Vertex, int]]]
+            The list of found strongly connected components.
+            Each component is a list of the vertices in the component
+            and the corresponding DFS index in which they were visited.
+        """
+        vertice_names = [v["name"] for v in self._vertices]
+        time = 0
+        DFS_vertices = self.DFS(self._vertices[vertice_names.index(initial)])
+        order = range(0, self._size)
+        id_dict = dict(zip(DFS_vertices, order))
+        for i in range(0, self._size):
+            if self._disc[i] == -1:
+                self._scc_util(i, time, id_dict, DFS_vertices)
+        return self._result
+
+    def _scc_util(self, i, time, id_dict, DFS_vertices):
+        self._disc[i] = time
+        self._low[i] = time
         time += 1
-        self.OnStack[i] = True
-        self.st.append(i)
+        self._OnStack[i] = True
+        self._st.append(i)
         try:
             DFS_vertices[i].successors()
         except:
             pass
         else:
             for v in DFS_vertices[i].successors():
-                if self.disc[id_dict.get(v,-1)] == -1:
-                    self.scc_util(id_dict.get(v), time, id_dict, DFS_vertices)
-                    self.low[i] = min(self.low[i], self.low[id_dict.get(v)])
-                elif self.OnStack[id_dict.get(v)] == True:
-                    self.low[i] = min(self.low[i], self.disc[id_dict.get(v)])
+                if self._disc[id_dict.get(v, -1)] == -1:
+                    self._scc_util(id_dict.get(v), time, id_dict, DFS_vertices)
+                    self._low[i] = min(self._low[i], self._low[id_dict.get(v)])
+                elif self._OnStack[id_dict.get(v)] == True:
+                    self._low[i] = min(self._low[i], self._disc[id_dict.get(v)])
             w = -1
-            if self.low[i] == self.disc[i]:
+            if self._low[i] == self._disc[i]:
                 scc = list()
                 while w != i:
-                    w = self.st.pop()
+                    w = self._st.pop()
                     scc.append((DFS_vertices[w],w))
-                    self.OnStack[w] = False
-                self.result.append(scc)
+                    self._OnStack[w] = False
+                self._result.append(scc)
 
-    def DFS(self, V) -> list:
+    # TODO - rename
+    def DFS(self, initial) -> list:
         """
         Depth first search algorithm that returns
         the order in which vertices were visited
+
+        Parameters
+        ----------
+        initial : igraph.Vertex
+            The  vertex to start the DFS at
+
+        Returns
+        -------
+        list
+            The list of visited vertices
         """
         d = []
         visited = set()
-        self.DFSUtil(V,visited,d)
-        for v in self.vertices:
+        self._DFSUtil(initial, visited, d)
+        for v in self._vertices:
             if v not in visited:
-                self.DFSUtil(v,visited,d)
+                self._DFSUtil(v, visited, d)
         return d
 
-    def DFSUtil(self,v,visited,d):
+    def _DFSUtil(self, v, visited, d):
         d.append(v)
         visited.add(v)
         for neighbor in v.successors():
             if neighbor not in visited:
-                self.DFSUtil(neighbor,visited,d)
+                self._DFSUtil(neighbor, visited, d)
 
-class johnsons_algorithm:
+
+class JohnsonsAlgorithm:
     """
     Computes johnson's algorithm, returns a list of
     all cycles in a given automata.
@@ -107,12 +146,12 @@ class johnsons_algorithm:
 
     def simple_cycles(self,G) -> list:
         start_index = 0
-        initial = tarjans_algorithm(G)
+        initial = TarjansAlgorithm(G)
         DFS_vertices = initial.DFS(G.vs[0])
         DFS_names = [v["name"] for v in DFS_vertices]
         while(start_index <= (len(self.vertices)-1)):
             subgraph = self.create_sub_graph(start_index, G, DFS_vertices)
-            tarjan = tarjans_algorithm(subgraph)
+            tarjan = TarjansAlgorithm(subgraph)
             scc_graphs = tarjan.strongly_connected_components(DFS_names[start_index])
             least_vertex = self.find_least_vertex(scc_graphs, subgraph)
             if(least_vertex[0] != None):

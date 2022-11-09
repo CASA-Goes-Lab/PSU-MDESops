@@ -3,42 +3,106 @@ Class representing observation maps of automata systems.
 For now only static masks are implemented
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 from DESops.basic_operations.transducers import transducer_transducer_product, transducer_auto_product, transducer_input_automaton
 from DESops.opacity.language_functions import language_inclusion
 from DESops.automata import NFA
 
-class ObservationMap(ABC):
-    """
-    An abstract class representing an observation map that can be applied to an automaton
-    """
 
+class ObservationMap(ABC):
+    """An abstract class representing an observation map that can be applied to an automaton
+    This maps the behavior of an automaton as a string to observations of this behavior
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
+    # TODO - make global definition of empty event?
     epsilon = ''
 
     # abstract methods
 
-    # Check if the observation map is applicable to the given system
+    @abstractmethod
     def check_applicable(self, g):
+        """Check if the observation map is applicable to the given system
+        i.e., if the behavior of the automaton is contained in the input behavior of the map
+
+        Parameters
+        ----------
+        g : Automata
+            The automaton
+
+        Returns
+        -------
+        bool
+            Whether or not the map is applicable to the given automaton
+
+        """
         pass
 
-    # Construct an automaton encoding observations of the given system
-    def apply_observation_map(self, g):
+    @abstractmethod
+    def apply_obs_map(self, g):
+        """Construct an automaton encoding observations of the given system
+
+        Parameters
+        ----------
+        g : Automata
+            The input automaton
+
+        Returns
+        -------
+        Automata
+            An automaton representing the observed or output behavior through the map
+
+        """
         pass
 
-    # Construct an observation map resulting from applying this map first followed by another map
+    @abstractmethod
     def compose(self, other):
+        """Construct an observation map resulting from applying this map first, followed by another map
+
+        Parameters
+        ----------
+        other : ObservationMap
+            The second observation map
+
+        Returns
+        -------
+        ObservationMap
+            The composed map
+
+        """
         pass
 
-    # Modify this observation map by prepending the given observation
+    @abstractmethod
     def prepend_observation(self, event, obs):
+        """Modify this observation map to accept its normal input behavior prepended by the given event
+        and output prepended by the given observation
+        
+        Useful if the observed automaton is modified with a new initial state, for example as in the label transform
+
+        Parameters
+        ----------
+        event : object
+            The prepended event
+        obs : object
+            The prepended observation
+
+        Returns
+        -------
+        ObservationMap
+            The modified map
+
+        """
         pass
 
 
 class StaticMask(ObservationMap):
-    """
-    Static masks produce observations by mapping a single event to a single observation (both possibly '')
-    """
+    """Static masks produce observations by mapping a single event to a single observation (both possibly '')"""
 
     def __init__(self, *args, **kwargs):
         self._event_map = dict(*args, **kwargs)
@@ -50,22 +114,36 @@ class StaticMask(ObservationMap):
         self._event_map[item] = data
 
     def copy(self):
+        """ """
         new_map = StaticMask(self._event_map)
         return new_map
 
     def check_applicable(self, g):
+        """
+
+        Parameters
+        ----------
+        g :
+            
+
+        Returns
+        -------
+
+        """
         return g.events.issubset(self._event_map.keys())
 
     def apply_obs_map(self, g):
         """
-        Construct an automaton marking observations of the given system.
 
-        Parameters:
-        g: The automaton under observation
+        Parameters
+        ----------
+        g :
+            
 
-        Returns: An automaton marking observations of g
+        Returns
+        -------
+
         """
-
         g_obs = g.copy()
         g_obs.es['label'] = [self[e] for e in g_obs.es['label']]
         g_obs.events = set(g_obs.es['label'])
@@ -74,6 +152,17 @@ class StaticMask(ObservationMap):
         return g_obs
 
     def compose(self, other):
+        """
+
+        Parameters
+        ----------
+        other :
+            
+
+        Returns
+        -------
+
+        """
         if isinstance(other, StaticMask):
             return StaticMask({e: other[self[e]] for e in self._event_map.keys()})
         elif isinstance(other, SetValuedStaticMask):
@@ -95,12 +184,27 @@ class StaticMask(ObservationMap):
             raise NotImplementedError('This type of composition is not implemented yet.')
 
     def prepend_observation(self, event, obs):
+        """
+
+        Parameters
+        ----------
+        event :
+            
+        obs :
+            
+
+        Returns
+        -------
+
+        """
         self[event] = obs
 
     def unobservable_events(self):
+        """ """
         return {e for e in self._event_map.keys() if self[e] == ObservationMap.epsilon}
 
     def to_NonDetDynamicMask(self):
+        """ """
         transducer = NFA()
         transducer.add_vertex(init=True, marked=True)
         transducer.add_edges([(0, 0)]*len(self._event_map), list(self._event_map.items()))
@@ -109,9 +213,15 @@ class StaticMask(ObservationMap):
 
 
 class SetValuedStaticMask(ObservationMap):
-    """
-    Set valued static masks produce observations by mapping a single event
+    """Set valued static masks produce observations by mapping a single event
     to a set of single observations (both possibly '')
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
     """
 
     def __init__(self, nd_event_map=None):
@@ -123,26 +233,67 @@ class SetValuedStaticMask(ObservationMap):
         return frozenset(self._nd_event_map[item])
 
     def copy(self):
+        """ """
         new_map = SetValuedStaticMask(self._nd_event_map)
         return new_map
 
     def add_observation(self, event, obs):
+        """
+
+        Parameters
+        ----------
+        event :
+            
+        obs :
+            
+
+        Returns
+        -------
+
+        """
         self._nd_event_map.setdefault(event, set()).add(obs)
 
     def remove_observation(self, event, obs):
+        """
+
+        Parameters
+        ----------
+        event :
+            
+        obs :
+            
+
+        Returns
+        -------
+
+        """
         self._nd_event_map[event].remove(obs)
 
     def check_applicable(self, g):
+        """
+
+        Parameters
+        ----------
+        g :
+            
+
+        Returns
+        -------
+
+        """
         return g.events.issubset(self._nd_event_map.keys())
 
     def apply_obs_map(self, g):
         """
-        Construct an automaton marking observations of the given system.
 
-        Parameters:
-        g: The automaton under observation
+        Parameters
+        ----------
+        g :
+            
 
-        Returns: An automaton marking observations of g
+        Returns
+        -------
+
         """
         g_obs = g.copy()
         g_obs.delete_edges(g_obs.es)
@@ -155,6 +306,17 @@ class SetValuedStaticMask(ObservationMap):
         return g_obs
 
     def compose(self, other):
+        """
+
+        Parameters
+        ----------
+        other :
+            
+
+        Returns
+        -------
+
+        """
         if isinstance(other, StaticMask):
             return SetValuedStaticMask({e: other[inter] for e in self._nd_event_map.keys() for inter in self[e]})
         elif isinstance(other, SetValuedStaticMask):
@@ -174,12 +336,27 @@ class SetValuedStaticMask(ObservationMap):
             raise NotImplementedError('This type of composition is not implemented yet.')
 
     def prepend_observation(self, event, obs):
+        """
+
+        Parameters
+        ----------
+        event :
+            
+        obs :
+            
+
+        Returns
+        -------
+
+        """
         self.add_observation(event, obs)
 
     def unobservable_events(self):
+        """ """
         return {e for e in self._nd_event_map.keys() if all([obs == ObservationMap.epsilon for obs in self[e]])}
 
     def to_NonDetDynamicMask(self):
+        """ """
         transducer = NFA()
         transducer.add_vertex(init=True, marked=True)
         transducer.add_edges([(0, 0)]*len(self._nd_event_map), list(self._nd_event_map.items()))
@@ -188,40 +365,72 @@ class SetValuedStaticMask(ObservationMap):
 
 
 class NonDetDynamicMask(ObservationMap):
-    """
-    Nondeterministic dynamic masks produce observations by mapping a single event
+    """Nondeterministic dynamic masks produce observations by mapping a single event
     to a single observation (both possibly '') evolving itself along a transducer automaton
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+
     """
 
     def __init__(self, transducer):
         self.transducer = transducer
 
     def copy(self):
+        """ """
         new_map = NonDetDynamicMask(self.transducer.copy())
         return new_map
 
     def check_applicable(self, g):
+        """
+
+        Parameters
+        ----------
+        g :
+            
+
+        Returns
+        -------
+
+        """
         # TODO : this seems to have weird results with epsilon events
         return language_inclusion(g, transducer_input_automaton(self.transducer), g.events - g.Euo)
 
     def apply_obs_map(self, g):
         """
-        Construct an automaton marking observations of the given system.
 
-        Parameters:
-        g: The automaton under observation
+        Parameters
+        ----------
+        g :
+            
 
-        Returns: An automaton marking observations of g
+        Returns
+        -------
+
         """
-
         g_attr_list = set()
         if 'secret' in g.vs.attributes():
             g_attr_list.add('secret')
         g_obs = transducer_auto_product(self.transducer, g, g_attr_list=g_attr_list)
+        # TODO - use dedicated empty event
         g_obs.Euo = {""}
         return g_obs
 
     def compose(self, other):
+        """
+
+        Parameters
+        ----------
+        other :
+            
+
+        Returns
+        -------
+
+        """
         if isinstance(other, StaticMask):
             # TODO : Make sure this works
             new_trans = self.transducer.copy()
@@ -242,6 +451,19 @@ class NonDetDynamicMask(ObservationMap):
             raise NotImplementedError('This type of composition is not implemented yet.')
 
     def prepend_observation(self, event, obs):
+        """
+
+        Parameters
+        ----------
+        event :
+            
+        obs :
+            
+
+        Returns
+        -------
+
+        """
         init_states = self.transducer.vs.select(init=True)
         new_init = self.transducer.add_vertex(init=True)
         self.transducer.add_edges([(new_init.index, s.index) for s in init_states], [(event, obs)]*len(init_states))
@@ -249,4 +471,17 @@ class NonDetDynamicMask(ObservationMap):
 
 
 def observable_projection_map(g):
+    """Create an observation map representing the projection of observable events for the given automaton
+
+    Parameters
+    ----------
+    g : Automata
+        The automaton
+
+    Returns
+    -------
+    StaticMask
+        The map representing projection
+
+    """
     return StaticMask({e: '' if e in g.Euo else e for e in g.events})

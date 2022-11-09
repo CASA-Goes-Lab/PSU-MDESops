@@ -1,3 +1,6 @@
+"""
+This script is for synthesizing an edit function to enforce opacity on a contact tracing system model
+"""
 import datetime
 import os
 

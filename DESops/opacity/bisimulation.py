@@ -4,19 +4,31 @@ Functions related to constructing a secret-preserving bisuimulation
 from DESops.automata.NFA import NFA
 
 
-def construct_bisimulation(g):
-    """
-    Constructs and returns a minimal-state automaton that is bisimilar to g and that preserves the secret behavior of g
+def construct_bisimulation(g, attribute="secret"):
+    """Constructs and returns a minimal-state automaton that is bisimilar to g and that preserves given attribute
+
+    Parameters
+    ----------
+    g : Automaton
+        The automaton to minimize
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+
+    Returns
+    -------
+    Automaton
+        The minimized automaton
+
     """
     events = set(g.es["label"])
-    if "secret" not in g.vs.attributes():
-        g.vs["secret"] = False
-    partition, table, e_dict = find_coarsest_bisimilar_partition(g, events)
+    if attribute not in g.vs.attributes():
+        g.vs[attribute] = False
+    partition, table, e_dict = _find_coarsest_bisimilar_partition(g, events)
 
     h = g.__class__()
     h.add_vertices(len(partition))
     h.vs["init"] = [any([g.vs[i]["init"] for i in block]) for block in partition]
-    h.vs["secret"] = [any([g.vs[i]["secret"] for i in block]) for block in partition]
+    h.vs[attribute] = [any([g.vs[i][attribute] for i in block]) for block in partition]
     h.Euo = g.Euo
 
     for i, block in enumerate(partition):
@@ -31,29 +43,41 @@ def construct_bisimulation(g):
     h.generate_out()
     return h
 
+# TODO why does this need events?
+def _find_coarsest_bisimilar_partition(g, events, attribute="secret"):
+    """Finds the coarsest partition of states of g that will produce an automaton that
+    is bisimilar to g and whose behavior is identical to that of g over the given attribute
 
-def find_coarsest_bisimilar_partition(g, events):
-    """
-    Finds the coarsest partition of states of g that will produce an automaton that
-    is bisimilar to g and whose secret behavior is identical to that of g
+    Parameters
+    ----------
+    g : Automaton
+        The automaton
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+    events : set
+        Relevant events of the automaton
 
-    Returns:
-        the partition as a list of sets of state indices,
+    Returns
+    -------
+    list, list[list], dict)
+        a tuple of the partition as a list of sets of state indices,
         a table whose (i,j) entry is the set of block indices reached by block i via event j,
         a dict mapping events to their column in the table
+
     """
     e_dict = dict()
     for i, e in enumerate(events):
         e_dict[e] = i
 
-    # initial partition separates secret and nonsecret states
+    # initial partition separates states with different attributes
+    attribute_values = set(g.vs[attribute])
     partition = [
-        {v.index for v in g.vs if not v["secret"]},
-        {v.index for v in g.vs if v["secret"]},
+        {v.index for v in g.vs.select(lambda vp: vp[attribute] == value) for value in attribute_values}
     ]
     if set() in partition:
         partition.remove(set())
 
+    # TODO - can improve efficiency by utilizing more block igraph commands
     # loop until we return in the final if statement
     while True:
         # s_dict maps each state index to the block containing it
@@ -71,8 +95,8 @@ def find_coarsest_bisimilar_partition(g, events):
         for i, row in enumerate(table):
             for j, value in enumerate(row):
                 row[j] = frozenset(value)
-            # add a secrecy flag to prevent secret and nonsecret states in the same block
-            table[i] = (*row, g.vs[i]["secret"])
+            # add a secrecy flag to prevent states with different attributes in the same block
+            table[i] = (*row, g.vs[i][attribute])
 
         # row_dict maps rows of the table to sets of states that produced that row
         row_dict = dict()
@@ -93,9 +117,21 @@ def find_coarsest_bisimilar_partition(g, events):
             partition = new_partition
 
 
-def construct_simulation(g):
-    """
-    Constructs and returns a minimal-state automaton that is similar to g and that preserves the secret behavior of g
+def construct_simulation(g, attribute="secret"):
+    """Constructs and returns a minimal-state automaton that is similar to g and that preserves the behavior of g over the given attribute
+
+    Parameters
+    ----------
+    g : Automaton
+        The automaton to minimize
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+
+    Returns
+    -------
+    Automaton
+        The minimized automaton
+
     """
     events = set(g.es["label"])
     partition, table, e_dict = find_coarsest_similar_partition(g, events)
@@ -103,7 +139,7 @@ def construct_simulation(g):
     h = NFA()
     h.add_vertices(len(partition))
     h.vs["init"] = [any([g.vs[i]["init"] for i in block]) for block in partition]
-    h.vs["secret"] = [any([g.vs[i]["secret"] for i in block]) for block in partition]
+    h.vs[attribute] = [any([g.vs[i][attribute] for i in block]) for block in partition]
     h.Euo = g.Euo
 
     for i, block in enumerate(partition):
@@ -117,24 +153,35 @@ def construct_simulation(g):
     return h
 
 
-def find_coarsest_similar_partition(g, events):
-    """
-    Finds the coarsest partition of states of g that will produce an automaton that
-    is similar to g and whose secret behavior is identical to that of g
+def find_coarsest_similar_partition(g, events, attribute="secret"):
+    """Finds the coarsest partition of states of g that will produce an automaton that
+    is similar to g and whose behavior is identical to that of g over the given attribute
 
-    Returns:
-        the partition as a list of sets of state indices,
+    Parameters
+    ----------
+    g : Automaton
+        The automaton
+    attribute : str
+        The name of the attribute to preserve (Default value = "secret")
+    events : set
+        Relevant events of the automaton
+
+    Returns
+    -------
+    list, list[list], dict)
+        a tuple of the partition as a list of sets of state indices,
         a table whose (i,j) entry is the set of block indices reached by block i via event j,
         a dict mapping events to their column in the table
+
     """
     e_dict = dict()
     for i, e in enumerate(events):
         e_dict[e] = i
 
-    # initial partition separates secret and nonsecret states
+    # initial partition separates states with different attributes
+    attribute_values = set(g.vs[attribute])
     partition = [
-        {v.index for v in g.vs if not v["secret"]},
-        {v.index for v in g.vs if v["secret"]},
+        {v.index for v in g.vs.select(lambda vp: vp[attribute] == value) for value in attribute_values}
     ]
     if set() in partition:
         partition.remove(set())
@@ -181,7 +228,7 @@ def find_coarsest_similar_partition(g, events):
             if new_part2:
                 new_partition.append(new_part2)
 
-        # if partition size is unchanged, then we have found the coarsest bisimilar partition
+        # if partition size is unchanged, then we have found the coarsest similar partition
         if len(new_partition) == len(partition):
             return partition, table, e_dict
         # otherwise repeat the process using the new partition

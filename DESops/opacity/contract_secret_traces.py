@@ -3,17 +3,13 @@
 Function to transform an fsm with secret states and unobservable events into a nondeterminstic fsm without
  unobservable events while preserving the secrecy of trajectories
 """
+
 from DESops.automata.NFA import NFA
-from DESops.basic_operations.ureach import (
-    unobservable_reach,
-    ureach_from_set,
-    ureach_ignore_states,
-)
+from DESops.basic_operations.ureach import unobservable_reach, ureach_from_set, ureach_ignore_states
 
-
+# TODO make unobervable events consistent with the rest of the project
 def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
-    """
-    Function contracting unobservable events while preserving secrecy properties.
+    """Function contracting unobservable events while preserving secrecy properties.
 
     Given the automaton 'g' with secret states and unobservable events, this function constructs a nondeterministic
     finite automaton (NFA) called 'h' without unobservable events that preserves the secrecy or opacity properties of
@@ -21,28 +17,39 @@ def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
     called secret if it passes through a secret state or if it does not visit any nonsecret states. The NFA 'h' has the
     following properties:
     1) For every trajectory 'q' in 'g', there is a trajectory 'r' in 'h' so that
+
         i) the observable projection of 'q' is 'r'
         ii) the i^th sequence of unobservable transitions (separated by observable transitions) in 'q'  is secret if and
             only if the the i^th state visited in 'h' is secret.
+
     1) For every trajectory 'r' in 'h', there is a trajectory 'q' in 'g' so that
+
         i) the observable projection of 'q' is 'r'
         ii) the i^th sequence of unobservable transitions (separated by observable transitions) in 'q'  is secret if and
             only if the the i^th state visited in 'h' is secret.
 
-    Parameters:
-    g: given automaton with secret states
-
-    secret_type: what behavior marks an observation period as secret
+    Parameters
+    ----------
+    g : Automaton
+        The automaton with secret states
+    secret_type : int
+        What behavior marks an observation period as secret
         1: an observation period is secret if it contains ANY secret state
-        2: an observation period is secret if it contains ONLY secret states
-    default is 1
+        2: an observation period is secret if it contains ONLY secret states (Default value = 1)
+    h : Automaton or None
+        Where to put the result of the construction
+        if not specified, a new automaton will be constructed and returned (Default value = None)
+    Euo : set or None
+        The set of unobservable events
+        if not specified, Euo will be determined from g.Euo (Default value = None)
 
-    h: where to put the result of the construction
-        if not specified, a new automaton will be constructed and returned
+    Returns
+    -------
+    Automaton
+        The automaton with contracted traces
 
-    Euo: set of unobservable events
-        if not specified, Euo will be determined from g.Euo
     """
+
     h_defined = True
     if h is None:
         h = NFA()
@@ -146,5 +153,5 @@ def contract_secret_traces(g, secret_type=1, h=None, Euo=None):
 
     h.generate_out()
 
-    if not h_defined:
-        return h
+    #if not h_defined:
+    return h

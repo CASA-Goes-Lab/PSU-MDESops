@@ -4,7 +4,7 @@ from DESops.automata import automata
 from DESops.automata.event import Event
 
 
-class NFA(automata._Automata):
+class NFA(automata.Automata):
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         super(NFA, self).__init__(init, Euc, Euo, E)
 

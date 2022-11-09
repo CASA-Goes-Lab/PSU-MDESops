@@ -17,11 +17,11 @@ def test_current_state_opacity():
 
     g.vs["secret"] = False
     g.vs[2, 4]["secret"] = True
-    assert d.opacity.verify_current_state_opacity(g) is True
+    assert d.opacity_verification.verify_current_state_opacity(g) is True
 
     g.vs["secret"] = False
     g.vs[3]["secret"] = True
-    assert d.opacity.verify_current_state_opacity(g) is False
+    assert d.opacity_verification.verify_current_state_opacity(g) is False
 
 
 def test_initial_state_opacity():
@@ -30,11 +30,11 @@ def test_initial_state_opacity():
 
     g.vs["secret"] = False
     g.vs[3, 4]["secret"] = True
-    assert d.opacity.verify_initial_state_opacity(g) is True
+    assert d.opacity_verification.verify_initial_state_opacity(g) is True
 
     g.vs["secret"] = False
     g.vs[1, 2]["secret"] = True
-    assert d.opacity.verify_initial_state_opacity(g) is False
+    assert d.opacity_verification.verify_initial_state_opacity(g) is False
 
 
 def test_k_step_opacity_1():
@@ -45,28 +45,28 @@ def test_k_step_opacity_1():
     g.vs[1, 5]["secret"] = True
 
     for m in k_joint_methods:
-        assert d.opacity.verify_k_step_opacity(g, 1, True, 1, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 2, True, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 1, True, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 1, m) is False
 
-        assert d.opacity.verify_k_step_opacity(g, 2, True, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 2, m) is True
 
     for m in k_separate_methods:
-        assert d.opacity.verify_k_step_opacity(g, 2, False, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, False, 2, m) is True
 
-        assert d.opacity.verify_k_step_opacity(g, 2, False, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, False, 1, m) is True
 
     g.vs["secret"] = False
     g.vs[2, 4]["secret"] = True
 
     for m in k_joint_methods:
-        assert d.opacity.verify_k_step_opacity(g, 0, True, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 0, True, 1, m) is False
 
-        assert d.opacity.verify_k_step_opacity(g, 2, True, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 2, m) is True
 
     for m in k_separate_methods:
-        assert d.opacity.verify_k_step_opacity(g, 2, False, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, False, 2, m) is True
 
-        assert d.opacity.verify_k_step_opacity(g, 0, False, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 0, False, 1, m) is False
 
 
 def test_k_step_opacity_2():
@@ -78,16 +78,16 @@ def test_k_step_opacity_2():
     g.vs[3]["secret"] = True
 
     for m in k_joint_methods:
-        assert d.opacity.verify_k_step_opacity(g, 2, True, 1, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 3, True, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 3, True, 1, m) is False
 
-        assert d.opacity.verify_k_step_opacity(g, 3, True, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 3, True, 2, m) is True
 
     for m in k_separate_methods:
-        assert d.opacity.verify_k_step_opacity(g, 3, False, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 3, False, 2, m) is True
 
-        assert d.opacity.verify_k_step_opacity(g, 2, False, 1, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 3, False, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, False, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 3, False, 1, m) is False
 
 
 def test_k_step_opacity_3():
@@ -99,18 +99,18 @@ def test_k_step_opacity_3():
     g.vs[0, 1, 4]["secret"] = True
 
     for m in k_joint_methods:
-        assert d.opacity.verify_k_step_opacity(g, 0, True, 1, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 1, True, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 0, True, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 1, True, 1, m) is False
 
-        assert d.opacity.verify_k_step_opacity(g, 1, True, 2, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 2, True, 2, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 1, True, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, True, 2, m) is False
 
     for m in k_separate_methods:
-        assert d.opacity.verify_k_step_opacity(g, 1, False, 2, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 2, False, 2, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 1, False, 2, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 2, False, 2, m) is False
 
-        assert d.opacity.verify_k_step_opacity(g, 0, False, 1, m) is True
-        assert d.opacity.verify_k_step_opacity(g, 1, False, 1, m) is False
+        assert d.opacity_verification.verify_k_step_opacity(g, 0, False, 1, m) is True
+        assert d.opacity_verification.verify_k_step_opacity(g, 1, False, 1, m) is False
 
 
 def test_infinite_step_opacity():
@@ -121,56 +121,56 @@ def test_infinite_step_opacity():
     g.vs[1]["secret"] = True
 
     for m in infinite_joint_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, True, 1, m) is True
-        assert d.opacity.verify_infinite_step_opacity(g, True, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 1, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 2, m) is True
 
     for m in infinite_separate_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, False, 2, m) is True
-        assert d.opacity.verify_infinite_step_opacity(g, False, 1, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 1, m) is True
 
     g.vs["secret"] = False
     g.vs[2]["secret"] = True
 
     for m in infinite_joint_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, True, 1, m) is False
-        assert d.opacity.verify_infinite_step_opacity(g, True, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 2, m) is True
 
     for m in infinite_separate_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, False, 2, m) is True
-        assert d.opacity.verify_infinite_step_opacity(g, False, 1, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 1, m) is True
 
     g.vs["secret"] = False
     g.vs[2, 4]["secret"] = True
 
     for m in infinite_joint_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, True, 1, m) is False
-        assert d.opacity.verify_infinite_step_opacity(g, True, 2, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 2, m) is False
 
     for m in infinite_separate_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, False, 2, m) is True
-        assert d.opacity.verify_infinite_step_opacity(g, False, 1, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 1, m) is True
 
     g.vs["secret"] = False
     g.vs[2, 3]["secret"] = True
 
     for m in infinite_joint_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, True, 1, m) is False
-        assert d.opacity.verify_infinite_step_opacity(g, True, 2, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 2, m) is False
 
     for m in infinite_separate_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, False, 2, m) is True
-        assert d.opacity.verify_infinite_step_opacity(g, False, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 2, m) is True
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 1, m) is False
 
     g.vs["secret"] = False
     g.vs[2, 3, 4]["secret"] = True
 
     for m in infinite_joint_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, True, 1, m) is False
-        assert d.opacity.verify_infinite_step_opacity(g, True, 2, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, True, 2, m) is False
 
     for m in infinite_separate_methods:
-        assert d.opacity.verify_infinite_step_opacity(g, False, 2, m) is False
-        assert d.opacity.verify_infinite_step_opacity(g, False, 1, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 2, m) is False
+        assert d.opacity_verification.verify_infinite_step_opacity(g, False, 1, m) is False
 
 
 def test_k_step_num_states():
@@ -188,7 +188,7 @@ def test_k_step_num_states():
             g.add_edge(j, k, str(k))
     g.generate_out()
 
-    _, num_states = d.opacity.verify_k_step_opacity(
+    _, num_states = d.opacity_verification.verify_k_step_opacity(
         g, K, method="trajectory", return_num_states=True
     )
     assert num_states == (i ** (K + 2) - 1) / (i - 1)

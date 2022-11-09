@@ -8,6 +8,8 @@ from DESops.opacity.secret_specification import construct_nonsecret_spec
 from DESops.opacity.label_transform import transform_secret_labels, induced_observation_map
 from DESops.opacity.observation_map import observable_projection_map, StaticMask, SetValuedStaticMask, NonDetDynamicMask
 from DESops.opacity.language_functions import language_inclusion
+from DESops.opacity.secret_specification import OpacityNotion
+
 
 def construct_secret_observer(
     g,
@@ -16,20 +18,8 @@ def construct_secret_observer(
     joint,
     obs_map
 ):
-    """
-    Constructs the secret observer of the system, an automaton marking admissible observations
+    """Constructs the secret observer of the system, an automaton marking admissible observations
 
-    Parameters:
-    g: the automaton modeling the original system
-    h_ns: the nonsecret specification automaton
-    ns_state_sets: sets of states of h_ns corresponding to the different notions of nonsecrecy
-    secret_type: "joint" or "separate"
-    obs_map: the observation map
-
-    Returns:
-    g_so: The secret observer automaton
-    """
-    '''
     Here state markings represent behavior that we want to consider.
     Runs that do not end at marked states in both g and h_ns are not used as
     counterexamples or explanations for opacity.
@@ -37,10 +27,30 @@ def construct_secret_observer(
     The secrecy of runs is defined entirely by ns_state_sets.
 
     The marking of g_so on the other hand represents observations that violate opacity.
-    '''
+
+    Parameters
+    ----------
+    g : Automata
+        The automaton modeling the original system
+    h_ns : Automata
+        The nonsecret specification automaton
+    ns_state_sets : sets: set
+        Sets of states of h_ns corresponding to the different notions of nonsecrecy
+    joint : bool
+        Whether or not to consider joint opacity (or separate)
+    obs_map :
+        type obs_map: ObservationMap
+
+    Returns
+    -------
+    DFA
+        The secret observer automaton
+
+    """
     g_ns = product_NFA([g, h_ns], save_marked_states=True)
     g_ns_obs = obs_map.apply_obs_map(g_ns)
     g_so = composition.observer(g_ns_obs)
+    # TODO - check effect of marking in input automata
     '''
     if not joint:
         """
@@ -79,16 +89,21 @@ def construct_secret_observer(
 
 
 def verify_opacity_secret_observer(g_so, return_violating=False):
-    """
-    Verify the system corresponding to the given secret observer is opaque
+    """Verify the system corresponding to the given secret observer is opaque
 
-    Parameters:
-    g_so: The secret observer automaton marking secrets
-    return_violating: Whether or not to return the index of a violating state if one exists
+    Parameters
+    ----------
+    g_so : DFA
+        The secret observer automaton marking secrets
+    return_violating : bool
+        Whether or not to return the index of a violating state if one exists (Default value = False)
 
-    Returns:
-    is_opaque: whether the system is opaque or not
-    violating_index: the index of a state violating opacity if one exists else -1
+    Returns
+    -------
+    bool or tuple
+        opaque (, violating_index)
+        the index of a state violating opacity if one exists else -1
+
     """
     try:
         violating_state = next(v for v in g_so.vs if v["marked"])
@@ -103,13 +118,30 @@ def verify_opacity_secret_observer(g_so, return_violating=False):
             return True
 
 
-def construct_secret_observer_label_transform(g, obs_map=None, notion='CSO', joint=False, **spec_kwargs,):
-    '''
-    Parameters:
-    g: The automaton modeling the system
-    obs_map: The static mask observation map used for the system
-    '''
+def construct_secret_observer_label_transform(g, obs_map=None, notion=OpacityNotion.CSO, joint=False, **spec_kwargs):
+    """Construct the secret observer of the label transformed automaton for the given notion of opacity
 
+    Parameters
+    ----------
+    g : Automata
+        The automaton
+    obs_map : ObservationMap
+        The observation map for the automaton (Default value = None)
+    notion : OpacityNotion
+        The notion of opacity (Default value = OpacityNotion.CSO)
+    joint : bool
+        Whether or not to consider joint opacity (or separate) (Default value = False)
+    spec_kwargs :
+        Additional arguments for the notion of opacity
+    **spec_kwargs :
+
+
+    Returns
+    -------
+    DFA
+        The secret observer
+
+    """
     a, Ens, Einit = transform_secret_labels(g)
     if not obs_map:
         obs_map = observable_projection_map(g)
@@ -136,6 +168,23 @@ def construct_secret_observer_label_transform(g, obs_map=None, notion='CSO', joi
 
 
 def is_obs_state_secret(state, ns_state_sets, joint):
+    """Check if the given state of the secret observer is secret or not
+
+    Parameters
+    ----------
+    state : object
+        The state of the secret observer
+    ns_state_sets : sets: set
+        The sets of nonsecret states
+    joint : bool
+        Whether or not to consider joint opacity
+
+    Returns
+    -------
+    bool
+        Whether or not the state is secret
+
+    """
     if joint:
         return state['marked'] and all([any([all([
             (pair[1] not in ns_states)
@@ -149,8 +198,38 @@ def is_obs_state_secret(state, ns_state_sets, joint):
                 for ns_states in ns_state_sets])
 
 
-def tmp_verify_edit_opacity(g, edit, public=False, obs_map=None, notion='CSO', joint=False,
+# TODO - make not temporary?
+def tmp_verify_edit_opacity(g, edit, public=False, obs_map=None, notion=OpacityNotion.CSO, joint=False,
                             k=1, **spec_kwargs):
+    """Temporary function for verifying if the given automaton under the given edit function is opaque.
+
+    Parameters
+    ----------
+    g : Automata
+        The automata (with secret state labels)
+    edit : Automata
+        The edit function
+    public : bool
+        Whether or not to check public opacity (or private) (Default value = False)
+    obs_map : ObservationMap
+        The observation map of original system g (Default value = None)
+    notion : OpacityNotion
+        The notion of opacity (Default value = OpacityNotion.CSO)
+    joint : bool
+        Whether or not to consider joint opacity (Default value = False)
+    k : int
+        The number of steps for K-step opacity (Default value = 1)
+    spec_kwargs :
+        Additional parameters for the notion of opacity
+    **spec_kwargs :
+
+
+    Returns
+    -------
+    bool
+        Whether or not the system is opaque
+
+    """
 
     if not obs_map:
         obs_map = observable_projection_map(g)

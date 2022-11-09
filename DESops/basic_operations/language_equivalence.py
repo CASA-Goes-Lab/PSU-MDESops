@@ -104,8 +104,8 @@ def composition(v1, v2, nx_v1, nx_v2, index, vertice_number):
 
 def inclusion(g, h, Eo):
     h_det = observer(h)
-    complement(h_det, inplace=True, events=Eo)
-    prod = product_NFA([g, h_det], save_marked_states=True)
+    h_det_comp = complement(h_det, events=Eo)
+    prod = product_NFA([g, h_det_comp], save_marked_states=True)
     opaque = True
     for v in prod.vs:
         if v["marked"]:
@@ -113,21 +113,24 @@ def inclusion(g, h, Eo):
             break
     return opaque
 
+
 def compare_language_marked(g1, g2, Eo1=None, Eo2=None):
     #active_events must be provided if there exists any observable event that doesn't appear in any transition
-    if Eo1 == None:
+    if Eo1 is None:
         Eo1 = g1.events.difference(g1.Euo)
-    if Eo2 == None:
+    if Eo2 is None:
         Eo2 = g2.events.difference(g2.Euo)
     if Eo1 != Eo2:
         return False
     return inclusion(g1, g2, Eo1) and inclusion(g2, g1, Eo1)
 
+
 def compare_language(g1, g2, Eo1=None, Eo2=None, type="generated"):
-    if(type == "generated"):
+    # TODO <awintenb@umich.edu> change to two Boolean flags?
+    if type == "generated":
         return compare_language_generated(g1, g2)
-    elif(type == "marked"):
+    elif type == "marked":
         return compare_language_marked(g1, g2, Eo1, Eo2)
         # pass
-    elif(type == "both"):
+    elif type == "both":
         return compare_language_generated(g1, g2) and compare_language_marked(g1, g2, Eo1, Eo2)

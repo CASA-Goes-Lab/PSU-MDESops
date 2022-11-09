@@ -1,11 +1,11 @@
 from collections import namedtuple
 
 from DESops import error
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 from DESops.automata.event import Event
 
 
-class PFA(_Automata):
+class PFA(Automata):
     """docstring for """
 
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set(), prob=None):

@@ -1,5 +1,9 @@
 from DESops.automata import NFA
 from DESops.opacity import secret_observer as so
+from DESops.opacity.secret_specification import OpacityNotion
+
+# TODO - convert to using files instead of building the automata here
+# TODO - convert references to doc format
 
 def saboori_07_fig1a():
     """
@@ -20,10 +24,10 @@ def saboori_07_fig1a():
 
 def test_saboori_07_fig1a():
     g = saboori_07_fig1a()
-    g_so_1 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=1, joint=False, secret_type=2)
+    g_so_1 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=1, joint=False, secret_type=2)
     assert so.verify_opacity_secret_observer(g_so_1)
 
-    g_so_2 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=False, secret_type=2)
+    g_so_2 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=False, secret_type=2)
     assert not so.verify_opacity_secret_observer(g_so_2)
 
 
@@ -47,7 +51,7 @@ def saboori_09_ex1():
 def test_saboori_09_ex1():
     g = saboori_09_ex1()
 
-    g_so = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=False, secret_type=2)
+    g_so = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=False, secret_type=2)
     assert not so.verify_opacity_secret_observer(g_so)
 
 
@@ -71,10 +75,10 @@ def saboori_09_fig1b():
 
 def test_saboori_09_fig1b():
     g = saboori_09_fig1b()
-    g_so_weak = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=False, secret_type=2)
+    g_so_weak = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=False, secret_type=2)
     assert so.verify_opacity_secret_observer(g_so_weak)
 
-    g_so_strong = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=True, secret_type=1)
+    g_so_strong = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=True, secret_type=1)
     assert not so.verify_opacity_secret_observer(g_so_strong)
 
 
@@ -98,7 +102,7 @@ def saboori_11_fig1a():
 def test_saboori_11_fig1a():
     g = saboori_11_fig1a()
 
-    g_so_2 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=False, secret_type=2)
+    g_so_2 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=False, secret_type=2)
     assert not so.verify_opacity_secret_observer(g_so_2)
 
 
@@ -152,12 +156,12 @@ def falcone_15_fig10a():
 
 def test_falcone_13_fig2a():
     g = falcone_13_fig2a()
-    g_so = so.construct_secret_observer_label_transform(g, notion="CSO")
+    g_so = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.CSO)
     assert not so.verify_opacity_secret_observer(g_so)
 
     edit = falcone_15_fig10a()
-    assert so.tmp_verify_edit_opacity(g, edit, public=True, notion='KSTEP', k=1, joint=False, secret_type=2)
-    assert not so.tmp_verify_edit_opacity(g, edit, public=False, notion='KSTEP', k=1, joint=False, secret_type=2)
+    assert so.tmp_verify_edit_opacity(g, edit, public=True, notion=OpacityNotion.KSTEP, k=1, joint=False, secret_type=2)
+    assert not so.tmp_verify_edit_opacity(g, edit, public=False, notion=OpacityNotion.KSTEP, k=1, joint=False, secret_type=2)
 
 
 def falcone_13_fig2b():
@@ -182,9 +186,9 @@ def falcone_13_fig2b():
 
 def test_falcone_13_fig2b():
     g = falcone_13_fig2b()
-    g_so_1 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=1, joint=False, secret_type=2)
+    g_so_1 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=1, joint=False, secret_type=2)
     assert so.verify_opacity_secret_observer(g_so_1)
-    g_so_2 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=False, secret_type=2)
+    g_so_2 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=False, secret_type=2)
     assert not so.verify_opacity_secret_observer(g_so_2)
 
 
@@ -209,9 +213,9 @@ def falcone_15_fig2c():
 
 def test_falcone_15_fig2c():
     g = falcone_15_fig2c()
-    g_so_weak = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=3, joint=False, secret_type=2)
+    g_so_weak = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=3, joint=False, secret_type=2)
     assert so.verify_opacity_secret_observer(g_so_weak)
-    g_so_strong = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=1, joint=True, secret_type=1)
+    g_so_strong = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=1, joint=True, secret_type=1)
     assert not so.verify_opacity_secret_observer(g_so_strong)
 
 
@@ -240,10 +244,10 @@ def test_falcone_15_fig2d():
     g = falcone_15_fig2d()
     """
     # Fails
-    g_so_1 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=1, joint=True, secret_type=1)
+    g_so_1 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=1, joint=True, secret_type=1)
     assert so.verify_opacity_secret_observer(g_so_1)
     """
-    g_so_2 = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=True, secret_type=1)
+    g_so_2 = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=True, secret_type=1)
     assert not so.verify_opacity_secret_observer(g_so_2)
 
 
@@ -325,10 +329,10 @@ def falcone_15_fig10b():
 
 def test_falcone_15_fig2e():
     g = falcone_15_fig2e()
-    g_so = so.construct_secret_observer_label_transform(g, notion="KSTEP", k=2, joint=True, secret_type=1)
+    g_so = so.construct_secret_observer_label_transform(g, notion=OpacityNotion.KSTEP, k=2, joint=True, secret_type=1)
     assert not so.verify_opacity_secret_observer(g_so)
     edit = falcone_15_fig10b()
-    assert so.tmp_verify_edit_opacity(g, edit, public=True, notion='KSTEP', k=2, joint=True, secret_type=1)
+    assert so.tmp_verify_edit_opacity(g, edit, public=True, notion=OpacityNotion.KSTEP, k=2, joint=True, secret_type=1)
 
 
 """
