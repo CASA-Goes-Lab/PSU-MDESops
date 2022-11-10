@@ -4,9 +4,9 @@ pages:
   stage: deploy
   script:
   - curl -sSL https://install.python-poetry.org | python3 -
-  - poetry install
+  - ~/.local/bin/poetry install
   - cd docs
-  - .local/bin/poetry run make html
+  - ~/.local/bin/poetry run make html
   - cp build/html/* ../public
   artifacts:
     paths:
