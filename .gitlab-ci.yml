@@ -3,6 +3,7 @@ image: 3.9-bullseye
 pages:
   stage: deploy
   script:
+  - mkdir public
   - curl -sSL https://install.python-poetry.org | python3 -
   - ~/.local/bin/poetry install  --extras docs
   - cd docs
