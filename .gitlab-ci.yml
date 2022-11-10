@@ -3,7 +3,7 @@ image: 3.9-bullseye
 pages:
   stage: deploy
   script:
-  - pip install -U sphinx sphinx-rtd-theme pyment m2r2
+  - poetry install
   - cd docs
   - make html
   - cp build/html/* ../public
