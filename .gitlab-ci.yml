@@ -8,7 +8,7 @@ pages:
   - ~/.local/bin/poetry install  --extras docs
   - cd docs
   - ~/.local/bin/poetry run make html
-  - cp build/html/* ../public
+  - cp -r build/html/* ../public
   artifacts:
     paths:
     - public
