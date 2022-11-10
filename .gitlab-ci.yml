@@ -6,7 +6,7 @@ pages:
   - curl -sSL https://install.python-poetry.org | python3 -
   - poetry install
   - cd docs
-  - make html
+  - .local/bin/poetry run make html
   - cp build/html/* ../public
   artifacts:
     paths:
