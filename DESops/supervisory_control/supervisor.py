@@ -26,6 +26,36 @@ StateSet = Set[int]
 
 SHOW_PROGRESS = False
 
+def infimal_sublanguage(
+    plant: DFA,
+    spec: DFA,
+    Euc: Optional[EventSet] = None,
+    Euo: Optional[EventSet] = None,
+    marked: bool = False, 
+) -> DFA:
+    """
+    Computes the infimal controllable supervisor based on non-controllable language given by plant with respect to language given by M
+    """
+    K = plant.copy()
+    M = spec.copy()
+    if Euc is None:
+        Euc = plant.Euc | spec.Euc
+    if Euo is None:
+        Euo = plant.Euo | spec.Euo
+    if marked:
+        K.add_vertex("dummy_uc", marked=True)
+        for index, v in enumerate(K.vs):
+            if v["marked"]:
+                for e in Euc:
+                    K.add_edge(index, -1, label=e)
+    else:
+        K.add_vertex("dummy_uc", marked=False)
+        for index, v in enumerate(K.vs):
+            for e in Euc:
+                K.add_edge(index, -1, label=e)
+    for e in Euc:
+        K.add_edge(-1, -1, e)
+    return composition.product(K,M)
 
 def supremal_sublanguage(
     plant: DFA,
