@@ -1,13 +1,14 @@
 """
 Funcions relevant to the composition operations.
 """
+# TODO add description of operations or add reference to textbook
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import pydash
 from tqdm import tqdm
 
-from DESops.automata.automata import _Automata
+from DESops.automata.automata import Automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
 from DESops.automata.NFA import NFA
@@ -18,21 +19,46 @@ EventSet = Set[Event]
 Automata_t = Union[DFA, NFA]
 SHOW_PROGRESS = False
 
-
+#TODO legacy; use composition.product instead (same thing but more succinct name)
 def product_bfs(*automata: DFA):
     """
-    TODO: legacy; use composition.product instead (same thing but more succinct name)
+    Compute the product of multiple `DFA` in a breadth-first manner.
+
+    .. deprecated:: 20.9.2
+        use `composition.product` instead of `composition.product_bfs`
+        this offers the same behavior but has a more succinct name
+
+    Parameters
+    ----------
+    automata : list[DFA]
+
+    Returns
+    -------
+    DFA
+        The product of the automata
+
     """
     import warnings
 
     warnings.warn(
-        "TODO: legacy; use composition.product instead (same thing but more succinct name"
+        "deprecated; use composition.product instead (same thing but more succinct name"
     )
+    return product(*automata)
 
-
+# TODO : generalize to NFA
 def product(*automata: DFA) -> DFA:
     """
-    Computes the product composition of 2 (or more) Automata in a BFS manner, and returns the resulting composition as a new Automata.
+    Computes the synchronous product composition of 2 (or more) Automata in a BFS manner,
+    Returns the resulting composition as a new automatan.
+
+    Parameters
+    ----------
+    automata : list[DFA]
+
+    Returns
+    -------
+    DFA
+        The product of the automata
     """
     if len(automata) < 2:
         raise MissingAttributeError(
@@ -106,10 +132,20 @@ def product(*automata: DFA) -> DFA:
 
     return G_out
 
-
+# TODO Is this bugged?
 def product_linear(*automata: Automata_t) -> Automata_t:
     """
-    Computes the product composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
+    Computes the product composition of 2 (or more) automata, and returns the resulting composition as a new automata.
+    If all input automata are `DFA`, the output is also a `DFA`. Otherwise the output is an `NFA`.
+
+    Parameters
+    ----------
+    automata : list[DFA or NFA]
+
+    Returns
+    -------
+    DFA or NFA
+        The product
     """
     if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
@@ -241,21 +277,45 @@ def __find_product_edges_at_state(
 
     return edges
 
-
+# TODO: legacy; use composition.parallel instead (same thing but more succinct name)
 def parallel_bfs(*automata: DFA):
     """
-    TODO: legacy; use composition.parallel instead (same thing but more succinct name)
+    Compute the parallel composition of multiple `DFA` in a breadth-first manner.
+
+    .. deprecated:: 20.9.2
+        use `composition.parallel` instead of `composition.parallel_bfs`
+        this offers the same behavior but has a more succinct name
+
+    Parameters
+    ----------
+    automata : list[DFA]
+
+    Returns
+    -------
+    DFA
+        The parallel composition of the automata
     """
     import warnings
 
     warnings.warn(
-        "TODO: legacy; use composition.parallel instead (same thing but more succinct name)"
+        "deprecated; use composition.parallel instead (same thing but more succinct name)"
     )
+
+    return parallel_bfs(*automata)
 
 
 def parallel(*automata: DFA) -> DFA:
     """
     Computes the parallel composition of 2 (or more) Automata in a BFS manner, and returns the resulting composition as a new Automata.
+
+    Parameters
+    ----------
+    automata : list[DFA]
+
+    Returns
+    -------
+    DFA
+        The parallel composition
     """
     if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
@@ -345,7 +405,17 @@ def parallel(*automata: DFA) -> DFA:
 
 def parallel_linear(*automata: Automata_t) -> Automata_t:
     """
-    Computes the parallel composition of 2 (or more) Automata, and returns the resulting composition as a new Automata.
+    Computes the parallel composition of 2 (or more) automata, and returns the resulting composition as a new automata.
+    If all input automata are `DFA`, the output is also a `DFA`. Otherwise the output is an `NFA`.
+
+    Parameters
+    ----------
+    automata : list[DFA or NFA]
+
+    Returns
+    -------
+    DFA or NFA
+        The parallel composition
     """
     if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
@@ -356,7 +426,10 @@ def parallel_linear(*automata: Automata_t) -> Automata_t:
     for G2 in tqdm(
         input_list, desc="Parallel Composition", disable=SHOW_PROGRESS is False
     ):
-        G_out = _Automata()
+        if any(isinstance(g, NFA) for g in automata):
+            G_out = NFA()
+        else:
+            G_out = DFA()
         E1 = set(G1.es["label"])
         E2 = set(G2.es["label"])
 
@@ -498,10 +571,18 @@ def __find_parallel_edges_at_states(
 
 def observer(G: Automata_t) -> Automata_t:
     """
-    Compute the observer automata of the input G
-    G should be a DFA, NFA or PFA
+    Compute the observer automata of the input `G` with respect to its unobservable events
+    `G` should be a `DFA`, `NFA` or `PFA`
 
-    Returns the observer as a DFA
+    Parameters
+    ----------
+    G : NFA or DFA or PFA
+        The automaton
+
+    Returns
+    -------
+    DFA
+        The observer automaton
     """
     observer = DFA()
     if not G.vcount() or G is None:
@@ -597,6 +678,22 @@ def observer(G: Automata_t) -> Automata_t:
 def strict_subautomata(H: DFA, G: DFA, skip_H_tilde=False) -> Tuple[Optional[DFA], DFA]:
     """
     Constructs language-equivalent automata G_tilde and H_tilde from given G and H such that H_tilde is a strict subautomaton of G_tilde.
+
+    Parameters
+    ----------
+    H : DFA
+        The automaton to make into a subautomaton
+    G : DFA
+        The automaton to make into a superautomaton
+    skip_H_tilde : bool
+        If True, then skip the construction of `H_tilde`, instead only constructing `G_tilde`
+
+    Returns
+    -------
+    H_tilde : DFA or None
+        The constructed subautomaton (or None if `skip_H_tilde` is True)
+    G_tilde : DFA
+        The constructed superautomaton
     """
     A = H.copy()
 

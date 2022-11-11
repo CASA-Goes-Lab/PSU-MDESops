@@ -12,6 +12,8 @@ from DESops.opacity.bosy.parse_smv import (
     write_partial_smv,
 )
 from DESops.opacity.bosy.spin import ltl2spin, read_spin, write_spin
+# TODO update to newer version of BoSy
+# TODO require tools to be found on PATH and/or be overridden by env variables
 
 # This program relies on BoSy and Aiger.
 # Note BoSy relies on swift. Ensure this is in your path

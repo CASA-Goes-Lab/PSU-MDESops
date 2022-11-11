@@ -22,7 +22,10 @@ After running this command, a copy of this repository will be available in your 
 
 These packages are dependencies required to install `pycairo`. This is key for the later installation of `python-igraph`, which DESops uses to plot graphs.
 
-Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies. Do **NOT** install pycairo yet. This will be done in step 4.
+Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
+Do **NOT** install pycairo yet. This will be done in step 4.
+
+Windows users can skip this step if they use the pre-compiled wheel for pycairo discussed in step 4.
 
 ### Step 3: Install Poetry:
 
@@ -47,6 +50,7 @@ If the method above does not work, you can use `pip` to properly install `poetry
 Sometimes pip requires a different command depending on your operating system. If the command above did not work, try the following alternatives:
 
     $ python3 -m pip install --user poetry
+
 or
 
     $ python -m pip install --user poetry
@@ -62,12 +66,32 @@ DESops can be installed using [poetry](https://python-poetry.org/) and running t
     $ poetry install
 
 Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
+
 ### Note for Windows Users:
 
-When using Windows, pycairo needs to be built from the wheel. Download one of the "cp38" versions located here:
-https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo
+If you skipped step 2, pycairo can be installed from a pre-compiled wheel. downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo.
+You should download the version named  `pycairo-1.21.0-cp<python-version>-cp<python-version>-<windows-version>.whl`.
+For example, if your python version is 3.8 and you are on 64-bit plat form, you should install `pycairo‑1.21.0‑cp38‑cp38‑win_amd64.whl`.
 
-Then install using `pip install <path_to>\pycairo‑1.19.1‑cp38‑cp38‑<win_version>.whl`
+Then install using `pip install <path_to>\<pycairo>.whl`.
+You will then need to run `poetry install` as described above.
+
+### Step 5: Using DESops:
+
+Once you have installed DESops with poetry, you can use the library in a number of ways.
+The simplest way is to run `poetry run python`.
+This will open a python environment with all of the dependencies for DESops.
+You can test the installation by running:
+
+    >>> import DESops as d
+    >>> g = d.DFA()
+
+Alternatively in your terminal, you can create a shell where the `python` command refers to the poetry environment by running `poetry shell`.
+Any python commands you after this step will run with the DESops environment.
+
+Finally, many IDEs like PyCharm and VSCode have plugins available for working with poetry environments.
+
+Once you have a working environment, you can follow the tutorials linked at the bottom of this page to get started using DESops.
 
 #### Random Automata Generation
 
@@ -92,6 +116,24 @@ Finally, to use this optional dependency, use the command:
     $ poetry install --extras "opacity_enf"
 
 The second method for opacity enforcement uses the library BoSy. See (/DESops/opacity/bosy) for more details.
+
+## Documentation
+
+Documentation for most functions are provided as docstings in the code.
+Additional documentation is managed by sphinx. To enable this run the command `poetry install --extras docs`.
+The documentation can then be built with the commands
+
+    $ cd docs
+    $ poetry run make html
+
+View the documentation at `docs/build/html/index.html` with a web browser.
+
+To update or add to the documentation, in the `docs` directory run the command
+
+    $ poetry run make buildapi
+
+Note that this generates new docs, overwriting existing docs.
+Additionally, the documentation will need to be rebuilt after this step.
 
 ## Contributing to DESops
 
@@ -138,6 +180,6 @@ For other options of `pytest`, see `poetry run pytest --help`.
 
 For tutorials, demonstrations, and further information about DESops, please check out the following resources:
 - [Installation Tutorial](https://www.youtube.com/watch?v=xZAt-nGIQ-E)
-- [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_01.ipynb)
-- [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/desops_tutorial_02.ipynb)
+- [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_01.ipynb)
+- [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_02.ipynb)
 - [Youtube Channel](https://www.youtube.com/channel/UCaoigOnm8eGMC7nslwd5-BA)

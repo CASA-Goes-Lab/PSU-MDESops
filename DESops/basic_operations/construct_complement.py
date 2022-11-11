@@ -1,44 +1,60 @@
 from DESops.automata.NFA import NFA
+from DESops.automata.DFA import DFA
 
 
-def complement(g, inplace=False, g_comp=None, events=None, dead_state_name=None):
+def complement(g, inplace=False, events=None, dead_state_name=None):
     """
-    Constructs the complement of the given automaton
+    Constructs the complement of the given automaton.
+    Note, the result may be nondeterministic even if the input is deterministic
 
-    Parameters:
-    g: the automaton
-    inplace: if True, the automaton will overwrite the original g with its complement
-    g_comp: where the complement is constructed (if not inplace); if not specified, a new automaton will be constructed and returned
-    events: the event set of the automaton; required if the event set includes events not found in any transition
-    dead_state_name: the name of the added dead state; if None, then no state names are saved
+    Constructed in place if `g_comp == g`. In this case the automaton `g` must be an `NFA`.
+
+    Parameters
+    ----------
+    g : DFA or NFA
+        The automaton
+    inplace : bool
+        If True, then construct the complement in place which overwrites `g`. Otherwise create a new automaton.
+    events : set or NoneType
+        The event set of the automaton (Default value = None)
+    dead_state_name : object
+        The name of the added dead state (Default value = None)
+
+    Returns
+    -------
+    NFA
+         The complement automaton
     """
     if inplace:
-        inplace_complement(g, events, dead_state_name)
-        return
-
-    g_comp_defined = True
-    if g_comp is None:
-        g_comp = NFA()
-        g_comp_defined = False
-
-    construct_complement(g, g_comp, events, dead_state_name)
-
-    if not g_comp_defined:
-        return g_comp
+        _inplace_complement(g, events, dead_state_name)
+        return g
+    else:
+        return _construct_complement(g, events, dead_state_name)
 
 
-def construct_complement(g, g_comp=None, events=None, dead_state_name=None):
+def _construct_complement(g, events=None, dead_state_name=None):
     """
-    Constructs the complement of the given marked automaton
+    Constructs the complement of the given marked automaton (not in place)
 
-    g: input marked automaton
+    g:
     g_comp: where the complement will be stored
     events: the event set of the automaton; required if the event set includes events not found in any transition
+
+    Parameters
+    ----------
+    g : DFA or NFA
+        The automaton (with marking)
+    events : set or NoneType
+         (Default value = None)
+    dead_state_name : object
+         (Default value = None)
+
+    Returns
+    -------
+    NFA
+         The complement automaton
     """
-    g_comp_defined = True
-    if g_comp is None:
-        g_comp = NFA()
-        g_comp_defined = False
+    g_comp = NFA()
 
     if not events:
         events = set(g.es["label"])
@@ -46,6 +62,7 @@ def construct_complement(g, g_comp=None, events=None, dead_state_name=None):
     # construct new automaton with additional "dead" state
     x_d = g.vcount()
     g_comp.add_vertices(g.vcount() + 1)
+    g_comp.vs["init"] = g.vs["init"] + [False]
 
     if dead_state_name is not None:
         g_comp.vs["name"] = g.vs["name"] + [dead_state_name]
@@ -61,14 +78,24 @@ def construct_complement(g, g_comp=None, events=None, dead_state_name=None):
             if not e in active_events:
                 g_comp.add_edge(v.index, x_d, e, fill_out=True)
 
-    if not g_comp_defined:
-        return g_comp
+    return g_comp
 
 
-def inplace_complement(g, events=None, dead_state_name=None):
+def _inplace_complement(g, events=None, dead_state_name=None):
     """
-    Constructs the complement of the given automaton in-place
+    Constructs the complement of the given automaton in place
+
+    Parameters
+    ----------
+    g : NFA
+        The automaton (with marking)
+    events : set or NoneType
+         (Default value = None)
+    dead_state_name : object
+         (Default value = None)
     """
+    if isinstance(g, DFA):
+        raise ValueError("Cannot construct complement in place if the automaton is a DFA.")
     if not events:
         events = set(g.es["label"])
 
@@ -85,3 +112,4 @@ def inplace_complement(g, events=None, dead_state_name=None):
         for e in events:
             if not e in active_events:
                 g.add_edge(v.index, x_d, e, fill_out=True)
+

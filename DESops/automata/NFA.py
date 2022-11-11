@@ -4,7 +4,7 @@ from DESops.automata import automata
 from DESops.automata.event import Event
 
 
-class NFA(automata._Automata):
+class NFA(automata.Automata):
     def __init__(self, init=None, Euc=set(), Euo=set(), E=set()):
         super(NFA, self).__init__(init, Euc, Euo, E)
 
@@ -56,12 +56,12 @@ class NFA(automata._Automata):
         """
         self._graph.delete_vertices(vs)
 
-        self.generate_out()    
+        self.generate_out()
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}
 
-    def add_edge(self, source, target, label, prob=None, fill_out=True):
+    def add_edge(self, source, target, label, prob=None, fill_out=True, **kwargs):
         """
         Adds an edge to the Automata instance. Edge is created across pair, a tuple
         of vertex indices according to the igraph Graph add_edge() method.
@@ -79,7 +79,7 @@ class NFA(automata._Automata):
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
 
-        self._graph.add_edge(source, target)
+        e = self._graph.add_edge(source, target, **kwargs)
         if not isinstance(label, Event):
             # convert labels from str to Event
             # label = Event(label)
@@ -97,6 +97,7 @@ class NFA(automata._Automata):
                 out = [self.Out(target, label)]
 
             self.vs[source].update_attributes({"out": out})
+        return e
 
     def add_edges(self, pair_list, labels, probs=None, fill_out=True, **kwargs):
         """
@@ -140,7 +141,7 @@ class NFA(automata._Automata):
             # no transitions provided
             return
 
-        self._graph.add_edges(pair_list)
+        es = self._graph.add_edges(pair_list)
 
         if labels:
             self.es["label"] = new_labels
@@ -166,6 +167,7 @@ class NFA(automata._Automata):
                     out = [self.Out(pair[1], label)]
                 out_list[pair[0]] = out
             self.vs["out"] = out_list
+        return es
 
     def trans(self, source, event):
         """

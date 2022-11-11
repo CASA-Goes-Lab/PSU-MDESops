@@ -5,8 +5,8 @@ import time
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from DESops.basic_operations.cycle_detection import johnsons_algorithm
-from DESops.basic_operations.cycle_detection import tarjans_algorithm
+from DESops.basic_operations.cycle_detection import JohnsonsAlgorithm
+from DESops.basic_operations.cycle_detection import TarjansAlgorithm
 from DESops.basic_operations import cycle_detection
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
@@ -23,21 +23,21 @@ def diagnoser(G: Automata_t, target: Event) -> Automata_t:
     A_label = DFA()
     A_label.add_vertices(2, names = ["N","Y"])
     A_label.add_edges([(0,1),(1,1)], labels = [target, target])
-    A_label.Euo = {target} 
+    A_label.Euo = {target}
     GparA = composition.parallel(G, A_label)
     Obs = composition.observer(GparA)
     return Obs
 
 def create_GN(G: Automata_t, target: Event) -> Automata_t:
     """
-    Computes the GN, an automaton without the given target event. 
+    Computes the GN, an automaton without the given target event.
     """
     G_N = delete_all_specific_edge(G, [target])
     bad_states = find_inacc(G)
     G_N.delete_vertices_no_warning(bad_states)
     return G_N
 
-def verifier(G_f: Automata_t, target: Event) -> Automata_t: 
+def verifier(G_f: Automata_t, target: Event) -> Automata_t:
     """
     Computes the verifier automata of the input G_f based on the target event
     """
@@ -55,7 +55,7 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
         }
     ]
     Ver_names = {Ver_vertices[0]["name"]: 0}
-    Ver_edges = []  
+    Ver_edges = []
     queue = deque([(GN_x0, Gf_x0)])
     while len(queue) > 0:
         x1, x2 = queue.popleft()
@@ -74,17 +74,17 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
                 x2_dst.append(G_f.vs[active_x2[e]]) # f(x2,e)
                 evt.append(Event("("+ e.label+","+ e.label+")"))
             elif e in unobservable:
-                if e != target and e in active_both: 
+                if e != target and e in active_both:
                     x1_dst.append(G_N.vs[active_x1[e]]) # fN(x1,e)
                     x2_dst.append(x2)
-                    evt.append(Event("("+e.label+",eps)")) 
+                    evt.append(Event("("+e.label+",eps)"))
                     x1_dst.append(x1)
                     x2_dst.append(G_f.vs[active_x2[e]]) # f(x2,e)
                     evt.append(Event("(eps," +e.label+")"))
                 elif e != target and e in active_x1:
                     x1_dst.append(G_N.vs[active_x1[e]]) # fN(x1,e)
                     x2_dst.append(x2)
-                    evt.append(Event("("+e.label+",eps)")) 
+                    evt.append(Event("("+e.label+",eps)"))
                 elif e != target and e in active_x2:
                     x1_dst.append(x1)
                     x2_dst.append(G_f.vs[active_x2[e]]) # f(x2,e)
@@ -94,7 +94,7 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
                     x1_dst.append(x1) # x1
                     x2_dst.append(G_f.vs[active_x2[e]]) # f(x2,ed)
                     evt.append(Event("(eps," +target.label+")"))
-                    
+
             else:
                 continue
 
@@ -118,7 +118,7 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
                     x = Ver_names[dst_name]
                     Ver_vertices[x]["marked"] = True
 
-                Ver_edges.append({"pair": (src_index, dst_index), "label": evt[i]}) 
+                Ver_edges.append({"pair": (src_index, dst_index), "label": evt[i]})
 
     Ver.add_vertices(
         len(Ver_vertices),
@@ -127,7 +127,7 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
     )
     Ver.add_edges(
         [e["pair"] for e in Ver_edges], [e["label"] for e in Ver_edges]
-    ) 
+    )
     Ver.events = G_f.events
     Ver.Euc.update(G_f.Euc)
     Ver.Euo.update(G_f.Euo)
@@ -135,7 +135,7 @@ def verifier(G_f: Automata_t, target: Event) -> Automata_t:
     prime_marked_vertices = [v for v in Ver.vs if v["marked"] == True]
     BFS_marked_states(Ver,prime_marked_vertices)
 
-    return Ver 
+    return Ver
 
 def BFS_marked_states(G:Automata_t, prime_marked_vertices:list()):
     """
@@ -167,7 +167,7 @@ def polynomial_test(G: Automata_t, target: Event) -> bool:
     except IndexError:
         return True
     else:
-        tarjan = tarjans_algorithm(ver)
+        tarjan = TarjansAlgorithm(ver)
         scc = tarjan.strongly_connected_components(ver.vs[0]["name"])
     indices = list()
     for g in scc:
@@ -201,14 +201,14 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     A_label = DFA()
     A_label.add_vertices(2, names = ["N","Y"])
     A_label.add_edges([(0,1),(1,1)], labels = [target, target])
-    A_label.Euo = {target} 
+    A_label.Euo = {target}
     GparA = composition.parallel(G, A_label)
     prime_info = prime_automata(GparA, target)
     prime = prime_info[0]
     prev = prime_info[1]
     ext_diag = NFA()
     prime_x0 = prime.vs[0]
-    for x in prime_x0["name"]: 
+    for x in prime_x0["name"]:
         name = str(x[0])
         break
     # The first vertex will always be the (NAME, 'N)', (NAME, 'N')
@@ -221,7 +221,7 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     obs = composition.observer(prime)
     obs_x0 = obs.vs[0]
     Ext_diag_names = {Ext_diag_vertices[0]["name"]: 0}
-    Ext_diag_edges = []  
+    Ext_diag_edges = []
     queue = deque([(obs_x0, Ext_diag_vertices[0]["name"])])
     while len(queue) > 0:
         x1 = queue.popleft()
@@ -253,9 +253,9 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
                     }
                 )
                 dst_index = len(Ext_diag_vertices)-1
-                Ext_diag_names[dst_name] = dst_index 
-                queue.append((dst_2,dst_name))    
-            Ext_diag_edges.append({"pair": (src_index, dst_index), "label": e}) 
+                Ext_diag_names[dst_name] = dst_index
+                queue.append((dst_2,dst_name))
+            Ext_diag_edges.append({"pair": (src_index, dst_index), "label": e})
 
     ext_diag.add_vertices(
         len(Ext_diag_vertices),
@@ -264,7 +264,7 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     )
     ext_diag.add_edges(
         [e["pair"] for e in Ext_diag_edges], [e["label"] for e in Ext_diag_edges]
-    )   
+    )
 
     ext_diag.events = G.events
     ext_diag.Euc.update(G.Euc)
@@ -276,7 +276,7 @@ def is_uncertain(dst_name) -> bool:
     Returns a boolean value based on whether or not a given state is uncertain.
     """
     if len(dst_name) == 1:
-        return False 
+        return False
     else:
         Y = False
         N = False
@@ -308,7 +308,7 @@ def prime_automata(G: Automata_t, target: Event) -> list:
     ]
     unobservable = G.Euo
     prime_names = {prime_vertices[0]["name"]: 0}
-    prime_edges = [] 
+    prime_edges = []
     queue = deque([G_x0])
     while len(queue) > 0:
         x1 = queue.popleft()
@@ -330,7 +330,7 @@ def prime_automata(G: Automata_t, target: Event) -> list:
                         continue
                     else:
                         obs_states = BFS_Euo_search(G,G.vs[d],result)
-                else: 
+                else:
                     continue
                 for state in obs_states:
                     dst_name = state[0]["name"]
@@ -344,7 +344,7 @@ def prime_automata(G: Automata_t, target: Event) -> list:
                             {
                                 "name": dst_name,
                             }
-                        ) 
+                        )
                         dst_index = (len(prime_vertices)-1)
                         prime_names[dst_name] = dst_index
                         queue.append(state[0])
@@ -357,7 +357,7 @@ def prime_automata(G: Automata_t, target: Event) -> list:
     )
     prime.add_edges(
         [e["pair"] for e in prime_edges], [e["label"] for e in prime_edges]
-    )   
+    )
 
     prime.events = G.events
     prime.Euc.update(G.Euc)
@@ -400,7 +400,7 @@ def ext_diag_test(G:Automata_t, target: Event) -> bool:
         print("Cycle of unobservable events detected. Does not meet the required assumption for extended diagnoser test. Please use the polynomial test.")
         return
     ext_diag = extended_diagnoser(G, target)
-    test = johnsons_algorithm(ext_diag)
+    test = JohnsonsAlgorithm(ext_diag)
     cycles = test.simple_cycles(ext_diag)
     unmarked_cycles = list()
     for c in cycles:
@@ -422,7 +422,7 @@ def ext_diag_test(G:Automata_t, target: Event) -> bool:
                 if len(result) > 0:
                     return False
     return True
-    
+
 def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
     """
     Returns a list of all cycles that solely contain 'Y'.
@@ -434,7 +434,7 @@ def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
                 find_Y_cycle(cycle, name, start+1, result)
             else:
                 result.append(True)
-                
+
 def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
     """
     Deletes all instances of a specific event (target) in a copy of a given automata (G) and returns the copy.
@@ -452,5 +452,5 @@ def delete_obs_events(G:Automata_t) -> Automata_t:
     G_uo = delete_all_specific_edge(G,obs_events)
     return G_uo
 
- 
-    
+
+

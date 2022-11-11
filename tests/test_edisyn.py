@@ -1,14 +1,11 @@
 import DESops as d
-try:
-    from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn
-    edisyn_available = True
-except ImportError:
-    edisyn_available = False
+from DESops.opacity.secret_specification import OpacityNotion
+from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn, check_edisyn
 
 import pytest
 
 
-@pytest.mark.skipif(not edisyn_available, reason="EdiSyn not available")
+@pytest.mark.skipif(not check_edisyn(), reason="EdiSyn not available")
 def test_simple_example():
     g = d.automata.DFA()
     g.add_vertices(2)
@@ -27,17 +24,17 @@ def test_simple_example():
 
     utility = [(u.index, v.index) for u in g.vs for v in g.vs]
 
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1, allow_deletions=True)
+    obf = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.CSO, insertion_bound=1, allow_deletions=True)
 
     assert obf
     assert obf.vcount() == 2
     assert obf.ecount() == 2
 
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'CSO', insertion_bound=1, allow_deletions=False)
+    obf = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.CSO, insertion_bound=1, allow_deletions=False)
 
     assert obf is None
 
-@pytest.mark.skipif(not edisyn_available, reason="EdiSyn not available")
+@pytest.mark.skipif(not check_edisyn(), reason="EdiSyn not available")
 def test_k_step_example():
     g = d.automata.NFA()
     g.add_vertices(5)
@@ -60,11 +57,11 @@ def test_k_step_example():
 
     utility = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (4, 0)]
 
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'KSTEP', k=2, insertion_bound=1, joint=False)
+    obf = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.KSTEP, k=2, insertion_bound=1, joint=False)
     assert obf.vcount() == 4
     assert obf.ecount() == 3
 
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'KSTEP', k=1, insertion_bound=1, joint=True)
+    obf = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.KSTEP, k=1, insertion_bound=1, joint=True)
     assert not obf
 
 
@@ -80,10 +77,10 @@ def l1_dist(p1, p2):
     return max(abs(p1[0] - p2[0]), abs(p1[1] - p2[1]))
 
 
-@pytest.mark.skipif(not edisyn_available, reason="EdiSyn not available")
+@pytest.mark.skipif(not check_edisyn(), reason="EdiSyn not available")
 def test_square_examples():
     g, utility = gen_square_example(3, 3, 2)
-    obf = enforce_state_based_opacity_edisyn(g, utility, 'KSTEP', k=2, insertion_bound=1, joint=False)
+    obf = enforce_state_based_opacity_edisyn(g, utility, OpacityNotion.KSTEP, k=2, insertion_bound=1, joint=False)
     assert obf.vcount() == 15
     assert obf.ecount() == 20
 

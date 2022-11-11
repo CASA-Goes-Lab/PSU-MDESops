@@ -16,31 +16,30 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True, priority
     the resulting composition as an automata.
 
     Parameters
-
-    g_list: an iterable collection of Automata (class object) for which
+    ----------
+    g_list: Iterable[Automata]
+        An iterable collection of Automata (class object) for which
         the parallel composition will be computed. If saving state names,
         this should be ordered, as it determines the order that vertex indices
         are stored in the composition's vertex names. MUST have at least two
         graphs (length > 1).
-
-    g_comp: directed igraph Graph, assumed to be empty. Used to store the output
-        instead of returning a copy. This is different from the interface in the
-        Automata class file, which returns a copy of the result of the
-        composition.
-
-    save_state_names (default True): whether vertex names should be saved
-        in the igraph Graph "name" attribute. If set to false, the attribute
-        will not be set (less memory usage). Vertex names are a list of indicies
-        from each input, in the order used by 'inputs'. For example, in the operation
-        A || B || C, a vertex name '(0,3,1)' in the output O means that state is
+    save_state_names: bool
+        If True, then vertex names are saved in the igraph Graph "name" attribute.
+        If set to false, the attribute will not be set (less memory usage).
+        Vertex names are a list of indicies from each input, in the order used by 'inputs'.
+        For example, in the operation A || B || C, a vertex name '(0,3,1)' in the output O means that state is
         composed of vertex 0 in A, 3 in B, and 1 in C (by index, NOT vertex name).
-
-    save_marked_states (default False): whether states in the composition
-        should be 'marked' or not (marked if the composed states are both marked).
+        (Default value: True)
+    save_marked_states : bool
+        If True, then states in the composition are 'marked' (marked if all the composed states are marked).
         An error will be raised if this parameter is True, but not all Automata
         in the composition have the "marked" parameter on their vertices.
+        (Default value: True)
 
-    Doesn't return anything to avoid potentially making redundant copies.
+    Returns
+    -------
+    NFA
+        The product of the automata
     """
     g_comp = NFA()
 
@@ -108,7 +107,7 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True, priority
             init.append(True)
 
             if save_marked_states:
-                g_comp_vert_mark.append(marked_bool(g1, g2, (v1, v2)))
+                g_comp_vert_mark.append(_marked_bool(g1, g2, (v1, v2)))
 
         # set next_states_to_check returns False when empty
         while next_states_to_check:
@@ -150,7 +149,7 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True, priority
                                 # maybe only do this with a flag passed into fn?
                                 if save_marked_states:
                                     g_comp_vert_mark.append(
-                                        marked_bool(g1, g2, new_vert_pair)
+                                        _marked_bool(g1, g2, new_vert_pair)
                                     )
                                 # need to check the new states' neighbors
                                 next_states_temp.add(new_vert_pair)
@@ -160,7 +159,7 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True, priority
 
             next_states_to_check = next_states_temp
 
-        assemble_graph(
+        _assemble_graph(
             g_comp,
             g_comp_edges,
             index - 1,  # -1 to undo the increment after the last added vertex
@@ -178,7 +177,7 @@ def product_NFA(g_list, save_state_names=True, save_marked_states=True, priority
     return g_comp
 
 
-def assemble_graph(
+def _assemble_graph(
     output,
     output_edges,
     index,
@@ -220,7 +219,7 @@ def assemble_graph(
         output.vs["out"] = adj
 
 
-def marked_bool(g1, g2, vert_pair):
+def _marked_bool(g1, g2, vert_pair):
     """
     graphs g1,g2
     vert_pair (v1, v2) vertices in g1,g2
