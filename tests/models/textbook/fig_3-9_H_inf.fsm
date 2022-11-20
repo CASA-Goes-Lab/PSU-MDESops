@@ -1,0 +1,46 @@
+12
+
+0	0	2
+a1	1	uc	o
+a2	4	c	o
+
+1	0	2
+b1	2	uc	o
+a2	5	c	o
+
+2	0	2
+a1	3	uc	o
+a2	6	c	o
+
+3	0	2
+a2	7	c	o
+b1	8	uc	o
+
+4	0	2
+b2	0	c	o
+a1	5	uc	o
+
+5	0	2
+b2	1	c	o
+b1	6	uc	o
+
+6	0	2
+b2	0	c	o
+a1	7	uc	o
+
+7	0	2
+b2	1	c	o
+b1	10	uc	o
+
+8	0	1
+a1	9	uc	o
+
+9	0	1
+b1	8	uc	o
+
+10	0	1
+a1	11	uc	o
+
+11	0	1
+b1	10	uc	o
+
