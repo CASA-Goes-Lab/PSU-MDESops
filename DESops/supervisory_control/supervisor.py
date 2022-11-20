@@ -13,6 +13,7 @@ from DESops.automata.event import Event
 from DESops.basic_operations import composition, unary
 from DESops.supervisory_control.AES.AES import construct_AES, extract_AES_super
 from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
+from DESops.error import InvalidAutomataTypeError
 
 
 class Mode(Enum):
@@ -26,7 +27,7 @@ StateSet = Set[int]
 
 SHOW_PROGRESS = False
 
-def infimal_sublanguage(
+def infimal_superlanguage(
     plant: DFA,
     spec: DFA,
     Euc: Optional[EventSet] = None,
@@ -36,23 +37,30 @@ def infimal_sublanguage(
     """
     Computes the infimal controllable supervisor based on non-controllable language given by plant with respect to language given by M
     """
+    if not plant.check_DFA():
+        raise InvalidAutomataTypeError('Plant should be a DFA')
     K = plant.copy()
     M = spec.copy()
+
     if Euc is None:
         Euc = plant.Euc | spec.Euc
     if Euo is None:
         Euo = plant.Euo | spec.Euo
     if marked:
+        _ = unary.construct_trim(K, inplace=True)
         K.add_vertex("dummy_uc", marked=True)
+        dummy_uc = len(K.vs)
         for index, v in enumerate(K.vs):
-            if v["marked"]:
-                for e in Euc:
-                    K.add_edge(index, -1, label=e)
+            v["marked"] = True
+            for e in Euc:
+                if not e in K.vs["out"][index]:
+                    K.add_edge(index, dummy_uc, label=e)
     else:
         K.add_vertex("dummy_uc", marked=False)
+        dummy_uc = len(K.vs)
         for index, v in enumerate(K.vs):
             for e in Euc:
-                K.add_edge(index, -1, label=e)
+                K.add_edge(index, dummy_uc, label=e)
     for e in Euc:
         K.add_edge(-1, -1, e)
     return composition.product(K,M)
