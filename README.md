@@ -119,6 +119,7 @@ The second method for opacity enforcement uses the library BoSy. See (/DESops/op
 
 ## Documentation
 
+The documentation for this project is hosted at [MDESops.github.io](https://MDESops.github.io) .
 Documentation for most functions are provided as docstings in the code.
 Additional documentation is managed by sphinx. To enable this run the command `poetry install --extras docs`.
 The documentation can then be built with the commands
@@ -134,6 +135,9 @@ To update or add to the documentation, in the `docs` directory run the command
 
 Note that this generates new docs, overwriting existing docs.
 Additionally, the documentation will need to be rebuilt after this step.
+
+For now, the documentation must be manually added to the github.io web page.
+Simply copy all files from ``docs/build/html/`` to the root directory of the github.io repository and push.
 
 ## Contributing to DESops
 
