@@ -196,3 +196,66 @@ def write_wmod(file_name, g):
     tree = ET.ElementTree(root)
     ET.indent(tree, '  ')
     tree.write(file_name, xml_declaration=True, encoding="utf-8", method="xml")
+
+
+def write_wmod_multi(file_name, plants=None, specs=None):
+    if plants is None:
+        plants = []
+    if specs is None:
+        specs = []
+
+    ET.register_namespace('d', "http://waters.sourceforge.net/xsd/module")
+    root = ET.Element("Module")
+    root.set("xmlns", "http://waters.sourceforge.net/xsd/module")
+    root.set("xmlns:ns2", "http://waters.sourceforge.net/xsd/module")
+    root.set("xmlns:ns3", "http://waters.sourceforge.net/xsd/module")
+    root.set("Name", 'DESops_sys')
+
+    E = set()
+    Euc = set()
+    for plant in plants:
+        E |= plant.events
+        Euc |= plant.Euc
+    for spec in specs:
+        E |= spec.events
+        Euc |= spec.Euc
+
+    event_list = ET.SubElement(root, 'EventDeclList')
+    ET.SubElement(event_list, "EventDecl", Kind="PROPOSITION", Name=":accepting")
+    for event in E:
+        kind = "UNCONTROLLABLE" if event in Euc else "CONTROLLABLE"
+        ET.SubElement(event_list, "EventDecl", Kind=kind, Name=event)
+
+    comp_list = ET.SubElement(root, 'ComponentList')
+
+    for i, g in enumerate(plants):
+        _write_wmod_component(comp_list, g, kind="PLANT", name=f"plant_{i}")
+    for i, g in enumerate(specs):
+        _write_wmod_component(comp_list, g, kind="SPEC", name=f"spec_{i}")
+
+    tree = ET.ElementTree(root)
+    ET.indent(tree, '  ')
+    tree.write(file_name, xml_declaration=True, encoding="utf-8", method="xml")
+
+
+def _write_wmod_component(comp_list, g, kind, name):
+
+    simple_comp = ET.SubElement(comp_list, 'SimpleComponent')
+    simple_comp.set("Kind", kind)
+    simple_comp.set("Name", name)
+    graph = ET.SubElement(simple_comp, 'Graph')
+    node_list = ET.SubElement(graph, 'NodeList')
+    for node in g.vs:
+        simple_node = ET.SubElement(node_list, "SimpleNode", Name=node["name"])
+        if node["init"]:
+            simple_node.set("Initial", "true")
+        if node["marked"]:
+            el = ET.SubElement(simple_node, "EventList")
+            ET.SubElement(el, "SimpleIdentifier", Name=":accepting")
+
+    edge_list = ET.SubElement(graph, "EdgeList")
+    for edge in g.es:
+        edge_elem = ET.SubElement(edge_list, 'Edge',
+                                  Source=edge.source_vertex["name"], Target=edge.target_vertex["name"])
+        event_ident = ET.SubElement(edge_elem, 'LabelBlock')
+        ET.SubElement(event_ident, 'SimpleIdentifier', Name=edge["label"])
