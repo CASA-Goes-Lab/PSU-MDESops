@@ -68,15 +68,18 @@ def _construct_complement(g, events=None, dead_state_name=None):
         g_comp.vs["name"] = g.vs["name"] + [dead_state_name]
     g_comp.vs["marked"] = [not i for i in g.vs["marked"]] + [True]
 
-    for t in g.es:
-        g_comp.add_edge(t.source, t.target, t["label"], fill_out=True)
+    g_comp.add_edges([(t.source, t.target) for t in g.es],
+                     [(t["label"]) for t in g.es],
+                     fill_out=True)
 
     # direct all nonexistent transitions to the "dead" state
+    edge_states = []
+    edge_labels = []
     for v in g_comp.vs:
         active_events = set(t["label"] for t in v.out_edges())
-        for e in events:
-            if not e in active_events:
-                g_comp.add_edge(v.index, x_d, e, fill_out=True)
+        edge_states += [(v.index, x_d) for e in events if not e in active_events]
+        edge_labels += [e for e in events if not e in active_events]
+    g_comp.add_edges(edge_states, edge_labels, fill_out=True)
 
     return g_comp
 
