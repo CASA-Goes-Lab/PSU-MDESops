@@ -70,8 +70,7 @@ def _construct_reverse(g, save_state_names=False, use_marked_states=True):
     if save_state_names:
         g_rev.vs["name"] = g.vs["name"]
 
-    for t in g.es:
-        g_rev.add_edge(t.target, t.source, t["label"])
+    g_rev.add_edges([(t.target, t.source) for t in g.es], [t['label'] for t in g.es], fill_out=True)
 
     g_rev.events = g.events
     g_rev.Euo = g.Euo
@@ -120,7 +119,7 @@ def _inplace_reverse(g, use_marked_states=True):
 
     g.vs["out"] = [[] for _ in range(g.vcount())]
 
-    t = g.es[0]
-    for _ in range(g.ecount()):
-        g.add_edge(t.target, t.source, t["label"], fill_out=True)
-        t.delete()
+    edge_states = [(t.target, t.source) for t in g.es]
+    edge_labels = [t['label'] for t in g.es]
+    g.delete_edges(g.es)
+    g.add_edges(edge_states, edge_labels, fill_out=True)
