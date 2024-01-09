@@ -16,17 +16,63 @@ from DESops.basic_operations import composition
 EventSet = Set[Event]
 Automata_t = Union[DFA, NFA]
 
+
 def diagnoser(G: Automata_t, target: Event) -> Automata_t:
     """
-    Constructs the diagnoser automaton of the input G based on the target event
+    Constructs the diagnoser automaton of the input automaton `G`,
+    based on the event `target`.
+
+    Parameters
+    ----------
+    G: DFA or NFA
+    target: Event
+
+    Returns
+    -------
+    DFA or NFA
+        The diagnoser automaton
     """
     A_label = DFA()
-    A_label.add_vertices(2, names = ["N","Y"])
-    A_label.add_edges([(0,1),(1,1)], labels = [target, target])
+    A_label.add_vertices(2, names=["N", "Y"])
+    A_label.add_edges([(0, 1), (1, 1)], labels=[target, target])
     A_label.Euo = {target}
     GparA = composition.parallel(G, A_label)
     Obs = composition.observer(GparA)
     return Obs
+
+
+def diagnoser_multi(G: Automata_t, target_set: EventSet) -> Automata_t:
+    """
+    Constructs the diagnoser automaton of the input automaton `G`,
+    based on the events in the set `target_set`.
+
+    The states of the resulting diagnoser are labeled as (name, "N" or "Y", target event).
+
+    Parameters
+    ----------
+    G: DFA or NFA
+    target_set: Set[Event]
+
+    Returns
+    -------
+    DFA or NFA
+        The diagnoser automaton
+    """
+    A_label = DFA()
+    target_list = list(target_set)
+    names = [("N", None)] + [("Y", et) for et in target_list]
+    A_label.add_vertices(1+len(target_list), names=names)
+    if target_set:
+        edges = [((0, i+1), et) for i, et in enumerate(target_list)]
+        edges += [((i+1, i+1), et) for i, et in enumerate(target_list)]
+        edges = list(zip(*edges))
+        A_label.add_edges(edges[0], edges[1])
+        A_label.Euo = target_set.copy()
+    GparA = composition.parallel(G, A_label)
+    GparA.vs["name"] = [(tup[0], *tup[1]) for tup in GparA.vs["name"]]
+    Obs = composition.observer(GparA)
+    return Obs
+
 
 def create_GN(G: Automata_t, target: Event) -> Automata_t:
     """
@@ -155,6 +201,7 @@ def BFS_marked_states(G:Automata_t, prime_marked_vertices:list()):
                     visited[neighbor.index] = True
                     G.vs[neighbor.index]["marked"] = True
 
+
 def polynomial_test(G: Automata_t, target: Event) -> bool:
     """
     Performs the polynomial test on a given automaton and event.
@@ -192,6 +239,7 @@ def polynomial_test(G: Automata_t, target: Event) -> bool:
                         return False
         index +=1
     return True
+
 
 def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     """
@@ -271,6 +319,7 @@ def extended_diagnoser(G:Automata_t, target: Event)->Automata_t:
     ext_diag.Euo.update(G.Euo)
     return ext_diag
 
+
 def is_uncertain(dst_name) -> bool:
     """
     Returns a boolean value based on whether or not a given state is uncertain.
@@ -288,6 +337,7 @@ def is_uncertain(dst_name) -> bool:
         if Y == True and N == True:
             return True
     return False
+
 
 def prime_automata(G: Automata_t, target: Event) -> list:
     """
@@ -365,6 +415,7 @@ def prime_automata(G: Automata_t, target: Event) -> list:
     prime.vs[0]["init"] = True
     return [prime,prev]
 
+
 def BFS_Euo_search(G:Automata_t, V, result) -> set:
     """
     Helper function for prime automata to find all reachable unobservable events.
@@ -423,6 +474,7 @@ def ext_diag_test(G:Automata_t, target: Event) -> bool:
                     return False
     return True
 
+
 def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
     """
     Returns a list of all cycles that solely contain 'Y'.
@@ -435,6 +487,7 @@ def find_Y_cycle(cycle: list, origin: tuple, start: int, result: list):
             else:
                 result.append(True)
 
+
 def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
     """
     Deletes all instances of a specific event (target) in a copy of a given automata (G) and returns the copy.
@@ -443,6 +496,7 @@ def delete_all_specific_edge(G: Automata_t, target: list()) -> Automata_t:
     deleted_edges = [v for v in G.es if v["label"] in target]
     G_N.delete_edges(deleted_edges)
     return G_N
+
 
 def delete_obs_events(G:Automata_t) -> Automata_t:
     """
