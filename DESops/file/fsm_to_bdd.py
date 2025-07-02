@@ -27,16 +27,20 @@ def read_fsm_to_bdd(fsm_filename):
         line = f.readline()
         line = line.split("\t")
         n_states = int(line[0])
+        n_states = (n_states-1) # Number of bits to represent n_states
         n_events = int(line[1])
-        bdd = BDD()
+        n_events = (n_events-1) # Number of bits to represent n_events
+        bdd = BDD() 
         bdd.configure(reordering=True)
         states = set()
         events = set()
+        
         for k in range(n_states.bit_length()):
             name_t = "".join(["s", str(k)])
             states.add(name_t)
             name_s = "".join(["t", str(k)])
             bdd.declare(name_s, name_t)
+        
         for k in range(n_events.bit_length()):
             name_e = "".join(["e", str(k)])
             bdd.declare(name_e)
