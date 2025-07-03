@@ -40,10 +40,16 @@ class DFA(Automata):
                     self.symbolic[key] = value
                 elif key == "transitions":
                     self.symbolic[key] = value
+                elif key == "trans_formula":
+                    self.symbolic[key] = value                    
                 elif key == "uctr":
                     self.symbolic[key] = value
+                elif key == "uctr_formula":
+                    self.symbolic[key] = value  
                 elif key == "uobs":
                     self.symbolic[key] = value
+                elif key == "uobs_formula":
+                    self.symbolic[key] = value 
                 elif key == "states":
                     self.symbolic[key] = value[1]
                     self.symbolic["states_dict"] = value[0]

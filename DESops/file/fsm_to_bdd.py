@@ -20,6 +20,16 @@ def read_fsm_to_bdd(fsm_filename):
 		"obs": edgeseq label to refer to transition observability attr
 		"contr": edgeseq label to refer to transition controllability attr
 		"""
+    name_last_pos = fsm_filename.find(".fsm")
+    if not fsm_filename.find('.fsm'):
+        raise error.FileFormatError(
+                    "ERROR %s:\ Filename does not end in .fsm"
+                )
+    name_init_pos = fsm_filename.rfind("/")
+    if not name_init_pos:
+        name_init_pos = 0
+    automaton_name = fsm_filename[name_init_pos+1:name_last_pos]                                      
+
     state_names = dict()
     event_names = dict()
     with open(fsm_filename, "r") as f:
@@ -28,17 +38,19 @@ def read_fsm_to_bdd(fsm_filename):
         line = line.split("\t")
         n_states = int(line[0])
         n_states = (n_states-1) # Number of bits to represent n_states
+        if not n_states: n_states = 1
         n_events = int(line[1])
         n_events = (n_events-1) # Number of bits to represent n_events
+        if not n_events: n_events = 1
         bdd = BDD() 
         bdd.configure(reordering=True)
         states = set()
         events = set()
         
         for k in range(n_states.bit_length()):
-            name_t = "".join(["s", str(k)])
+            name_t = "".join([automaton_name+"_s", str(k)])
             states.add(name_t)
-            name_s = "".join(["t", str(k)])
+            name_s = "".join([automaton_name+"_t", str(k)])
             bdd.declare(name_s, name_t)
         
         for k in range(n_events.bit_length()):
@@ -112,10 +124,10 @@ def read_fsm_to_bdd(fsm_filename):
                     new_ev = True
                 event = event_names[trans_tuple[0]]
                 if formula == "":
-                    formula = edge_bdd_formula(source, target, event)
+                    formula = edge_bdd_formula(source, target, event, automaton_name)
                 else:
                     formula = " | ".join(
-                        [formula, edge_bdd_formula(source, target, event)]
+                        [formula, edge_bdd_formula(source, target, event, automaton_name)]
                     )
                 # trans_list.append((states_tuple[0], trans_tuple[1]))
                 if trans_tuple[2] == "uc" and new_ev:
@@ -142,27 +154,35 @@ def read_fsm_to_bdd(fsm_filename):
         # 		3- get all possible targets - t = list(bdd.pick_iter(v))
         # 	t lists of all possible (target, event) pair such that (source,event,target) is in the transition function of the DFA
         transitions = bdd.add_expr(formula)
+        transitions_formula = formula
         # uctr encodes the uncontrollable events
         if uctr:
+            uctr_formula = uctr
             uctr = bdd.add_expr(uctr)
         else:
+            uctr_formula = ""
             uctr = bdd.false
         # uobs encodes the unobservable events
         if uobs:
+            uobs_formula = uobs
             uobs = bdd.add_expr(uobs)
         else:
+            uobs_formula = ""
             uobs = bdd.false
+    # Save all Boolean expr formulas for updates later if needed            
+    state_names = {value: key for key, value in state_names.items()}            
     args = {
         "bdd": bdd,
         "transitions": transitions,
+        "trans_formula": transitions_formula,
         "uctr": uctr,
+        "uctr_formula": uctr_formula,
         "uobs": uobs,
+        "uobs_formula": uobs_formula,
         "states": (state_names, states),
         "events": (event_names, events),
     }
     G = DFA(**args)
-    # A DFA CLASS MUST HAVE A BDD OPTIONAL
-    return G
     # target = bdd.add_expr('t0 & !t1')
     # target = dict(t0= True,t1 = False)
     # source = dict(s0=False, s1=False,e0=True)
@@ -174,18 +194,19 @@ def read_fsm_to_bdd(fsm_filename):
     # bdd.collect_garbage()
     # print(len(bdd))
     # print(bdd.vars)
+    return G
 
 
-def edge_bdd_formula(source, target, event):
+def edge_bdd_formula(source, target, event,name):
     source = "&".join(
         [
-            "".join(["s", str(i)]) if s == "1" else "".join(["!s", str(i)])
+            "".join([name+"_s", str(i)]) if s == "1" else "".join(["!"+name+"_s", str(i)])
             for i, s in enumerate(source)
         ]
     )
     target = "&".join(
         [
-            "".join(["t", str(i)]) if s == "1" else "".join(["!t", str(i)])
+            "".join([name+"_t", str(i)]) if s == "1" else "".join(["!"+name+"_t", str(i)])
             for i, s in enumerate(target)
         ]
     )
@@ -207,3 +228,5 @@ def event_bdd_formula(event):
         ]
     )
     return event
+
+

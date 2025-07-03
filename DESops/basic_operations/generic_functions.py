@@ -4,6 +4,7 @@
 Contains helpful functions used in various operations.
 """
 from collections.abc import Iterable
+from DESops import automata
 
 from dd.autoref import BDD
 
@@ -162,6 +163,72 @@ def obs_events_symbolic(state, G):
     # print(next_state.to_expr())
     # print(list(G.symbolic["bdd"].pick_iter(events)))
     return events
+
+def composition_symbolic(G1, G2):
+    # Computes the symbolic parallel composition of G_1||G_2
+    
+    # Initiate bdd
+    bdd = BDD()
+    # First check shared events among G1 and G2
+    events_G1 = set(G1.symbolic['events_dict'].keys())
+    events_G2 = set(G2.symbolic['events_dict'].keys())
+    shared_events = events_G1.intersection(events_G2)
+    state_size = 2**(len(G1.symbolic['states']))*2**(len(G2.symbolic['states']))-1
+    event_size = len(events_G1.union(events_G2))-1
+    
+    for st in G1.symbolic['states']:
+        # Declaring G1 variable states s
+        bdd.declare(st)
+        #Finding the last _ location - variables are named: autname_s#
+        underscore_location = st.rfind("_")
+        #replacing s with t in variable name
+        # Declaring G1 variable target states t
+        bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])
+    for st in G2.symbolic['states']:
+       # Declaring G1 variable states s
+        bdd.declare(st)
+        #Finding the last _ location - variables are named: autname_s#
+        underscore_location = st.rfind("_")
+        #replacing s with t in variable name
+        # Declaring G1 variable target states t
+        bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])    
+    states = set()
+    events = set()
+    state_names = dict()
+    event_names = dict()
+
+    # Finding out shared events that are different variable names in G1 and G2
+    for ev in shared_events:
+        renames = dict()
+        if G1.symbolic['events_dict'][ev] != G2.symbolic['events_dict'][ev]:
+            renames['e'+G1.symbolic['events_dict'][ev]] = 'e'+G2.symbolic['events_dict'][ev]
+    # for k in range(state_size.bit_length()):
+    #         name_t = "".join(["s", str(k)])
+    #         states.add(name_t)
+    #         name_s = "".join(["t", str(k)])
+    #         bdd.declare(name_s, name_t)
+        
+    # for k in range(event_size.bit_length()):
+    #         name_e = "".join(["e", str(k)])
+    #         bdd.declare(name_e)
+    #         events.add(name_e)
+    st1 = G1.symbolic["bdd"].add_expr("!s0")
+    st2 = G2.symbolic["bdd"].add_expr("!s0")
+    ev1 = G1.symbolic["bdd"].add_expr("!e0")
+    ev2 = G2.symbolic["bdd"].add_expr("e0")
+    nx_st1 = next_state_symbolic(st1,ev1,G1)
+    nx_st2 = next_state_symbolic(st2,ev2,G2)
+    # init = G.symbolic["bdd"].add_expr("!1.s0 & !2.s0")
+    # transitions1 = G1.symbolic["transitions"]
+    # bvar1 = G1.symbolic["states"].union(G.symbolic["events"])
+    # subs1 = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
+
+    # transitions2 = G2.symbolic["transitions"]
+    # bvar2 = G2.symbolic["states"].union(G.symbolic["events"])
+    # subs2 = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
+    # print(subs)
+    G = automata.DFA()
+    return G
 
 
 def symbolic_observer(G):
