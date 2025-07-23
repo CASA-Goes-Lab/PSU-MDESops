@@ -56,6 +56,8 @@ class DFA(Automata):
                 elif key == "events":
                     self.symbolic[key] = value[1]
                     self.symbolic["events_dict"] = value[0]
+                elif key == "name":
+                    self.symbolic[key] = value
                 else:
                     raise error.InvalidAttributeError(
                         "ERROR:\nTRIED TO CREATE SYMBOLIC DFA ARG ERROR\nARG KEYS ARE:bdd,transitions,uctr,uobs,states,events"
