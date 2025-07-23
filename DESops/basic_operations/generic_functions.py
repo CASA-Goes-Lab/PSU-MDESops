@@ -109,6 +109,28 @@ def write_transition_attributes(G, Euc=set(), Euo=set()):
         G.es["obs"] = obs_list
 
 
+def next_state_symbolic_target(state, event, G):
+    # computes next state given set of state and set of event and DFA G
+    # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables) and event is a formula over variables e0,...,em (event variables)
+    # Normally state is a set of states and events is a set of observable events
+    # returns a formula over target variables
+
+    next_state = G.symbolic["transitions"] & state & event
+    bvar = G.symbolic["states"].union(G.symbolic["events"])
+    bits_states_G = len(G.symbolic["states"])-1
+    if not bits_states_G: bits_states_G = 1
+    bits_states_G = int(bin(bits_states_G)[2:])
+    # subs = {(s[:-bits_states_G-1]+'t'+s[-bits_states_G:]): s for s in G.symbolic["states"]}
+
+    # bvar = G.symbolic["states"].union(G.symbolic["events"])
+    # subs = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
+    next_state = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
+    # next_state = G.symbolic["bdd"].let(subs, next_state)
+    G.symbolic["bdd"].collect_garbage()
+    # print(next_state.to_expr())
+    # print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    return next_state
+
 def next_state_symbolic(state, event, G):
     # computes next state given set of state and set of event and DFA G
     # this is a symbolic operator: state is a formula over variables s0,...,sn (source variables) and event is a formula over variables e0,...,em (event variables)
@@ -117,12 +139,18 @@ def next_state_symbolic(state, event, G):
 
     next_state = G.symbolic["transitions"] & state & event
     bvar = G.symbolic["states"].union(G.symbolic["events"])
-    subs = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
+    bits_states_G = len(G.symbolic["states"])-1
+    if not bits_states_G: bits_states_G = 1
+    bits_states_G = int(bin(bits_states_G)[2:])
+    subs = {(s[:-bits_states_G-1]+'t'+s[-bits_states_G:]): s for s in G.symbolic["states"]}
+
+    # bvar = G.symbolic["states"].union(G.symbolic["events"])
+    # subs = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
     next_state = G.symbolic["bdd"].quantify(next_state, bvar, forall=False)
     next_state = G.symbolic["bdd"].let(subs, next_state)
     G.symbolic["bdd"].collect_garbage()
-    # print(next_state.to_expr())
-    # print(list(G.symbolic["bdd"].pick_iter(next_state)))
+    print(next_state.to_expr())
+    print(list(G.symbolic["bdd"].pick_iter(next_state)))
     return next_state
 
 
@@ -167,67 +195,221 @@ def obs_events_symbolic(state, G):
 def composition_symbolic(G1, G2):
     # Computes the symbolic parallel composition of G_1||G_2
     
+
+
+    # With multiple automata, it is better to do all at once for BDDs
+
+    # We will need to compute all possible private and shared events among all possible combinations
+    
+
     # Initiate bdd
     bdd = BDD()
     # First check shared events among G1 and G2
     events_G1 = set(G1.symbolic['events_dict'].keys())
     events_G2 = set(G2.symbolic['events_dict'].keys())
     shared_events = events_G1.intersection(events_G2)
+    private_G1 = events_G1.difference(shared_events)
+    private_G2 = events_G2.difference(shared_events)
     state_size = 2**(len(G1.symbolic['states']))*2**(len(G2.symbolic['states']))-1
     event_size = len(events_G1.union(events_G2))-1
-    
-    for st in G1.symbolic['states']:
-        # Declaring G1 variable states s
-        bdd.declare(st)
-        #Finding the last _ location - variables are named: autname_s#
-        underscore_location = st.rfind("_")
-        #replacing s with t in variable name
-        # Declaring G1 variable target states t
-        bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])
-    for st in G2.symbolic['states']:
-       # Declaring G1 variable states s
-        bdd.declare(st)
-        #Finding the last _ location - variables are named: autname_s#
-        underscore_location = st.rfind("_")
-        #replacing s with t in variable name
-        # Declaring G1 variable target states t
-        bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])    
+    if not event_size: event_size = 1
+
+
     states = set()
     events = set()
     state_names = dict()
     event_names = dict()
 
-    # Finding out shared events that are different variable names in G1 and G2
-    for ev in shared_events:
-        renames = dict()
-        if G1.symbolic['events_dict'][ev] != G2.symbolic['events_dict'][ev]:
-            renames['e'+G1.symbolic['events_dict'][ev]] = 'e'+G2.symbolic['events_dict'][ev]
-    # for k in range(state_size.bit_length()):
-    #         name_t = "".join(["s", str(k)])
-    #         states.add(name_t)
-    #         name_s = "".join(["t", str(k)])
-    #         bdd.declare(name_s, name_t)
-        
-    # for k in range(event_size.bit_length()):
-    #         name_e = "".join(["e", str(k)])
-    #         bdd.declare(name_e)
-    #         events.add(name_e)
-    st1 = G1.symbolic["bdd"].add_expr("!s0")
-    st2 = G2.symbolic["bdd"].add_expr("!s0")
-    ev1 = G1.symbolic["bdd"].add_expr("!e0")
-    ev2 = G2.symbolic["bdd"].add_expr("e0")
-    nx_st1 = next_state_symbolic(st1,ev1,G1)
-    nx_st2 = next_state_symbolic(st2,ev2,G2)
-    # init = G.symbolic["bdd"].add_expr("!1.s0 & !2.s0")
-    # transitions1 = G1.symbolic["transitions"]
-    # bvar1 = G1.symbolic["states"].union(G.symbolic["events"])
-    # subs1 = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
 
-    # transitions2 = G2.symbolic["transitions"]
-    # bvar2 = G2.symbolic["states"].union(G.symbolic["events"])
-    # subs2 = {"".join(["t", s[1:]]): s for s in G.symbolic["states"]}
-    # print(subs)
-    G = automata.DFA()
+    G1_bdd = G1.symbolic['bdd']
+    G2_bdd = G2.symbolic['bdd']
+
+    # Creating the replacements needed for G1 s variables to G1 t variables
+    bvar_G1 = G1.symbolic["states"].union(G1.symbolic["events"])
+    bits_states_G1 = len(G1.symbolic["states"])-1
+    if not bits_states_G1: bits_states_G1 = 1
+    bits_states_G1 = int(bin(bits_states_G1)[2:])
+    subs_G1 = {(s[:-bits_states_G1-1]+'t'+s[-bits_states_G1:]): s for s in G1.symbolic["states"]}
+    subs_G1_t = {s:(s[:-bits_states_G1-1]+'t'+s[-bits_states_G1:]) for s in G1.symbolic["states"]}
+
+
+    bvar_G2 = G2.symbolic["states"].union(G2.symbolic["events"])
+    bits_states_G2 = len(G2.symbolic["states"])-1
+    if not bits_states_G2: bits_states_G2 = 1
+    bits_states_G2 = int(bin(bits_states_G2)[2:])
+    subs_G2 = {(s[:-bits_states_G2-1]+'t'+s[-bits_states_G2:]): s for s in G2.symbolic["states"]}
+    subs_G2_t = {s:(s[:-bits_states_G2-1]+'t'+s[-bits_states_G2:]) for s in G2.symbolic["states"]}
+
+    for st in G1.symbolic['states']:
+    #     # Declaring G1 variable states s
+        bdd.declare(st)
+    #     #Finding the last _ location - variables are named: autname_s#
+    #     underscore_location = st.rfind("_")
+    #     #replacing s with t in variable name
+    #     # Declaring G1 variable target states t
+    #     bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])
+    for st in subs_G1:
+    #     # Declaring G1 variable states s
+        bdd.declare(st)
+    #     #Finding the last _ location - variables are named: autname_s#
+    #     underscore_location = st.rfind("_")
+    #     #replacing s with t in variable name
+    #     # Declaring G1 variable target states t
+    #     bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:])
+    for st in G2.symbolic['states']:
+    #    # Declaring G1 variable states s
+        bdd.declare(st)
+    #     #Finding the last _ location - variables are named: autname_s#
+    #     underscore_location = st.rfind("_")
+    #     #replacing s with t in variable name
+    #     # Declaring G1 variable target states t
+    #     bdd.declare(st[:underscore_location+1]+"t"+ st[underscore_location+2:]) 
+    for st in subs_G2:
+    #     # Declaring G1 variable states s
+        bdd.declare(st)
+
+    # Declaring the event variables
+    for k in range(event_size.bit_length()):
+            name_e = "".join(["e", str(k)])
+            bdd.declare(name_e)
+            events.add(name_e)   
+    
+
+    # Finding out shared events that are different variable names in G1 and G2
+    for i,ev in enumerate(events_G1.union(events_G2)):
+        binary = bin(i)[2:]
+        binary = binary.zfill(event_size.bit_length())
+        event_names[ev] = binary
+
+    
+
+    init_G1 = G1.symbolic["bdd"].add_expr("&".join(["!"+var for var in G1.symbolic['states']]))
+    init_G2 = G2.symbolic["bdd"].add_expr("&".join(["!"+var for var in G2.symbolic['states']]))
+    # Creating list of states to visit and pushing initial state both from G1 and G2 bdds
+    states_to_visit = []
+    visited_states = []
+    states_to_visit.append((init_G1,init_G2))
+    transitions = bdd.false
+    # Add a while all not visited states (similar to visiting all reachable states)
+    while states_to_visit:
+        # removing fist item in list: st_G1 is a state in the G1 bdd and st_G2 is a state in G2 bdd
+        (st_G1, st_G2) = states_to_visit.pop(0)
+        visited_states.append((st_G1, st_G2))
+
+
+        # add transitions for privates events G1
+        for ev in private_G1:
+            ev_number_G1 = G1.symbolic["events_dict"][ev]
+            ev_G1 = G1_bdd.add_expr(event_bdd_formula(ev_number_G1))
+            # Next state for G1 only
+            nx_G1 = next_state_symbolic_target(st_G1,ev_G1,G1)
+            # Changing t to s for G1
+            nx_G1_in_s  = G1_bdd.let(subs_G1, nx_G1)
+
+            # Changing s to t for G2 (same state)
+            nx_G2 = st_G2
+            nx_G2 = G2_bdd.let(subs_G2_t, nx_G2)
+            nx_G2_in_s = nx_G2
+            
+            nx_G1_expr = bdd.add_expr(nx_G1.to_expr()) #Gets next state G1 as expression on t
+            nx_G2_expr = bdd.add_expr(nx_G2.to_expr()) # Gets next state G1 as expression on t
+            if ev not in event_names:
+                binary = bin(index_event)[2:]
+                binary = binary.zfill(event_size.bit_length())
+                event_names[ev] = binary
+                index_event += 1
+                new_ev = True
+            event_bin = event_names[ev]
+            ev_str_expr = event_bdd_formula(event_bin)
+            ev_expr = bdd.add_expr(ev_str_expr)
+            # Check if target states has been visited or in the states to visit list
+            if (nx_G1_in_s,nx_G2_in_s) not in visited_states and (nx_G1_in_s,nx_G2_in_s) not in states_to_visit:
+                states_to_visit.append((nx_G1_in_s,nx_G2_in_s))
+            trans_expr = nx_G1_expr & nx_G2_expr & ev_expr & bdd.add_expr(st_G1.to_expr()) & bdd.add_expr(st_G2.to_expr())
+            transitions = transitions | trans_expr
+            # print(formula.to_expr())
+
+
+        # add transitions for privates events G2
+        for ev in private_G2:
+            # ev_G1 = G1_bdd.add_expr(event_bdd_formula(ev))
+            ev_number_G2 = G2.symbolic["events_dict"][ev]
+            ev_G2 = G2_bdd.add_expr(event_bdd_formula(ev_number_G2))
+            # Changing s to t for G1 (same state)
+            nx_G1 = st_G1
+            nx_G1 = G1_bdd.let(subs_G1_t, nx_G1)
+            nx_G1_in_s = nx_G1
+            # Next state for G2 only
+            nx_G2 = next_state_symbolic_target(st_G2,ev_G2,G2)
+            # Changing t to s for G2
+            nx_G2_in_s  = G2_bdd.let(subs_G2, nx_G2)
+            nx_G1_expr = bdd.add_expr(nx_G1.to_expr()) #Gets next state G1 as expression on t
+            nx_G2_expr = bdd.add_expr(nx_G2.to_expr()) # Gets next state G1 as expression on t
+            if ev not in event_names:
+                binary = bin(index_event)[2:]
+                binary = binary.zfill(event_size.bit_length())
+                event_names[ev] = binary
+                index_event += 1
+                new_ev = True
+            event_bin = event_names[ev]
+            ev_str_expr = event_bdd_formula(event_bin)
+            ev_expr = bdd.add_expr(ev_str_expr)
+            # Check if target states has been visited or in the states to visit list
+            if (nx_G1_in_s,nx_G2_in_s) not in visited_states and (nx_G1_in_s,nx_G2_in_s) not in states_to_visit:
+                states_to_visit.append((nx_G1_in_s,nx_G2_in_s))
+            trans_expr = nx_G1_expr & nx_G2_expr & ev_expr & bdd.add_expr(st_G1.to_expr()) & bdd.add_expr(st_G2.to_expr())
+            transitions = transitions | trans_expr
+            # print(formula.to_expr())
+
+        # add transitions for shared events 
+        for ev in shared_events:
+            ev_number_G1 = G1.symbolic["events_dict"][ev]
+            ev_G1 = G1_bdd.add_expr(event_bdd_formula(ev_number_G1))
+            ev_number_G2 = G2.symbolic["events_dict"][ev]
+            ev_G2 = G2_bdd.add_expr(event_bdd_formula(ev))
+            nx_G1 = next_state_symbolic_target(st_G1,ev_G1,G1)
+            # Changing t to s for G1
+            nx_G1_in_s  = G1_bdd.let(subs_G1, nx_G1)
+            nx_G2 = next_state_symbolic_target(st_G2,ev_G2,G2)
+            # Changing t to s for G2
+            nx_G2_in_s  = G2_bdd.let(subs_G2, nx_G2)
+            nx_G1_expr = bdd.add_expr(nx_G1.to_expr()) #Gets next state G1 as expression on t
+            nx_G2_expr = bdd.add_expr(nx_G2.to_expr()) # Gets next state G1 as expression on t
+            if ev not in event_names:
+                binary = bin(index_event)[2:]
+                binary = binary.zfill(event_size.bit_length())
+                event_names[ev] = binary
+                index_event += 1
+                new_ev = True
+            event_bin = event_names[ev]
+            ev_str_expr = event_bdd_formula(event_bin)
+            ev_expr = bdd.add_expr(ev_str_expr)
+            # Check if target states has been visited or in the states to visit list
+            if (nx_G1_in_s,nx_G2_in_s) not in visited_states and (nx_G1_in_s,nx_G2_in_s) not in states_to_visit:
+                states_to_visit.append((nx_G1_in_s,nx_G2_in_s))
+            trans_expr = nx_G1_expr & nx_G2_expr & ev_expr & bdd.add_expr(st_G1.to_expr()) & bdd.add_expr(st_G2.to_expr())
+            transitions = transitions | trans_expr
+            # print(formula.to_expr())
+    # with open("bdd.dot", "w") as f_dot:
+    bdd.add_expr(transitions.to_expr())
+    bdd.collect_garbage()
+    
+    # Save all Boolean expr formulas for updates later if needed            
+    state_names = {value: key for key, value in state_names.items()}            
+    args = {
+        "bdd": bdd,
+        "transitions": transitions,
+        # "trans_formula": transitions_formula,
+        # "uctr": uctr,
+        # "uctr_formula": uctr_formula,
+        # "uobs": uobs,
+        # "uobs_formula": uobs_formula,
+        "states": (state_names, states),
+        "events": (event_names, events),
+        # "name": automaton_name,
+    }
+    # print(formula.to_expr())
+    G = automata.DFA(**args)
     return G
 
 
@@ -253,3 +435,14 @@ def symbolic_observer(G):
                 queue.append(next_state)
                 new_states.append(next_state)
     print(new_states)
+
+
+
+def event_bdd_formula(event):
+    event = "&".join(
+        [
+            "".join(["e", str(i)]) if s == "1" else "".join(["!e", str(i)])
+            for i, s in enumerate(event)
+        ]
+    )
+    return event

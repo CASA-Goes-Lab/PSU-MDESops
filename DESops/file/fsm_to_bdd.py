@@ -132,14 +132,14 @@ def read_fsm_to_bdd(fsm_filename):
                 # trans_list.append((states_tuple[0], trans_tuple[1]))
                 if trans_tuple[2] == "uc" and new_ev:
                     if uctr == "":
-                        uctr = event_bdd_formula(event)
+                        uctr = event_bdd_formula(event,name)
                     else:
-                        uctr = " | ".join([uctr, event_bdd_formula(event)])
+                        uctr = " | ".join([uctr, event_bdd_formula(event,name)])
                 if trans_tuple[3] == "uo" and new_ev:
                     if uobs == "":
-                        uobs = event_bdd_formula(event)
+                        uobs = event_bdd_formula(event,name)
                     else:
-                        uobs = " | ".join([uobs, event_bdd_formula(event)])
+                        uobs = " | ".join([uobs, event_bdd_formula(event,name)])
 
                     # events_unctr.add(Event(trans_tuple[0]))
                 # trans_controllable.append(trans_tuple[2])
@@ -174,13 +174,14 @@ def read_fsm_to_bdd(fsm_filename):
     args = {
         "bdd": bdd,
         "transitions": transitions,
-        "trans_formula": transitions_formula,
+        # "trans_formula": transitions_formula,
         "uctr": uctr,
-        "uctr_formula": uctr_formula,
+        # "uctr_formula": uctr_formula,
         "uobs": uobs,
-        "uobs_formula": uobs_formula,
+        # "uobs_formula": uobs_formula,
         "states": (state_names, states),
         "events": (event_names, events),
+        "name": automaton_name,
     }
     G = DFA(**args)
     # target = bdd.add_expr('t0 & !t1')
@@ -220,7 +221,7 @@ def edge_bdd_formula(source, target, event,name):
     return formula
 
 
-def event_bdd_formula(event):
+def event_bdd_formula(event,name):
     event = "&".join(
         [
             "".join(["e", str(i)]) if s == "1" else "".join(["!e", str(i)])
