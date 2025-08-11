@@ -153,6 +153,138 @@ def next_state_symbolic(state, event, G):
     print(list(G.symbolic["bdd"].pick_iter(next_state)))
     return next_state
 
+def binary_to_state_name(state_assignment, state_vars, G):
+    """
+    Convert binary state assignment back to original state name
+    """
+    # Get the states_dict from the symbolic representation (this is the correct location)
+    if "states_dict" in G.symbolic:
+        states_dict = G.symbolic["states_dict"]  # This maps binary -> state_name
+        
+        # Convert state_assignment to binary string
+        # Extract only state variables and sort them to match the bit order
+        state_bits = []
+        for state_var in sorted(state_vars):
+            if state_var in state_assignment:
+                state_bits.append('1' if state_assignment[state_var] else '0')
+        
+        binary_string = ''.join(state_bits)
+        
+        # Look up the state name using the binary string
+        if binary_string in states_dict:
+            return states_dict[binary_string]
+    
+    # Fallback: try to reconstruct from automaton name if states_dict not available
+    # Extract automaton name from state variable names (e.g., "branch3_s0" -> "branch3")
+    if state_vars:
+        sample_var = list(state_vars)[0]
+        if '_s' in sample_var:
+            automaton_name = sample_var.split('_s')[0]
+            
+            # Convert boolean assignment to integer
+            state_value = 0
+            for i, state_var in enumerate(sorted(state_vars)):
+                if state_var in state_assignment and state_assignment[state_var]:
+                    bit_index = int(state_var.split('_s')[-1])
+                    state_value += 2 ** bit_index
+            
+            # For simple cases, you might have a pattern like state_0, state_1, etc.
+            # This is a basic fallback - you may need to adjust based on your actual naming
+            return f"state_{state_value}"
+    
+    # Final fallback: return binary representation as string
+    state_bits = []
+    for state_var in sorted(state_vars):
+        if state_var in state_assignment:
+            state_bits.append('1' if state_assignment[state_var] else '0')
+    return ''.join(state_bits)
+
+def reach_symbolic(G):
+    # Add a check ensuring G has a symbolic representation
+    transitions = G.symbolic["transitions"]
+    bdd = G.symbolic["bdd"]
+    state_vars = G.symbolic["states"]
+
+    # print(f"Transitions formula: {transitions.to_expr()}")
+    # print(f"State variables: {state_vars}")
+    # print(f"Event variables: {G.symbolic['events']}")
+    
+    # Create initial state formula (all state bits set to 0)
+    # Dynamically construct the initial state formula based on available state variables
+    init_conditions = []
+    for state_var in sorted(state_vars):  # Sort to ensure consistent ordering
+        init_conditions.append(f"!{state_var}")
+    
+    init_formula = " & ".join(init_conditions)
+    initial_state = bdd.add_expr(init_formula)
+    
+    # Initialize reachable states with initial state
+    reachable = initial_state
+    new_states = initial_state
+    
+    # Fixed-point iteration for reachability
+    while new_states != bdd.false:
+        # Current set of states to explore
+        current_states = new_states
+        
+        # Compute image: all states reachable in one step from current_states
+        # Image = ∃s,e. current_states(s) ∧ transitions(s,e,t)
+        image = transitions & current_states
+        
+        # Quantify out source state variables and event variables
+        # This leaves us with target state variables
+        vars_to_quantify = state_vars.union(G.symbolic["events"])
+        image = bdd.quantify(image, vars_to_quantify, forall=False)
+        
+        # Rename target variables to source variables (t0->s0, t1->s1, etc.)
+        # This converts the target states back to source state representation
+        rename_dict = {}
+        for state_var in state_vars:
+            # Find the corresponding target variable (replace 's' with 't')
+            target_var = state_var.replace('_s', '_t')
+            rename_dict[target_var] = state_var
+        
+        image = bdd.let(rename_dict, image)
+        
+        # Find new states: image - reachable
+        new_states = image & ~reachable
+        
+        # Add new states to reachable set
+        reachable = reachable | image
+        
+        # Clean up BDD to prevent memory bloat
+        bdd.collect_garbage()
+    
+    # Count the total number of reachable states
+    # Each satisfying assignment of the reachable BDD corresponds to one reachable state
+    # Count by explicitly specifying all state variables to consider
+    # Force the BDD to consider all state variables by creating a dummy constraint
+    reachable_count = len(list(bdd.pick_iter(reachable, state_vars)))
+
+    
+    # print(f"Total number of reachable states: {reachable_count}")
+    # print(f"Reachable states formula: {reachable.to_expr()}")
+    
+    # Optional: Print all reachable states explicitly with their names
+    # print("\nAll reachable states:")
+    reachable_state_names = set()
+    
+    # FIXED: Use the same approach as counting - pass state_vars to pick_iter
+    for i, state_assignment in enumerate(bdd.pick_iter(reachable, state_vars)):
+        # Filter to show only state variables
+        state_only = {k: v for k, v in state_assignment.items() if k in state_vars}
+        
+        # Convert binary representation to state name
+        state_name = binary_to_state_name(state_assignment, state_vars, G)
+        reachable_state_names.add(state_name)
+        
+        # print(f"State {i+1}: {state_name} : {state_only}")
+    
+    # print(f"\nReachable states set: {sorted(reachable_state_names)}")
+    
+    return reachable_count, reachable
+
+
 
 def ureach_symbolic(state, event, G):
     # computes ureach state set given set of state and set of event and DFA G
