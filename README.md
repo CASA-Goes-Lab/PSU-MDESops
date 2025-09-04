@@ -14,7 +14,7 @@ On the right hand corner of this page, click on the blue box that says `Clone`. 
 
 In your working directory, write the following command:
 
-    $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/desops.git
+    $ git clone git@github.com:CASA-Goes-Lab/PSU-MDESops.git
 
 After running this command, a copy of this repository will be available in your working directory.
 
