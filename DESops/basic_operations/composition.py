@@ -450,6 +450,9 @@ def parallel_linear(*automata: Automata_t) -> Automata_t:
             marked=[v["marked"] for v in G_out_vertices],
             indexes=[v["indexes"] for v in G_out_vertices],
         )
+        if G_out.vcount() > 0:
+            G_out.vs["init"] = [False] * G_out.vcount()
+            G_out.vs[0]["init"] = True
         G1_vertices = [
             {
                 "index": x.index,
