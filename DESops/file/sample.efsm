@@ -1,0 +1,13 @@
+VAR status 0 1
+VAR cond 0 1
+
+CTRL on
+CTRL off
+UCTRL fail
+
+INIT status=0 cond=0
+MARK status=0 cond=0
+
+TRANS status=0,cond=0 on   status=1,cond=0
+TRANS status=1,cond=0 off  status=0,cond=0
+TRANS status=1,cond=0 fail status=1,cond=1
