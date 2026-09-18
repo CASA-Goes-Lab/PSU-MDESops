@@ -4,92 +4,44 @@ implemented, including parallel/product compositions and observer computation. T
 
 ## Installation
 
-Below is a diagram that showcases the installation process. Before installing DESops, the first three steps must be completed first.
-
-![README_diagram graph image](img/diagram.png)
+DESops is installed with a plain Python virtual environment and `pip` — no extra package manager required.
 
 ### Step 1: Clone Repository
 
-On the right hand corner of this page, click on the blue box that says `Clone`. Copy and paste the HTTPS url.
-
-In your working directory, write the following command:
-
     $ git clone git@github.com:CASA-Goes-Lab/PSU-MDESops.git
+    $ cd PSU-MDESops
 
-After running this command, a copy of this repository will be available in your working directory.
+### Step 2: Create and activate a virtual environment
 
-### Step 2: Install pkg-config and cairo
+Requires Python 3.11 or newer.
 
-These packages are dependencies required to install `pycairo`. This is key for the later installation of `python-igraph`, which DESops uses to plot graphs.
+    $ python3 -m venv .venv
+    $ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-Both `pkg-config` and `cairo` can be installed at once. Depending on your operating system, you can follow the steps on this [website](https://pycairo.readthedocs.io/en/latest/getting_started.html) to properly install these dependencies.
-Do **NOT** install pycairo yet. This will be done in step 4.
+### Step 3: Install DESops
 
-Windows users can skip this step if they use the pre-compiled wheel for pycairo discussed in step 4.
+    $ pip install --upgrade pip
+    $ pip install "setuptools<81" wheel
+    $ pip install --no-build-isolation -e ".[dev]"
 
-### Step 3: Install Poetry:
+The `setuptools<81` pin and `--no-build-isolation` flag work around the `dd` dependency (used for BDD support), which ships no prebuilt wheel and whose legacy `setup.py` still imports the now-removed `pkg_resources` module unless a compatible `setuptools` is already present in the environment.
 
-The recommended way to install poetry is writing the following commands in your terminal:
+`.[dev]` installs the test/lint tooling alongside DESops. For a minimal install without dev tools, drop `[dev]`. Two other optional extras are available:
 
-### OS X / Linux / BashOnWindows:
+    $ pip install --no-build-isolation -e ".[caching]"  # pycairo, for igraph's Cairo-based plotting
+    $ pip install --no-build-isolation -e ".[docs]"      # Sphinx and friends, for building documentation
 
-    $ curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python3 -
+`pycairo` (the `caching` extra) additionally requires the system `pkg-config` and `cairo` libraries to be installed first — see [this guide](https://pycairo.readthedocs.io/en/latest/getting_started.html) for OS-specific instructions. Most users plotting with the default `plotly`-based visualization do not need this extra.
 
-### Windows Powershell:
+### Step 4: Using DESops
 
-    $ (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py -UseBasicParsing).Content | python3 -
+With the virtual environment active, verify the installation:
 
-### Alternative Method
-
-If the method above does not work, you can use `pip` to properly install `poetry`. Run the following command:
-
-    $ pip install --user poetry
-
-### Common Error: Operating device does not recognize pip
-
-Sometimes pip requires a different command depending on your operating system. If the command above did not work, try the following alternatives:
-
-    $ python3 -m pip install --user poetry
-
-or
-
-    $ python -m pip install --user poetry
-
-More information and different installation methods are available on the [poetry](https://python-poetry.org/) website if needed.
-
-### Step 4: Install DESops:
-
-Make sure you are in the same working directory as the `poetry.lock` file. This should be located where you cloned the repository.
-
-DESops can be installed using [poetry](https://python-poetry.org/) and running the command:
-
-    $ poetry install
-
-Note that version 1.11.1 of pycairo was specified due to issues with pycairo's current version 1.20
-
-### Note for Windows Users:
-
-If you skipped step 2, pycairo can be installed from a pre-compiled wheel. downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#pycairo.
-You should download the version named  `pycairo-1.21.0-cp<python-version>-cp<python-version>-<windows-version>.whl`.
-For example, if your python version is 3.8 and you are on 64-bit plat form, you should install `pycairo‑1.21.0‑cp38‑cp38‑win_amd64.whl`.
-
-Then install using `pip install <path_to>\<pycairo>.whl`.
-You will then need to run `poetry install` as described above.
-
-### Step 5: Using DESops:
-
-Once you have installed DESops with poetry, you can use the library in a number of ways.
-The simplest way is to run `poetry run python`.
-This will open a python environment with all of the dependencies for DESops.
-You can test the installation by running:
-
+    $ python
     >>> import DESops as d
     >>> g = d.DFA()
 
-Alternatively in your terminal, you can create a shell where the `python` command refers to the poetry environment by running `poetry shell`.
-Any python commands you after this step will run with the DESops environment.
-
-Finally, many IDEs like PyCharm and VSCode have plugins available for working with poetry environments.
+Any IDE that supports selecting a Python interpreter (PyCharm, VS Code, etc.) can point directly at `.venv` for editing and running the project.
 
 Once you have a working environment, you can follow the tutorials linked at the bottom of this page to get started using DESops.
 
@@ -105,15 +57,11 @@ There are several required libraries, and a c++ compiler is needed to build the 
 #### Opacity enforcement
 
 Two methods for synthesizing enforcement mechanisms for opacity are currently supported. The first requires the optional
-python library [EdiSyn](https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn). To install EdiSyn in an appropriate directory
-, run:
+python library [EdiSyn](https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn), which is not published to PyPI and must be
+installed manually alongside DESops in the same virtual environment:
 
     $ git clone https://gitlab.eecs.umich.edu/M-DES-tools/EdiSyn.git
-
-Then edit `pyproject.toml` to point to this directory. You will need to uncomment this line. For development EdiSyn can be used in the editable mode.
-Finally, to use this optional dependency, use the command:
-
-    $ poetry install --extras "opacity_enf"
+    $ pip install -e ./EdiSyn
 
 The second method for opacity enforcement uses the library BoSy. See (/DESops/opacity/bosy) for more details.
 
@@ -121,17 +69,17 @@ The second method for opacity enforcement uses the library BoSy. See (/DESops/op
 
 The documentation for this project is hosted at [MDESops.github.io](https://MDESops.github.io) .
 Documentation for most functions are provided as docstings in the code.
-Additional documentation is managed by sphinx. To enable this run the command `poetry install --extras docs`.
+Additional documentation is managed by sphinx. To enable this, install with the `docs` extra: `pip install --no-build-isolation -e ".[docs]"`.
 The documentation can then be built with the commands
 
     $ cd docs
-    $ poetry run make html
+    $ make html
 
 View the documentation at `docs/build/html/index.html` with a web browser.
 
 To update or add to the documentation, in the `docs` directory run the command
 
-    $ poetry run make buildapi
+    $ make buildapi
 
 Note that this generates new docs, overwriting existing docs.
 Additionally, the documentation will need to be rebuilt after this step.
@@ -141,18 +89,15 @@ Simply copy all files from ``docs/build/html/`` to the root directory of the git
 
 ## Contributing to DESops
 
-You will need [Poetry](https://python-poetry.org/) to start contribution on the DESops codes.
-
-First, you will need to clone the repository using `git`:
+First, clone the repository using `git`:
 ```
-$ git clone git@gitlab.eecs.umich.edu:M-DES-tools/desops.git
-$ cd desops
+$ git clone git@github.com:CASA-Goes-Lab/PSU-MDESops.git
+$ cd PSU-MDESops
 ```
 
-Second, you will need to install the required dependencies and `pre-commit` git hooks:
+Second, follow the [Installation](#installation) steps above using the `.[dev]` extra, then install the `pre-commit` git hooks:
 ```
-$ poetry install
-$ poetry run pre-commit install
+$ pre-commit install
 ```
 
 ### Before pushing your contribution to the repository
@@ -167,23 +112,23 @@ All tests are located in `tests` directory, and must be written with the formats
 
 You can execute tests by the following command:
 ```
-$ poetry run pytest
+$ pytest
 ```
 You can also execute certain tests by specifying test names:
 ```
-$ poetry run pytest -k [name]
+$ pytest -k [name]
 ```
 For example, if you want to do the test defined by `def test_example():`, pass its name to `pytest` as:
 ```
-$ poetry run pytest -k example
+$ pytest -k example
 ```
 
-For other options of `pytest`, see `poetry run pytest --help`.
+For other options of `pytest`, see `pytest --help`.
 
 ### Additional Resources
 
 For tutorials, demonstrations, and further information about DESops, please check out the following resources:
 - [Installation Tutorial](https://www.youtube.com/watch?v=xZAt-nGIQ-E)
-- [DESops Tutorial 1](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_01.ipynb)
-- [DESops Tutorial 2](https://gitlab.eecs.umich.edu/M-DES-tools/desops/-/blob/master/jupyter-tutorials/desops_tutorial_02.ipynb)
+- [DESops Tutorial 1](https://github.com/CASA-Goes-Lab/PSU-MDESops/blob/master/jupyter-tutorials/desops_tutorial_01.ipynb)
+- [DESops Tutorial 2](https://github.com/CASA-Goes-Lab/PSU-MDESops/blob/master/jupyter-tutorials/desops_tutorial_02.ipynb)
 - [Youtube Channel](https://www.youtube.com/channel/UCaoigOnm8eGMC7nslwd5-BA)

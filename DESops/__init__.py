@@ -1,6 +1,9 @@
 # flake8: noqa
 # from DESops.automata.automata import _Automata
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _version
+
 from DESops import SDA, error, random_automata
 from DESops.automata.DFA import DFA
 from DESops.automata.event import Event
@@ -20,4 +23,7 @@ from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
 from DESops.diagnoser import diagnoser
 
-__version__ = "20.9.2"
+try:
+    __version__ = _version("DESops")
+except PackageNotFoundError:
+    __version__ = "0.0.0+unknown"
