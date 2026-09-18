@@ -85,6 +85,7 @@ from copy import deepcopy
 from typing import Set, Union
 from abc import ABC, abstractmethod
 
+from DESops.backends.igraph_backend import from_igraph
 from DESops.core.event import Event
 from DESops.core.operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
@@ -598,6 +599,22 @@ class Automata(ABC):
                 if self.es[e]["label"] in Euc and self.es[e].source not in bad_states
             }
         return bad_states
+
+    def to_data(self):
+        """
+        Snapshot this Automata as backend-agnostic AutomatonData (plain
+        lists/sets, no igraph dependency).
+
+        This is a read-only export: today's storage is still igraph
+        underneath, so this builds a fresh snapshot on every call rather
+        than reflecting live state. See DESops.backends.protocol for the
+        shape and doc/scoping-report.md for where this is headed.
+
+        Returns
+        -------
+        DESops.backends.protocol.AutomatonData
+        """
+        return from_igraph(self._graph)
 
     # Methods to interface with graph variables & methods
 

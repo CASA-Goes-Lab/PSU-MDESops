@@ -1,1 +1,1 @@
-"""Graph backend abstraction layer (placeholder — see doc/scoping-report.md)."""
+"""Graph backend abstraction layer. See doc/scoping-report.md for the plan."""
