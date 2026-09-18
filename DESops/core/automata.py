@@ -531,6 +531,12 @@ class Automata(ABC):
         self._data.names = list(names)
         self._sync_graph()
 
+    def update_marked(self, marked):
+        # update vertex markings from list of markings
+        self._resync_data()
+        self._data.marked = list(marked)
+        self._sync_graph()
+
     # TODO <awintenb@umich.edu>  Should we instead use __copy__ and __deepcopy__?
     # TODO <awintenb@umich.edu> Should we keep this if it is overridden by DFA, NFA
     def copy(self):
