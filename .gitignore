@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Generated visualization output (see DESops/visualization/plot_bdd_in_plotly.py)
+bdd_visualization_*.html
+
 # C extensions
 *.so
 
