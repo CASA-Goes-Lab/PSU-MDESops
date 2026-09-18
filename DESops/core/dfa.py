@@ -74,6 +74,7 @@ class DFA(Automata):
         return A
 
     def add_edge(self, source, target, label, check_DFA=True, fill_out=True, **kwargs):
+        self._resync_data()
         if not isinstance(label, Event):
             # convert labels from str to Event
             # label = Event(label)
@@ -91,23 +92,19 @@ class DFA(Automata):
 
         self.events.add(label)
 
-        self._graph.add_edge(source, target)
-        self.es[self.ecount() - 1].update_attributes({"label": label})
+        self._data.edges.append((source, target))
+        self._data.labels.append(label)
+        for key in self._data.edge_attrs:
+            self._data.edge_attrs[key].append(None)
 
-        if fill_out:
-            out = self.vs[source]["out"]
-            if out is not None:
-                out.append(self.Out(target, label))
-            else:
-                out = [self.Out(target, label)]
-
-            self.vs[source].update_attributes({"out": out})
+        self._sync_graph()
 
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         # TODO WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
         # IF THE CALLER IS PARALLEL COMP, OBSERVER, ETC, THEN NOT WARNING SHOULD BE PRINTED
         # THIS CAN BE DONE BY CHECKING THE FUNCTION CALLER
 
+        self._resync_data()
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
 
@@ -138,26 +135,20 @@ class DFA(Automata):
                         )
                     )
 
-        new_labels = list(self._graph.es["label"])
-        new_labels.extend(labels)
         self.events.update(labels)
-        self._graph.add_edges(pair_list)
-        self._graph.es["label"] = new_labels
+        self._data.edges.extend(pair_list)
+        self._data.labels.extend(labels)
+        for key in self._data.edge_attrs:
+            self._data.edge_attrs[key].extend([None] * len(pair_list))
 
         if kwargs:
             for key, value in kwargs.items():
-                self.es[key] = value
+                # Mirrors the original's `self.es[key] = value`: `value` is
+                # treated as the complete, final attribute list (it replaces
+                # rather than extends), not just the values for the new edges.
+                self._data.edge_attrs[key] = list(value)
 
-        if fill_out:
-            out_list = self.vs["out"]
-            for label, pair in zip(labels, pair_list):
-                out = out_list[pair[0]]
-                if out is not None:
-                    out.append(self.Out(pair[1], label))
-                else:
-                    out = [self.Out(pair[1], label)]
-                out_list[pair[0]] = out
-            self.vs["out"] = out_list
+        self._sync_graph()
 
     def check_DFA(self):
         """

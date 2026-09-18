@@ -22,13 +22,12 @@ def to_igraph(data: AutomatonData) -> "ig.Graph":
     for key, values in data.vertex_attrs.items():
         graph.vs[key] = list(values)
 
-    if data.edges:
-        graph.add_edges(data.edges)
-        graph.es["label"] = list(data.labels)
-        if data.probs is not None:
-            graph.es["prob"] = list(data.probs)
-        for key, values in data.edge_attrs.items():
-            graph.es[key] = list(values)
+    graph.add_edges(data.edges)
+    graph.es["label"] = list(data.labels)
+    if data.probs is not None:
+        graph.es["prob"] = list(data.probs)
+    for key, values in data.edge_attrs.items():
+        graph.es[key] = list(values)
 
     return graph
 

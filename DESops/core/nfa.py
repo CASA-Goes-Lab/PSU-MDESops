@@ -2,6 +2,7 @@ from typing import Set
 
 from DESops.core import automata
 from DESops.core.event import Event
+from DESops.error import IncongruencyError
 
 
 class NFA(automata.Automata):
@@ -9,11 +10,13 @@ class NFA(automata.Automata):
         super(NFA, self).__init__(init, Euc, Euo, E)
 
         if init is None:
-            self.vs["init"] = []
+            self._data.vertex_attrs["init"] = []
 
         elif not isinstance(init, NFA):
-            self.vs["init"] = False
-            self.vs[0]["init"] = True
+            self._data.vertex_attrs["init"] = [False] * self._data.num_states
+            self._data.vertex_attrs["init"][0] = True
+
+        self._sync_graph()
 
         self.type = "NFA"
 
@@ -36,16 +39,14 @@ class NFA(automata.Automata):
         Faster to use fewer delete_vertices() calls with larger inputs vs
         than multiple calls with smaller inputs.
         """
-        self._graph.delete_vertices(vs)
+        self._resync_data()
+        self._remove_vertices_by_index(automata._vertex_indices(vs))
 
-        if not any([v["init"] for v in self.vs]):
+        if not any(self._data.vertex_attrs.get("init", [])):
             import warnings
 
             warnings.warn("All initial states deleted.")
-            self._graph.delete_vertices([v.index for v in self.vs])
-            return
-
-        self.generate_out()
+            self._remove_vertices_by_index(range(self._data.num_states))
 
     def delete_vertices_no_warning(self, vs):
         """
@@ -54,9 +55,8 @@ class NFA(automata.Automata):
 
         No warnings.
         """
-        self._graph.delete_vertices(vs)
-
-        self.generate_out()
+        self._resync_data()
+        self._remove_vertices_by_index(automata._vertex_indices(vs))
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:
         return {out[0] for out in self.vs[state]["out"] if out[1] == event}
@@ -78,26 +78,28 @@ class NFA(automata.Automata):
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
-
-        e = self._graph.add_edge(source, target, **kwargs)
-        if not isinstance(label, Event):
-            # convert labels from str to Event
-            # label = Event(label)
-            pass
-        self.es[self.ecount() - 1].update_attributes({"label": label})
+        self._resync_data()
+        self._data.edges.append((source, target))
+        self._data.labels.append(label)
         self.events.add(label)
+
         if prob:
-            self.es[self.ecount() - 1].update_attributes({"prob": prob})
+            if self._data.probs is None:
+                self._data.probs = [None] * (self._data.num_edges - 1)
+            self._data.probs.append(prob)
+        elif self._data.probs is not None:
+            self._data.probs.append(None)
 
-        if fill_out:
-            out = self.vs[source]["out"]
-            if out is not None:
-                out.append(self.Out(target, label))
-            else:
-                out = [self.Out(target, label)]
+        for key in self._data.edge_attrs:
+            if key not in kwargs:
+                self._data.edge_attrs[key].append(None)
+        for key, value in kwargs.items():
+            if key not in self._data.edge_attrs:
+                self._data.edge_attrs[key] = [None] * (self._data.num_edges - 1)
+            self._data.edge_attrs[key].append(value)
 
-            self.vs[source].update_attributes({"out": out})
-        return e
+        self._sync_graph()
+        return self.es[self._data.num_edges - 1]
 
     def add_edges(self, pair_list, labels, probs=None, fill_out=True, **kwargs):
         """
@@ -121,33 +123,17 @@ class NFA(automata.Automata):
 
         Returns nothing.
         """
+        self._resync_data()
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
 
         # labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
-
-        new_labels = list(self._graph.es["label"])
-        new_labels.extend(labels)
 
         self.events.update(labels)
 
         if probs is not None:
             if len(pair_list) != len(probs):
                 raise IncongruencyError("Length of pairs != length of probs")
-            new_probs = list(self._graph.es["prob"])
-            new_probs.extend(probs)
-
-        if not pair_list:
-            # no transitions provided
-            return
-
-        es = self._graph.add_edges(pair_list)
-
-        if labels:
-            self.es["label"] = new_labels
-
-        if probs is not None:
-            self.es["prob"] = new_probs
 
         if kwargs:
             for key, value in kwargs.items():
@@ -155,19 +141,32 @@ class NFA(automata.Automata):
                     raise IncongruencyError(
                         "Length fo pairs != length of kwarg {}".format(key)
                     )
-                self.es[key] = value
 
-        if fill_out:
-            out_list = self.vs["out"]
-            for label, pair in zip(labels, pair_list):
-                out = out_list[pair[0]]
-                if out is not None:
-                    out.append(self.Out(pair[1], label))
-                else:
-                    out = [self.Out(pair[1], label)]
-                out_list[pair[0]] = out
-            self.vs["out"] = out_list
-        return es
+        if not pair_list:
+            # no transitions provided
+            return
+
+        old_count = self._data.num_edges
+        self._data.edges.extend(pair_list)
+        self._data.labels.extend(labels)
+
+        if probs is not None:
+            if self._data.probs is None:
+                self._data.probs = [None] * old_count
+            self._data.probs.extend(probs)
+        elif self._data.probs is not None:
+            self._data.probs.extend([None] * len(pair_list))
+
+        for key, value in kwargs.items():
+            if key not in self._data.edge_attrs:
+                self._data.edge_attrs[key] = [None] * old_count
+            self._data.edge_attrs[key].extend(value)
+        for key in self._data.edge_attrs:
+            if key not in kwargs:
+                self._data.edge_attrs[key].extend([None] * len(pair_list))
+
+        self._sync_graph()
+        return self.es[old_count : old_count + len(pair_list)]
 
     def trans(self, source, event):
         """

@@ -13,7 +13,7 @@ class PFA(Automata):
         super(PFA, self).__init__(init, Euc, Euo, E)
 
         if not prob and self.ecount() > 0:
-            if "prob" not in self.es.attributes():
+            if self._data.probs is None:
                 import warnings
 
                 warnings.warn(
@@ -28,9 +28,11 @@ class PFA(Automata):
                     )
                 )
 
-            self._graph.es["prob"] = prob.copy()
+            self._data.probs = list(prob)
+            self._sync_graph()
         else:
-            self._graph.es["prob"] = []
+            self._data.probs = []
+            self._sync_graph()
 
         self.Out = namedtuple("Out", ["target", "label", "prob"])
 
@@ -61,59 +63,57 @@ class PFA(Automata):
         prob: (default None) optionally provide probability for this transition (indicating
             stochastic transition), to be stored in the "prob" edge keyword attribute.
         """
-        self._graph.add_edge(source, target)
+        self._resync_data()
         if not isinstance(label, Event):
             # convert labels from str to Event
             label = Event(label)
-        self.es[self.ecount() - 1].update_attributes({"label": label})
 
+        self._data.edges.append((source, target))
+        self._data.labels.append(label)
         self.events.add(label)
-        self.es[self.ecount() - 1].update_attributes({"prob": prob})
 
-        if fill_out:
-            out = self.vs[source]["out"]
-            if out is not None:
-                out.append(self.Out(target, label, prob))
-            else:
-                out = [self.Out(target, label, prob)]
+        if self._data.probs is None:
+            self._data.probs = [None] * (self._data.num_edges - 1)
+        self._data.probs.append(prob)
 
-            self.vs[source].update_attributes({"out": out})
+        for key in self._data.edge_attrs:
+            self._data.edge_attrs[key].append(None)
+
+        self._sync_graph()
 
     def add_edges(self, pair_list, labels, probs, fill_out=True, **kwargs):
-
+        self._resync_data()
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
         if len(pair_list) != len(probs):
             raise IncongruencyError("Length of pairs != length of probs")
-        labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
-        self.events.update(labels)
-        new_labels = list(self._graph.es["label"])
-        new_labels.extend(labels)
-        new_probs = list(self._graph.es["prob"])
-        new_probs.extend(probs)
-
-        self._graph.add_edges(pair_list)
-
-        self._graph.es["label"] = new_labels
-        self._graph.es["prob"] = new_probs
-
         if kwargs:
             for key, value in kwargs.items():
                 if len(pair_list) != len(value):
                     raise IncongruencyError(
                         "Length of pairs != length of kwarg {}".format(key)
                     )
-                self.es[key] = value
 
-        if fill_out:
-            out_list = self.vs["out"]
-            for label, pair, prob in zip(labels, pair_list, probs):
-                out = out_list[pair[0]]
-                if out is not None:
-                    out.append(self.Out(pair[1], label, prob))
-                else:
-                    out = [self.Out(pair[1], label, prob)]
-            self.vs["out"] = out_list
+        labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
+        self.events.update(labels)
+
+        old_count = self._data.num_edges
+        self._data.edges.extend(pair_list)
+        self._data.labels.extend(labels)
+
+        if self._data.probs is None:
+            self._data.probs = [None] * old_count
+        self._data.probs.extend(probs)
+
+        for key, value in kwargs.items():
+            if key not in self._data.edge_attrs:
+                self._data.edge_attrs[key] = [None] * old_count
+            self._data.edge_attrs[key].extend(value)
+        for key in self._data.edge_attrs:
+            if key not in kwargs:
+                self._data.edge_attrs[key].extend([None] * len(pair_list))
+
+        self._sync_graph()
 
     def generate_out(self):
         """
@@ -122,12 +122,16 @@ class PFA(Automata):
         >>> automata.vs["out"][v] // -> [(target vert, event transition), (...), ...]
         """
         adj_list = self._graph.get_inclist()
+        # "prob" may not be declared yet the first time this runs during
+        # __init__, before PFA's own constructor body has set self._data.probs
+        # (see _sync_graph()).
+        has_prob = "prob" in self._graph.es.attributes()
         self.vs["out"] = [
             [
                 (
                     self._graph.es[e].target,
                     self._graph.es[e]["label"],
-                    self._graph.es[e]["prob"],
+                    self._graph.es[e]["prob"] if has_prob else None,
                 )
                 for e in row
             ]

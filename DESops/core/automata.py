@@ -85,7 +85,8 @@ from copy import deepcopy
 from typing import Set, Union
 from abc import ABC, abstractmethod
 
-from DESops.backends.igraph_backend import from_igraph
+from DESops.backends.igraph_backend import from_igraph, to_igraph
+from DESops.backends.protocol import AutomatonData
 from DESops.core.event import Event
 from DESops.core.operations.generic_functions import find_Euc, find_Euo, find_obs_contr
 from DESops.error import (
@@ -100,6 +101,16 @@ try:
     import igraph as ig
 except ImportError:
     raise DependencyNotInstalledError("IGraph library not found")
+
+
+def _vertex_indices(vs):
+    """Extract plain state indices from an iterable of ig.Vertex or ints."""
+    return {v.index if hasattr(v, "index") else v for v in vs}
+
+
+def _edge_indices(es):
+    """Extract plain edge indices from an iterable of ig.Edge or ints."""
+    return {e.index if hasattr(e, "index") else e for e in es}
 
 
 # TODO: Legacy, to be removed with unobservable_reach method
@@ -190,7 +201,6 @@ class Automata(ABC):
         """
 
         # Default case; create Automata from scratch.
-        self._graph = ig.Graph(directed=True)
         self.events = set()  # IT SHOULD BE A SET OF EVENTS
 
         if not Euc:
@@ -208,49 +218,73 @@ class Automata(ABC):
 
         if isinstance(init, ig.Graph):
             # Create Automata from igraph Graph
-            graph = init
             # deepcopy copies attributes
-            self._graph = deepcopy(graph)
+            self._data = from_igraph(deepcopy(init))
             self.events = E
             # find_obs_contr(self._graph, self.Euc, self.Euo, self.events)
 
         elif isinstance(init, Automata):
             # Create Automata from another Automata
             # deepcopy copies attributes
-            self._graph = deepcopy(init._graph)
+            # init may have direct self.vs/self.es edits made since its
+            # last mutating-method call (and therefore since its last
+            # resync); re-absorb those before copying, or they'd be lost.
+            init._resync_data()
+            self._data = deepcopy(init._data)
             self.events = init.events.copy()
             self.type = init.type
             self.Euo = init.Euo.copy()
             self.Euc = init.Euc.copy()
 
-        if "label" not in self._graph.es.attributes():
-            self._graph.es["label"] = [""]
+        else:
+            self._data = AutomatonData(
+                names=[], marked=[], edges=[], labels=[], events=set()
+            )
 
-        if "name" not in self._graph.vs.attributes():
-            self._graph.vs["name"] = [""]
+        # generate_out() (called by _sync_graph() below) needs self.Out to
+        # already exist, so this must be set first.
+        self.Out = namedtuple("Out", ["target", "label"])
 
-        if "out" not in self._graph.vs.attributes():
-            self._graph.vs["out"] = [""]
-
-        if "marked" not in self._graph.vs.attributes():
-            self._graph.vs["marked"] = []
-
-        # Allow references to graph instance's edge & vertex sequence methods
-        # from the Automata (e.g. self.es as opposed to doing self._graph.es)
-        self.es = self._graph.es
-        self.vs = self._graph.vs
-
-        # More bindings to igraph Graph methods, used in some functions in
-        # this file, potentially useful elsewhere?
-
-        self.write_dot = self._graph.write_dot
+        # Builds self._graph/self.vs/self.es (an igraph view) from
+        # self._data, the source of truth. See DESops.backends.protocol
+        # and doc/logs/v2-igraph-decoupling.md.
+        self._sync_graph()
 
         self.__bool__ = self._graph.__bool__()
 
         # Attach UR class object (defined below)
         self.UR = UnobservableReach(self.Euo, self.vs)
 
-        self.Out = namedtuple("Out", ["target", "label"])
+    def _sync_graph(self):
+        """
+        Rebuild the igraph view (self._graph, self.vs, self.es) from
+        self._data, the source of truth. Called after every mutation.
+        """
+        self._graph = to_igraph(self._data)
+        self.vs = self._graph.vs
+        self.es = self._graph.es
+        self.write_dot = self._graph.write_dot
+        self.generate_out()
+        if hasattr(self, "UR"):
+            # self._graph (and therefore self.vs) was just replaced with a
+            # new object, rather than mutated in place as before this
+            # rewrite; UR cached the old self.vs at construction time and
+            # would otherwise silently keep reading a now-orphaned graph.
+            self.UR.vs = self.vs
+
+    def _resync_data(self):
+        """
+        Re-absorb the current igraph view (self._graph/.vs/.es) into
+        self._data before a mutating method acts on it.
+
+        Consumer code throughout DESops mutates self.vs/self.es directly
+        (e.g. `g.vs[i]["init"] = True`) rather than exclusively through
+        Automata's own methods. Since a mutating method rebuilds the
+        igraph view from self._data when it's done, any such direct edit
+        made since the last sync would otherwise be silently discarded.
+        Every public mutating method must call this first.
+        """
+        self._data = from_igraph(self._graph)
 
     def delete_vertices(self, vs):
         """Deletes vertex seq vs.
@@ -267,20 +301,53 @@ class Automata(ABC):
         vs : ig.VertexSeq
             The vertex sequence to delete
         """
+        self._resync_data()
         if 0 in vs:
             # TODO - Jack: this is expected behavior, does it need a warning?
             # i.e. deleting vert 0 should always result in deleting everything.
             #
             # import warnings
             # warnings.warn("Initial state deleted.")
-            self._graph.delete_vertices([v.index for v in self.vs])
+            self._remove_vertices_by_index(range(self._data.num_states))
 
         else:
             if len(vs) == 0:
                 return
-            self._graph.delete_vertices(vs)
-            self.generate_out()
+            self._remove_vertices_by_index(_vertex_indices(vs))
 
+    def _remove_vertices_by_index(self, indices):
+        """
+        Remove the given state indices (and any incident edges) from
+        self._data, then rebuild the igraph view. Shared by
+        delete_vertices() here and in the NFA override.
+        """
+        to_delete = set(indices)
+        keep = [i for i in range(self._data.num_states) if i not in to_delete]
+        index_map = {old: new for new, old in enumerate(keep)}
+
+        self._data.names = [self._data.names[i] for i in keep]
+        self._data.marked = [self._data.marked[i] for i in keep]
+        for key, values in self._data.vertex_attrs.items():
+            self._data.vertex_attrs[key] = [values[i] for i in keep]
+
+        new_edges, new_labels = [], []
+        new_probs = [] if self._data.probs is not None else None
+        new_edge_attrs = {key: [] for key in self._data.edge_attrs}
+        for i, (source, target) in enumerate(self._data.edges):
+            if source in index_map and target in index_map:
+                new_edges.append((index_map[source], index_map[target]))
+                new_labels.append(self._data.labels[i])
+                if new_probs is not None:
+                    new_probs.append(self._data.probs[i])
+                for key in new_edge_attrs:
+                    new_edge_attrs[key].append(self._data.edge_attrs[key][i])
+
+        self._data.edges = new_edges
+        self._data.labels = new_labels
+        self._data.probs = new_probs
+        self._data.edge_attrs = new_edge_attrs
+
+        self._sync_graph()
 
     def delete_edges(self, es):
         """
@@ -292,8 +359,18 @@ class Automata(ABC):
         es : EdgeSeq
             The edge sequence to delete
         """
-        self._graph.delete_edges(es)
-        self.generate_out()
+        self._resync_data()
+        to_delete = _edge_indices(es)
+        keep = [i for i in range(self._data.num_edges) if i not in to_delete]
+
+        self._data.edges = [self._data.edges[i] for i in keep]
+        self._data.labels = [self._data.labels[i] for i in keep]
+        if self._data.probs is not None:
+            self._data.probs = [self._data.probs[i] for i in keep]
+        for key, values in self._data.edge_attrs.items():
+            self._data.edge_attrs[key] = [values[i] for i in keep]
+
+        self._sync_graph()
 
     @abstractmethod
     def add_edge(self, source, target, label, prob=None, fill_out=False, **kwargs):
@@ -374,22 +451,22 @@ class Automata(ABC):
             Names and values assigned to the vertex attributes (not implemented)
 
         """
-        self._graph.add_vertex()
-        if name:
-            self.vs[self.vcount() - 1].update_attributes({"name": name})
-        else:
-            self.vs[self.vcount() - 1].update_attributes(
-                {"name": str(self.vcount() - 1)}
-            )
-        if marked is not None:
-            self.vs[self.vcount() - 1].update_attributes({"marked": marked})
+        self._resync_data()
+        idx = self._data.num_states
+        self._data.names.append(name if name else str(idx))
+        self._data.marked.append(marked)
 
-        self.vs[self.vcount() - 1].update_attributes({"out": []})
+        for key in self._data.vertex_attrs:
+            if key not in kwargs:
+                self._data.vertex_attrs[key].append(None)
+        for key, value in kwargs.items():
+            if key not in self._data.vertex_attrs:
+                self._data.vertex_attrs[key] = [None] * idx
+            self._data.vertex_attrs[key].append(value)
 
-        for arg in kwargs.items():
-            self._graph.vs[self.vcount() - 1].update_attributes({arg[0]: arg[1]})
+        self._sync_graph()
 
-        return self.vs[self.vcount() - 1]
+        return self.vs[idx]
 
     def add_vertices(self, number_vertices, names=None, marked=None, **kwargs):
         """
@@ -408,57 +485,51 @@ class Automata(ABC):
             Names and values assigned uniformly to the vertex attributes (not implemented)
 
         """
+        self._resync_data()
+        old_count = self._data.num_states
+
         if names:
             if number_vertices != len(names):
                 raise IncongruencyError(
                     "Number vertices to be added != number of names provided"
                 )
-            new_names = self._graph.vs["name"] + names
-
+            self._data.names.extend(names)
         else:
             # if no names given, fill in with index names
-            new_names = self.vs["name"]
-            new_names.extend(
-                str(i) for i in range(self.vcount(), self.vcount() + number_vertices)
+            self._data.names.extend(
+                str(i) for i in range(old_count, old_count + number_vertices)
             )
 
         if marked is not None:
             if number_vertices != len(marked):
                 raise IncongruencyError("Number vertices to be added != number names")
-            new_marked = self._graph.vs["marked"] + marked
+            self._data.marked.extend(marked)
         else:
-            new_marked = self._graph.vs["marked"] + [
-                False for _ in range(number_vertices)
-            ]
+            self._data.marked.extend(False for _ in range(number_vertices))
 
-        # list comprehension used instead of [[]] * number_vertices because latter gives list of references to the same object
-        new_out = self._graph.vs["out"] + [[] for _ in range(number_vertices)]
-
-        extra_attrs = dict()
         for key, val in kwargs.items():
             if number_vertices != len(val):
                 raise IncongruencyError(
                     "Number vertices to be added != number of names provided"
                 )
-            if key in self._graph.vs.attributes():
-                extra_attrs[key] = self._graph.vs[key] + val
-            else:
-                extra_attrs[key] = [None] * self.vcount() + val
+            if key not in self._data.vertex_attrs:
+                self._data.vertex_attrs[key] = [None] * old_count
+            self._data.vertex_attrs[key].extend(val)
 
-        self._graph.add_vertices(number_vertices)
+        # any existing vertex attribute not touched by this call gets padded
+        # for the new vertices, matching igraph's own default-fill behavior
+        for key in self._data.vertex_attrs:
+            if key not in kwargs:
+                self._data.vertex_attrs[key].extend([None] * number_vertices)
 
-        self._graph.vs["name"] = new_names
-        self._graph.vs["out"] = new_out
-
-        self._graph.vs["marked"] = new_marked
-
-        for key, val in extra_attrs.items():
-            self._graph.vs[key] = val
+        self._sync_graph()
 
     # TODO <awintenb@umich.edu> - does this need to exist? Can it just be replaced by the assignment in the body
     def update_names(self, names):
         # update vertex names from list of names
-        self.vs["name"] = names
+        self._resync_data()
+        self._data.names = list(names)
+        self._sync_graph()
 
     # TODO <awintenb@umich.edu>  Should we instead use __copy__ and __deepcopy__?
     # TODO <awintenb@umich.edu> Should we keep this if it is overridden by DFA, NFA
