@@ -5,9 +5,9 @@ For now only static masks are implemented
 
 from abc import ABC, abstractmethod
 
-from DESops.basic_operations.transducers import transducer_transducer_product, transducer_auto_product, transducer_input_automaton
+from DESops.core.operations.transducers import transducer_transducer_product, transducer_auto_product, transducer_input_automaton
 from DESops.opacity.language_functions import language_inclusion
-from DESops.automata import NFA
+from DESops.core import NFA
 
 
 class ObservationMap(ABC):

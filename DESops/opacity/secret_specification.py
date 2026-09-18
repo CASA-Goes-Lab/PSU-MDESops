@@ -5,7 +5,7 @@ Construction of specification automata as described in
 "A general language-based framework for specifying and verifying notions of opacity"
 by Andrew Wintenberg, Matthew Blischke, Stéphane Lafortune, Necmiye Ozay
 """
-from DESops.automata.NFA import NFA
+from DESops.core.nfa import NFA
 from enum import Enum
 
 

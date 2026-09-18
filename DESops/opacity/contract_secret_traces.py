@@ -4,8 +4,8 @@ Function to transform an fsm with secret states and unobservable events into a n
  unobservable events while preserving the secrecy of trajectories
 """
 
-from DESops.automata.NFA import NFA
-from DESops.basic_operations.ureach import unobservable_reach, ureach_from_set, ureach_ignore_states
+from DESops.core.nfa import NFA
+from DESops.core.operations.ureach import unobservable_reach, ureach_from_set, ureach_ignore_states
 
 # TODO make unobervable events consistent with the rest of the project
 def contract_secret_traces(g, secret_type=1, h=None, Euo=None):

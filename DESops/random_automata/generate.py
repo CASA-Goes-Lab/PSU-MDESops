@@ -5,10 +5,10 @@ The implementation is modified from the FsmGenerator in the VEiP GitLab reposito
 
 from random import choice, randint, randrange, sample, shuffle
 
-from DESops.automata.DFA import DFA
-from DESops.automata.event import Event
-from DESops.automata.NFA import NFA
-from DESops.file.igraph_pickle import write_pickle
+from DESops.core.dfa import DFA
+from DESops.core.event import Event
+from DESops.core.nfa import NFA
+from DESops.io.igraph_pickle import write_pickle
 
 
 def generate(

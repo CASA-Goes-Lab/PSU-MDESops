@@ -3,11 +3,11 @@ Functions related to automaton languages
 """
 import warnings
 
-from DESops.automata.event import Event
-from DESops.automata.NFA import NFA
-from DESops.basic_operations import composition
-from DESops.basic_operations.construct_complement import complement
-from DESops.basic_operations.product_NFA import product_NFA
+from DESops.core.event import Event
+from DESops.core.nfa import NFA
+from DESops.core.operations import composition
+from DESops.core.operations.complement import complement
+from DESops.core.operations.product_nfa import product_NFA
 from DESops.opacity.secret_specification import _concatenate_union
 
 

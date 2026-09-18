@@ -1,4 +1,4 @@
-from DESops.automata.NFA import NFA
+from DESops.core.nfa import NFA
 from DESops.opacity.observation_map import StaticMask
 
 initial_event = 'e_init'

@@ -1,5 +1,5 @@
 import DESops as d
-import DESops.SDA.event_extensions as ee
+import DESops.sda.event_extensions as ee
 
 
 from DESops.opacity.edisyn_interface import enforce_state_based_opacity_edisyn, check_edisyn

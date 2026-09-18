@@ -8,7 +8,7 @@ from pathlib import Path
 from pydash.arrays import flatten_deep
 
 import DESops as d
-from DESops.basic_operations.composition import observer, product_linear
+from DESops.core.operations.composition import observer, product_linear
 from DESops.opacity.bisimulation import construct_bisimulation
 from DESops.opacity.bosy.edit_to_bosy import list_to_bool_vars
 

@@ -1,4 +1,4 @@
-from DESops.automata import NFA
+from DESops.core import NFA
 from DESops.opacity import secret_observer as so
 from DESops.opacity.secret_specification import OpacityNotion
 

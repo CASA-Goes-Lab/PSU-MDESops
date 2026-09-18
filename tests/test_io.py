@@ -1,5 +1,5 @@
 import DESops as d
-from DESops.file.wmod_to_igraph import read_wmod, write_wmod, read_xml_automaton
+from DESops.io.wmod_to_igraph import read_wmod, write_wmod, read_xml_automaton
 from tempfile import TemporaryDirectory
 import os
 

@@ -2,7 +2,7 @@
 """
 Functions related to the mapping-based method of verifying K-step opacity
 """
-from DESops.automata.DFA import DFA
+from DESops.core.dfa import DFA
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 
 # TODO refactor this file to use new Automata conventions (secret and inital state labels)

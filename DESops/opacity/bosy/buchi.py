@@ -4,8 +4,8 @@ Functions for constructing the Buchi automata that are used to enforce CSO with 
 import re
 from collections import deque
 
-from DESops.automata.DFA import DFA
-from DESops.automata.NFA import NFA
+from DESops.core.dfa import DFA
+from DESops.core.nfa import NFA
 
 # sentinel event for event replacement
 e_replace = True

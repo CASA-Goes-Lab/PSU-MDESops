@@ -1,7 +1,7 @@
 """
 Functions related to constructing a secret-preserving bisuimulation
 """
-from DESops.automata.NFA import NFA
+from DESops.core.nfa import NFA
 
 
 def construct_bisimulation(g, attribute="secret"):

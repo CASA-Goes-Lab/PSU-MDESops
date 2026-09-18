@@ -1,6 +1,6 @@
 import os
 
-from DESops.automata.NFA import NFA
+from DESops.core.nfa import NFA
 
 
 def read_spin(filename):

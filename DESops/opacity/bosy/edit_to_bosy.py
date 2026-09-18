@@ -2,7 +2,7 @@ import json
 import math
 import warnings
 
-from DESops.automata import DFA
+from DESops.core import DFA
 
 # https://github.com/reactive-systems/bosy
 

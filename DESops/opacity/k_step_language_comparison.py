@@ -1,7 +1,7 @@
-from DESops.automata.event import Event
-from DESops.basic_operations import composition
-from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.product_NFA import product_NFA
+from DESops.core.event import Event
+from DESops.core.operations import composition
+from DESops.core.operations.reverse import reverse
+from DESops.core.operations.product_nfa import product_NFA
 from DESops.opacity.language_functions import (
     construct_H_NS,
     language_inclusion,

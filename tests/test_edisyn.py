@@ -7,7 +7,7 @@ import pytest
 
 @pytest.mark.skipif(not check_edisyn(), reason="EdiSyn not available")
 def test_simple_example():
-    g = d.automata.DFA()
+    g = d.DFA()
     g.add_vertices(2)
     g.add_edge(0, 1, 'e')
     g.add_edge(1, 1, 'e')
@@ -36,7 +36,7 @@ def test_simple_example():
 
 @pytest.mark.skipif(not check_edisyn(), reason="EdiSyn not available")
 def test_k_step_example():
-    g = d.automata.NFA()
+    g = d.NFA()
     g.add_vertices(5)
     g.add_edge(0, 1, 'a')
     g.add_edge(1, 2, 'b')
@@ -86,7 +86,7 @@ def test_square_examples():
 
 
 def gen_square_example(m, n, l1_dist_bound):
-    g = d.automata.DFA()
+    g = d.DFA()
 
     g.add_vertices(m * n)
     g.vs['name'] = [ind_to_coord(v.index, m) for v in g.vs]

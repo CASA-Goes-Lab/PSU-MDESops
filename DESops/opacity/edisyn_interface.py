@@ -1,7 +1,7 @@
 """
 Interface to the Edisyn library for synthesis of obfuscation for opacity enforcement
 """
-from DESops.automata.NFA import NFA
+from DESops.core.nfa import NFA
 from DESops.opacity.secret_observer import construct_secret_observer_label_transform
 from DESops.opacity.secret_specification import OpacityNotion
 from os import makedirs

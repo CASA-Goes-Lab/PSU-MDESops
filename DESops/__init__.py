@@ -1,27 +1,28 @@
 # flake8: noqa
-# from DESops.automata.automata import _Automata
+# from DESops.core.automata import _Automata
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version
 
-from DESops import SDA, error, random_automata
-from DESops.automata.DFA import DFA
-from DESops.automata.event import Event
-from DESops.automata.NFA import NFA
-from DESops.automata.PFA import PFA
-from DESops.basic_operations import composition, generic_functions, unary
-from DESops.basic_operations.construct_complement import complement
-from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.language_equivalence import compare_language
-from DESops.file.fsm_to_bdd import read_fsm_to_bdd
-from DESops.file.fsm_to_igraph import read_fsm
-from DESops.file.igraph_pickle import *
-from DESops.file.igraph_to_fsm import write_fsm
+from DESops import error, random_automata
+from DESops import sda as SDA
+from DESops.core.dfa import DFA
+from DESops.core.event import Event
+from DESops.core.nfa import NFA
+from DESops.core.pfa import PFA
+from DESops.core.operations import composition, generic_functions, unary
+from DESops.core.operations.complement import complement
+from DESops.core.operations.reverse import reverse
+from DESops.core.operations.language_equivalence import compare_language
+from DESops.io.fsm_to_bdd import read_fsm_to_bdd
+from DESops.io.fsm_to_igraph import read_fsm
+from DESops.io.igraph_pickle import *
+from DESops.io.igraph_to_fsm import write_fsm
 from DESops.opacity import opacity_verification
 from DESops.supervisory_control import supervisor
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
-from DESops.diagnoser import diagnoser
+from DESops.diagnosis import diagnoser
 
 try:
     __version__ = _version("DESops")

@@ -1,8 +1,8 @@
 """
 Methods for opacity verification of automata
 """
-from DESops.basic_operations import composition
-from DESops.basic_operations.construct_reverse import reverse
+from DESops.core.operations import composition
+from DESops.core.operations.reverse import reverse
 from DESops.opacity.k_step_language_comparison import (
     verify_k_step_opacity_language_comparison,
 )

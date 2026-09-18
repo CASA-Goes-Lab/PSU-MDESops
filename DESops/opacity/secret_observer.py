@@ -1,8 +1,8 @@
 '''
 Functions related to the secret observer construction for opacity
 '''
-from DESops.basic_operations import composition
-from DESops.basic_operations.product_NFA import product_NFA
+from DESops.core.operations import composition
+from DESops.core.operations.product_nfa import product_NFA
 
 from DESops.opacity.secret_specification import construct_nonsecret_spec
 from DESops.opacity.label_transform import transform_secret_labels, induced_observation_map

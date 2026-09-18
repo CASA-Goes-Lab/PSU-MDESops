@@ -8,11 +8,11 @@ from typing import List, Optional, Set, Tuple
 import pydash
 from tqdm import tqdm
 
-from DESops.automata import DFA
-from DESops.automata.event import Event
-from DESops.basic_operations import composition, unary
-from DESops.supervisory_control.AES.AES import construct_AES, extract_AES_super
-from DESops.supervisory_control.VLPPO.VLPPO import offline_VLPPO
+from DESops.core import DFA
+from DESops.core.event import Event
+from DESops.core.operations import composition, unary
+from DESops.supervisory_control.aes import construct_AES, extract_AES_super
+from DESops.supervisory_control.vlppo import offline_VLPPO
 from DESops.error import InvalidAutomataTypeError
 
 

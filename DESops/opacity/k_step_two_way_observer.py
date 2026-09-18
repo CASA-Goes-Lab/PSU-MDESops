@@ -3,11 +3,11 @@ Functions related to the two-way observer method of verifying K-step opacity
 """
 import warnings
 
-from DESops.automata.DFA import DFA
-from DESops.automata.NFA import NFA
-from DESops.basic_operations import composition
-from DESops.basic_operations.construct_reverse import reverse
-from DESops.basic_operations.ureach import ureach_from_set_adj
+from DESops.core.dfa import DFA
+from DESops.core.nfa import NFA
+from DESops.core.operations import composition
+from DESops.core.operations.reverse import reverse
+from DESops.core.operations.ureach import ureach_from_set_adj
 from DESops.opacity.contract_secret_traces import contract_secret_traces
 from DESops.opacity.language_functions import find_path_between
 

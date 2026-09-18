@@ -1,7 +1,7 @@
 from collections import deque
 
-from DESops.automata.DFA import DFA
-from DESops.automata.NFA import NFA
+from DESops.core.dfa import DFA
+from DESops.core.nfa import NFA
 from DESops.opacity.bisimulation import construct_bisimulation
 from DESops.opacity.bosy.edit_to_bosy import list_to_bool_vars
 

@@ -1,6 +1,6 @@
 import DESops as d
 import tests.util as util
-from DESops.basic_operations.language_equivalence import compare_language
+from DESops.core.operations.language_equivalence import compare_language
 
 
 def test_type():
