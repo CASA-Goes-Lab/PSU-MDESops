@@ -3,6 +3,7 @@ from collections import namedtuple
 from DESops import error
 from DESops.core.automata import Automata
 from DESops.core.event import Event
+from DESops.error import IncongruencyError
 
 
 class PFA(Automata):
@@ -72,9 +73,9 @@ class PFA(Automata):
         if fill_out:
             out = self.vs[source]["out"]
             if out is not None:
-                out.append(self.Out(target, label))
+                out.append(self.Out(target, label, prob))
             else:
-                out = [self.Out(target, label)]
+                out = [self.Out(target, label, prob)]
 
             self.vs[source].update_attributes({"out": out})
 
@@ -82,20 +83,18 @@ class PFA(Automata):
 
         if len(pair_list) != len(labels):
             raise IncongruencyError("Length of pairs != length of labels")
+        if len(pair_list) != len(probs):
+            raise IncongruencyError("Length of pairs != length of probs")
         labels = [Event(l) if not isinstance(l, Event) else l for l in labels]
         self.events.update(labels)
         new_labels = list(self._graph.es["label"])
         new_labels.extend(labels)
+        new_probs = list(self._graph.es["prob"])
+        new_probs.extend(probs)
 
         self._graph.add_edges(pair_list)
 
         self._graph.es["label"] = new_labels
-
-        if len(pair_list) != len(probs):
-            raise IncongruencyError("Length of pairs != length of probs")
-        new_probs = list(self._graph.es["prob"])
-        new_probs.extend(probs)
-
         self._graph.es["prob"] = new_probs
 
         if kwargs:
