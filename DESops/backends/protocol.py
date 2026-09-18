@@ -66,3 +66,20 @@ class AutomatonData:
     @property
     def num_edges(self) -> int:
         return len(self.edges)
+
+    def out_adjacency(self) -> List[List[Tuple[int, Label]]]:
+        """
+        Per-state outgoing-transition adjacency: adjacency[s] is a list of
+        (target, label) pairs for every edge out of state s.
+
+        Pure Python, built directly from `edges`/`labels` -- no igraph
+        involved. This is the native equivalent of what
+        Automata.generate_out() computes via igraph's get_inclist(), and
+        is interchangeable with it: DESops.core.automata.UnobservableReach
+        only ever does `vs["out"][s]`, so passing {"out": data.out_adjacency()}
+        in place of an Automata's real `.vs` works unchanged.
+        """
+        adjacency: List[List[Tuple[int, Label]]] = [[] for _ in range(self.num_states)]
+        for (source, target), label in zip(self.edges, self.labels):
+            adjacency[source].append((target, label))
+        return adjacency

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import pydash
 from tqdm import tqdm
 
-from DESops.core.automata import Automata
+from DESops.core.automata import Automata, UnobservableReach
 from DESops.core.dfa import DFA
 from DESops.core.event import Event
 from DESops.core.nfa import NFA
@@ -304,19 +304,35 @@ def parallel_bfs(*automata: DFA):
     return parallel_bfs(*automata)
 
 
-def parallel(*automata: DFA) -> DFA:
+def parallel(*automata: DFA, backend: str = "igraph") -> DFA:
     """
     Computes the parallel composition of 2 (or more) Automata in a BFS manner, and returns the resulting composition as a new Automata.
 
     Parameters
     ----------
     automata : list[DFA]
+    backend : str
+        Which implementation to use: "igraph" (default, reads via the
+        automata's igraph view) or "native" (pure Python over
+        AutomatonData, no igraph dependency). Both produce equivalent
+        results; "native" exists so a future non-igraph backend (e.g.
+        BDD) can be compared or substituted. See
+        doc/logs/v2-igraph-decoupling.md.
 
     Returns
     -------
     DFA
         The parallel composition
     """
+    if backend == "igraph":
+        return _parallel_igraph(*automata)
+    elif backend == "native":
+        return _parallel_native(*automata)
+    else:
+        raise ValueError(f"Unknown backend: {backend!r}")
+
+
+def _parallel_igraph(*automata: DFA) -> DFA:
     if len(automata) < 2:
         raise MissingAttributeError("More than one automaton are needed.")
 
@@ -375,6 +391,102 @@ def parallel(*automata: DFA) -> DFA:
                         {
                             "name": dst_name,
                             "marked": x1_dst["marked"] and x2_dst["marked"],
+                        }
+                    )
+                    dst_index = len(G_out_vertices) - 1
+                    G_out_names[dst_name] = dst_index
+                    queue.append((x1_dst, x2_dst))
+
+                G_out_edges.append({"pair": (src_index, dst_index), "label": e})
+
+        G_out.add_vertices(
+            len(G_out_vertices),
+            [v["name"] for v in G_out_vertices],
+            [v["marked"] for v in G_out_vertices],
+        )
+        G_out.add_edges(
+            [e["pair"] for e in G_out_edges],
+            [e["label"] for e in G_out_edges],
+            check_DFA=False,
+            fill_out=True,
+        )
+        G_out.events = G1.events | G2.events
+        G_out.Euc.update(G1.Euc | G2.Euc)
+        G_out.Euo.update(G1.Euo | G2.Euo)
+
+        G1 = G_out
+
+    return G_out
+
+
+def _parallel_native(*automata: DFA) -> DFA:
+    """
+    Pure-Python (no igraph) equivalent of _parallel_igraph. Same BFS-over-
+    state-pairs algorithm; state indices are used directly instead of
+    igraph Vertex objects, and adjacency/name/marking lookups go through
+    AutomatonData.out_adjacency() and to_data() instead of `.vs`/`.es`.
+    """
+    if len(automata) < 2:
+        raise MissingAttributeError("More than one automaton are needed.")
+
+    G1 = automata[0]
+    input_list = automata[1:]
+
+    if any(i.vcount() == 0 for i in automata):
+        # if any inputs are empty, return empty automata
+        return DFA()
+
+    for G2 in input_list:
+        G_out = DFA()
+
+        data1 = G1.to_data()
+        data2 = G2.to_data()
+        adj1 = data1.out_adjacency()
+        adj2 = data2.out_adjacency()
+
+        G_out_vertices = [
+            {
+                "name": (data1.names[0], data2.names[0]),
+                "marked": data1.marked[0] and data2.marked[0],
+            }
+        ]
+        G_out_names = {G_out_vertices[0]["name"]: 0}
+        G_out_edges = []  # type: List[Dict[str, Any]]
+
+        queue = deque([(0, 0)])
+
+        private_G1 = G1.events - G2.events
+        private_G2 = G2.events - G1.events
+
+        while len(queue) > 0:
+            x1, x2 = queue.popleft()
+            active_x1 = {label: target for target, label in adj1[x1]}
+            active_x2 = {label: target for target, label in adj2[x2]}
+            active_both = set(active_x1.keys()) & set(active_x2.keys())
+            cur_name = (data1.names[x1], data2.names[x2])
+            src_index = G_out_names[cur_name]
+
+            for e in set(active_x1.keys()) | set(active_x2.keys()):
+                if e in active_both:
+                    x1_dst = active_x1[e]
+                    x2_dst = active_x2[e]
+                elif e in private_G1:
+                    x1_dst = active_x1[e]
+                    x2_dst = x2
+                elif e in private_G2:
+                    x1_dst = x1
+                    x2_dst = active_x2[e]
+                else:
+                    continue
+
+                dst_name = (data1.names[x1_dst], data2.names[x2_dst])
+                dst_index = G_out_names.get(dst_name)
+
+                if dst_index is None:
+                    G_out_vertices.append(
+                        {
+                            "name": dst_name,
+                            "marked": data1.marked[x1_dst] and data2.marked[x2_dst],
                         }
                     )
                     dst_index = len(G_out_vertices) - 1
@@ -569,7 +681,7 @@ def __find_parallel_edges_at_states(
     return edges
 
 
-def observer(G: Automata_t) -> Automata_t:
+def observer(G: Automata_t, backend: str = "igraph") -> Automata_t:
     """
     Compute the observer automata of the input `G` with respect to its unobservable events
     `G` should be a `DFA`, `NFA` or `PFA`
@@ -578,12 +690,25 @@ def observer(G: Automata_t) -> Automata_t:
     ----------
     G : NFA or DFA or PFA
         The automaton
+    backend : str
+        Which implementation to use: "igraph" (default) or "native" (pure
+        Python over AutomatonData, no igraph dependency). See
+        doc/logs/v2-igraph-decoupling.md.
 
     Returns
     -------
     DFA
         The observer automaton
     """
+    if backend == "igraph":
+        return _observer_igraph(G)
+    elif backend == "native":
+        return _observer_native(G)
+    else:
+        raise ValueError(f"Unknown backend: {backend!r}")
+
+
+def _observer_igraph(G: Automata_t) -> Automata_t:
     observer = DFA()
     if not G.vcount() or G is None:
         return observer
@@ -671,6 +796,95 @@ def observer(G: Automata_t) -> Automata_t:
     observer.vs["out"] = outgoing_list
 
     observer.vs["name"] = [tuple(v) for v in observer.vs["name"]]
+
+    return observer
+
+
+def _observer_native(G: Automata_t) -> Automata_t:
+    """
+    Pure-Python (no igraph) equivalent of _observer_igraph. Same subset-
+    construction algorithm; reads AutomatonData/out_adjacency() instead of
+    G.vs, and uses a fresh UnobservableReach wrapping that native
+    adjacency (see AutomatonData.out_adjacency()'s docstring) instead of
+    G.UR, which is tied to G's igraph view.
+    """
+    observer = DFA()
+    if not G.vcount():
+        return observer
+
+    data = G.to_data()
+    adjacency = data.out_adjacency()
+    n = data.num_states
+
+    vertice_names = list()
+    vertice_number = dict()
+    marked_list = list()
+    transition_list = list()
+    transition_label = list()
+
+    queue = list()
+    index = 0
+
+    if isinstance(G, NFA):
+        init_flags = data.vertex_attrs.get("init", [False] * n)
+        init_states = frozenset(i for i in range(n) if init_flags[i])
+    else:
+        init_states = frozenset({0})
+
+    Euo = frozenset(G.Euo)
+    ur = UnobservableReach(G.Euo, {"out": adjacency})
+
+    v0 = ur.from_set(init_states, Euo, freeze_result=True)
+
+    name_v0 = frozenset(data.names[v] for v in v0)
+    marking = any(data.marked[v] for v in v0)
+    vertice_names.insert(index, name_v0)
+    vertice_number[v0] = index
+    marked_list.insert(index, marking)
+
+    index = index + 1
+    queue.append(v0)
+    while queue:
+        v = queue.pop(0)
+
+        adj_states = dict()
+        for vert in v:
+            for target, event in adjacency[vert]:
+                if event in adj_states and event not in G.Euo:
+                    adj_states[event].add(target)
+                elif event not in adj_states and event not in G.Euo:
+                    s = set()
+                    s.add(target)
+                    adj_states[event] = s
+
+        for ev in adj_states.keys():
+            next_state = frozenset(adj_states[ev])
+
+            next_state = ur.from_set(next_state, Euo, freeze_result=True)
+            if next_state in vertice_number.keys():
+                transition_list.append((vertice_number[v], vertice_number[next_state]))
+                transition_label.append(ev)
+            else:
+                name_next_state = frozenset(data.names[v] for v in next_state)
+                transition_list.append((vertice_number[v], index))
+                transition_label.append(ev)
+                vertice_number[next_state] = index
+                marking = any(data.marked[v] for v in next_state)
+                marked_list.insert(index, marking)
+                vertice_names.insert(index, name_next_state)
+                queue.append(next_state)
+                index = index + 1
+
+    init_kwarg = [i == 0 for i in range(index)]
+    observer.add_vertices(
+        index, [tuple(v) for v in vertice_names], marked_list, init=init_kwarg
+    )
+    observer.events = G.events - G.Euo
+    observer.Euc.update(G.Euc - G.Euo)
+    observer.Euo.clear()
+    observer.add_edges(
+        transition_list, transition_label, check_DFA=False, fill_out=False
+    )
 
     return observer
 

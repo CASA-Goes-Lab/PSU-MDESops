@@ -84,3 +84,109 @@ def test_complement_unknown_backend_raises():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+# --- parallel -----------------------------------------------------------
+
+
+def test_parallel_native_matches_igraph():
+    g1 = util.load_model("models/textbook/fig_2-1.fsm")
+    g2 = util.load_model("models/textbook/fig_2-2.fsm")
+
+    p_igraph = d.composition.parallel(g1, g2, backend="igraph")
+    p_native = d.composition.parallel(g1, g2, backend="native")
+
+    assert p_native.vcount() == p_igraph.vcount()
+    assert p_native.ecount() == p_igraph.ecount()
+    assert p_native.vs["marked"] == p_igraph.vs["marked"]
+    assert p_native.vs["name"] == p_igraph.vs["name"]
+    assert _out_sets(p_native) == _out_sets(p_igraph)
+
+
+def test_parallel_native_three_automata_matches_igraph():
+    # Chaining two compositions (g1 x g2, then that result x g3) means the
+    # BFS in each backend visits states via `set(...) | set(...)`, whose
+    # iteration order isn't strictly a function of content -- the two
+    # backends can legitimately number states differently after two
+    # rounds even though the automata are equivalent. Compare by language
+    # rather than by exact state index for this reason (the two-automaton
+    # case above matches by index exactly, since there's no compounding).
+    from DESops.core.operations.language_equivalence import compare_language
+
+    g1 = util.load_model("models/textbook/fig_2-1.fsm")
+    g2 = util.load_model("models/textbook/fig_2-2.fsm")
+    g3 = util.load_model("models/textbook/fig_2-21_G1.fsm")
+
+    p_igraph = d.composition.parallel(g1, g2, g3, backend="igraph")
+    p_native = d.composition.parallel(g1, g2, g3, backend="native")
+
+    assert p_native.vcount() == p_igraph.vcount()
+    assert p_native.ecount() == p_igraph.ecount()
+    assert compare_language(p_native, p_igraph, type="both")
+
+
+def test_parallel_native_empty_input():
+    g1 = d.DFA()
+    g2 = util.load_model("models/textbook/fig_2-1.fsm")
+    assert d.composition.parallel(g1, g2, backend="native").vcount() == 0
+
+
+# --- observer -------------------------------------------------------------
+
+
+def test_observer_native_matches_igraph():
+    G_t = util.load_model("models/G_t.fsm")
+
+    obs_igraph = d.composition.observer(G_t, backend="igraph")
+    obs_native = d.composition.observer(G_t, backend="native")
+
+    assert obs_native.vcount() == obs_igraph.vcount()
+    assert obs_native.ecount() == obs_igraph.ecount()
+    assert obs_native.vs["marked"] == obs_igraph.vs["marked"]
+    assert _out_sets(obs_native) == _out_sets(obs_igraph)
+
+
+def test_observer_native_matches_expected():
+    # Same expectations as test_Automata.py::test_observer.
+    G_t = util.load_model("models/G_t.fsm")
+    obs = d.composition.observer(G_t, backend="native")
+    assert obs.vcount() == 5
+    assert obs.ecount() == 6
+    assert d.Event("a") in (v[1] for v in obs.vs["out"][0])
+
+
+def test_observer_native_empty_automaton():
+    g = d.DFA()
+    obs = d.composition.observer(g, backend="native")
+    assert obs.vcount() == 0
+
+
+def test_observer_native_dfa_input_matches_igraph():
+    # DFA input takes the `init_states = frozenset({0})` path rather than
+    # reading an "init" vertex attribute.
+    g = util.load_model("models/textbook/fig_2-1.fsm")
+    assert isinstance(g, d.DFA)
+
+    obs_igraph = d.composition.observer(g, backend="igraph")
+    obs_native = d.composition.observer(g, backend="native")
+
+    assert obs_native.vcount() == obs_igraph.vcount()
+    assert obs_native.ecount() == obs_igraph.ecount()
+
+
+# --- unobservable reach (out_adjacency as a drop-in for the igraph "out") -
+
+
+def test_out_adjacency_drives_unobservable_reach_same_as_igraph():
+    from DESops.core.automata import UnobservableReach
+
+    g = util.load_model("models/G_t.fsm")
+    data = g.to_data()
+    adjacency = data.out_adjacency()
+
+    native_ur = UnobservableReach(g.Euo, {"out": adjacency})
+
+    for start in range(g.vcount()):
+        expected = g.UR.from_set({start}, frozenset(g.Euo), freeze_result=True)
+        actual = native_ur.from_set({start}, frozenset(g.Euo), freeze_result=True)
+        assert actual == expected
