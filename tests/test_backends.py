@@ -134,3 +134,60 @@ def test_to_data_empty_automaton():
     assert data.num_states == 0
     assert data.num_edges == 0
     assert data.events == set()
+
+
+# --- extra vertex/edge attributes (e.g. "init", "forbidden" from wmod I/O) --
+
+
+def test_to_igraph_with_vertex_attrs():
+    data = AutomatonData(
+        names=["0", "1"],
+        marked=[False, False],
+        edges=[],
+        labels=[],
+        events=set(),
+        vertex_attrs={"init": [True, False], "forbidden": [False, True]},
+    )
+    graph = to_igraph(data)
+    assert graph.vs["init"] == [True, False]
+    assert graph.vs["forbidden"] == [False, True]
+
+
+def test_to_igraph_with_edge_attrs():
+    data = AutomatonData(
+        names=["0", "1"],
+        marked=[False, False],
+        edges=[(0, 1)],
+        labels=["a"],
+        events={"a"},
+        edge_attrs={"weight": [3]},
+    )
+    graph = to_igraph(data)
+    assert graph.es["weight"] == [3]
+
+
+def test_from_igraph_round_trip_with_extra_attrs():
+    original = AutomatonData(
+        names=["0", "1"],
+        marked=[False, True],
+        edges=[(0, 1)],
+        labels=["a"],
+        events={"a"},
+        vertex_attrs={"init": [True, False]},
+        edge_attrs={"weight": [3]},
+    )
+    recovered = from_igraph(to_igraph(original))
+    assert recovered.vertex_attrs == original.vertex_attrs
+    assert recovered.edge_attrs == original.edge_attrs
+
+
+def test_to_data_captures_dynamic_vertex_attrs():
+    # Mirrors DESops/io/wmod_to_igraph.py's read_wmod, which passes
+    # arbitrary extra kwargs (e.g. "init") to add_vertex().
+    g = d.DFA()
+    g.add_vertex(name="s0", init=True)
+    g.add_vertex(name="s1", init=False)
+
+    data = g.to_data()
+
+    assert data.vertex_attrs["init"] == [True, False]
