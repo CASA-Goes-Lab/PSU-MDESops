@@ -28,8 +28,9 @@ class AutomatonData:
     ----------
     names : list[str]
         State names. State ids are positions in this list.
-    marked : list[bool]
-        Per-state marking, parallel to `names`.
+    marked : list[bool or None]
+        Per-state marking, parallel to `names`. A state added without an
+        explicit marking is None (igraph's own default), not False.
     edges : list[tuple[int, int]]
         (source, target) state id pairs. Edge ids are positions in this list.
     labels : list[Label]
@@ -50,11 +51,11 @@ class AutomatonData:
     """
 
     names: List[str]
-    marked: List[bool]
+    marked: List[Optional[bool]]
     edges: List[Tuple[int, int]]
     labels: List[Label]
     events: Set[Label]
-    probs: Optional[List[float]] = None
+    probs: Optional[List[Optional[float]]] = None
     vertex_attrs: Dict[str, list] = field(default_factory=dict)
     edge_attrs: Dict[str, list] = field(default_factory=dict)
 
