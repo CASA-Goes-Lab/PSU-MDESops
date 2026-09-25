@@ -46,7 +46,7 @@ def product_bfs(*automata: DFA):
     return product(*automata)
 
 # TODO : generalize to NFA
-def product(*automata: DFA) -> DFA:
+def product(*automata: DFA, backend: str = "igraph") -> DFA:
     """
     Computes the synchronous product composition of 2 (or more) Automata in a BFS manner,
     Returns the resulting composition as a new automatan.
@@ -54,12 +54,26 @@ def product(*automata: DFA) -> DFA:
     Parameters
     ----------
     automata : list[DFA]
+    backend : str
+        Which implementation to use: "igraph" (default, reads via the
+        automata's igraph view) or "native" (pure Python over
+        AutomatonData, no igraph dependency). Both produce equivalent
+        results; see doc/logs/v2-igraph-decoupling.md.
 
     Returns
     -------
     DFA
         The product of the automata
     """
+    if backend == "igraph":
+        return _product_igraph(*automata)
+    elif backend == "native":
+        return _product_native(*automata)
+    else:
+        raise ValueError(f"Unknown backend: {backend!r}")
+
+
+def _product_igraph(*automata: DFA) -> DFA:
     if len(automata) < 2:
         raise MissingAttributeError(
             "Product composition needs more than one automaton."
@@ -105,6 +119,89 @@ def product(*automata: DFA) -> DFA:
                         {
                             "name": dst_name,
                             "marked": x1_dst["marked"] and x2_dst["marked"],
+                        }
+                    )
+                    dst_index = len(G_out_vertices) - 1
+                    G_out_names[dst_name] = dst_index
+                    queue.append((x1_dst, x2_dst))
+
+                G_out_edges.append({"pair": (src_index, dst_index), "label": e})
+
+        G_out.add_vertices(
+            len(G_out_vertices),
+            [v["name"] for v in G_out_vertices],
+            [v["marked"] for v in G_out_vertices],
+        )
+        G_out.add_edges(
+            [e["pair"] for e in G_out_edges],
+            [e["label"] for e in G_out_edges],
+            check_DFA=False,
+            fill_out=True,
+        )
+        G_out.events = G1.events | G2.events
+        G_out.Euc.update(G1.Euc | G2.Euc)
+        G_out.Euo.update(G1.Euo | G2.Euo)
+
+        G1 = G_out
+
+    return G_out
+
+
+def _product_native(*automata: DFA) -> DFA:
+    """
+    Pure-Python (no igraph) equivalent of _product_igraph. Same BFS-over-
+    state-pairs algorithm as _parallel_native, minus the private-event
+    branches (product only follows events active in both automata).
+    """
+    if len(automata) < 2:
+        raise MissingAttributeError(
+            "Product composition needs more than one automaton."
+        )
+
+    if any(g.vcount() == 0 for g in automata):
+        return DFA()
+
+    G1 = automata[0]
+    input_list = automata[1:]
+
+    for G2 in input_list:
+        G_out = DFA()
+
+        data1 = G1.to_data()
+        data2 = G2.to_data()
+        adj1 = data1.out_adjacency()
+        adj2 = data2.out_adjacency()
+
+        G_out_vertices = [
+            {
+                "name": (data1.names[0], data2.names[0]),
+                "marked": data1.marked[0] and data2.marked[0],
+            }
+        ]
+        G_out_names = {G_out_vertices[0]["name"]: 0}
+        G_out_edges = []  # type: List[Dict[str, Any]]
+
+        queue = deque([(0, 0)])
+
+        while len(queue) > 0:
+            x1, x2 = queue.popleft()
+            active_x1 = {label: target for target, label in adj1[x1]}
+            active_x2 = {label: target for target, label in adj2[x2]}
+            active_both = set(active_x1.keys()) & set(active_x2.keys())
+            cur_name = (data1.names[x1], data2.names[x2])
+            src_index = G_out_names[cur_name]
+
+            for e in active_both:
+                x1_dst = active_x1[e]
+                x2_dst = active_x2[e]
+                dst_name = (data1.names[x1_dst], data2.names[x2_dst])
+                dst_index = G_out_names.get(dst_name)
+
+                if dst_index is None:
+                    G_out_vertices.append(
+                        {
+                            "name": dst_name,
+                            "marked": data1.marked[x1_dst] and data2.marked[x2_dst],
                         }
                     )
                     dst_index = len(G_out_vertices) - 1

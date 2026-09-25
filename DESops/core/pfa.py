@@ -29,10 +29,10 @@ class PFA(Automata):
                 )
 
             self._data.probs = list(prob)
-            self._sync_graph()
+            self._invalidate_graph()
         else:
             self._data.probs = []
-            self._sync_graph()
+            self._invalidate_graph()
 
         self.Out = namedtuple("Out", ["target", "label", "prob"])
 
@@ -79,7 +79,7 @@ class PFA(Automata):
         for key in self._data.edge_attrs:
             self._data.edge_attrs[key].append(None)
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     def add_edges(self, pair_list, labels, probs, fill_out=True, **kwargs):
         self._resync_data()
@@ -113,7 +113,7 @@ class PFA(Automata):
             if key not in kwargs:
                 self._data.edge_attrs[key].extend([None] * len(pair_list))
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     def generate_out(self):
         """
@@ -124,7 +124,7 @@ class PFA(Automata):
         adj_list = self._graph.get_inclist()
         # "prob" may not be declared yet the first time this runs during
         # __init__, before PFA's own constructor body has set self._data.probs
-        # (see _sync_graph()).
+        # (see _build_graph()).
         has_prob = "prob" in self._graph.es.attributes()
         self.vs["out"] = [
             [

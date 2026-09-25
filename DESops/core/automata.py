@@ -129,6 +129,37 @@ State_or_StateSet = Union[int, Set[int]]
 # TODO: <awintenb@umich.edu> The _Automata class was renamed to Automata to facilitate documentation, can it be changed back
 # TODO: <awintenb@umich.edu> should init become a mandatory attribute. I don't think the convention that state 0 is initial is a good one.
 
+
+class _OutView:
+    """
+    `.vs`-shaped stand-in exposing only ["out"], used by UnobservableReach
+    and Automata's own adjacency reads (next_states, active_events, trans,
+    events_between). Reads through the live igraph view if one has already
+    been built, so a direct `g.vs[i]["out"] = ...` edit stays visible
+    exactly as it would reading `g.vs` itself; otherwise reads (and caches,
+    until the next mutation) straight from AutomatonData via
+    out_adjacency(), so a purely-native automaton never forces an igraph
+    build just to answer an adjacency query.
+    """
+
+    def __init__(self, automata):
+        self._automata = automata
+        self._cache = None
+
+    def invalidate(self):
+        self._cache = None
+
+    def __getitem__(self, key):
+        if key != "out":
+            raise KeyError(key)
+        automata = self._automata
+        if "_graph" in automata.__dict__:
+            return automata.vs["out"]
+        if self._cache is None:
+            self._cache = automata._data.out_adjacency()
+        return self._cache
+
+
 class Automata(ABC):
     """Used to represent finite-state automata, by means of a directed
     graph object (from the igraph library) with labelled transitions.
@@ -241,36 +272,68 @@ class Automata(ABC):
                 names=[], marked=[], edges=[], labels=[], events=set()
             )
 
-        # generate_out() (called by _sync_graph() below) needs self.Out to
-        # already exist, so this must be set first.
+        # generate_out() (called by _build_graph() below, on demand) needs
+        # self.Out to already exist, so this must be set first.
         self.Out = namedtuple("Out", ["target", "label"])
 
-        # Builds self._graph/self.vs/self.es (an igraph view) from
-        # self._data, the source of truth. See DESops.backends.protocol
-        # and doc/logs/v2-igraph-decoupling.md.
-        self._sync_graph()
+        # self._data is the source of truth (see DESops.backends.protocol
+        # and doc/logs/v2-igraph-decoupling.md); self._graph/vs/es/write_dot
+        # (an igraph view of it) are *not* built here. They're built lazily,
+        # on first access, by __getattr__ -> _build_graph() below -- an
+        # automaton that's only ever read/mutated natively never pays for
+        # an igraph.Graph at all.
+        self._out_view = _OutView(self)
 
-        self.__bool__ = self._graph.__bool__()
+        # Attach UR class object (defined below). Backed by _out_view
+        # rather than self.vs directly, so g.UR.from_set(...) also doesn't
+        # force an igraph build, and never needs re-pointing after a
+        # mutation the way a direct self.vs reference would.
+        self.UR = UnobservableReach(self.Euo, self._out_view)
 
-        # Attach UR class object (defined below)
-        self.UR = UnobservableReach(self.Euo, self.vs)
-
-    def _sync_graph(self):
+    def __getattr__(self, name):
         """
-        Rebuild the igraph view (self._graph, self.vs, self.es) from
-        self._data, the source of truth. Called after every mutation.
+        Lazily build the igraph view on first access to self._graph, .vs,
+        .es, or .write_dot -- only reached when normal attribute lookup
+        already failed, i.e. the view hasn't been built since the last
+        invalidation (see _invalidate_graph()). Consumer code throughout
+        DESops reads (and sometimes reassigns, e.g. DESops/io/igraph_pickle.py)
+        these directly; this keeps that working unchanged, just built on
+        demand instead of eagerly on every mutation.
+        """
+        if name in ("_graph", "vs", "es", "write_dot"):
+            self._build_graph()
+            return self.__dict__[name]
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
+
+    def _build_graph(self):
+        """
+        Build the igraph view (self._graph, self.vs, self.es, self.write_dot)
+        from self._data, the source of truth. Called on demand by
+        __getattr__, not eagerly after every mutation.
         """
         self._graph = to_igraph(self._data)
         self.vs = self._graph.vs
         self.es = self._graph.es
         self.write_dot = self._graph.write_dot
         self.generate_out()
-        if hasattr(self, "UR"):
-            # self._graph (and therefore self.vs) was just replaced with a
-            # new object, rather than mutated in place as before this
-            # rewrite; UR cached the old self.vs at construction time and
-            # would otherwise silently keep reading a now-orphaned graph.
-            self.UR.vs = self.vs
+
+    def _invalidate_graph(self):
+        """
+        Drop any already-built igraph view and native-adjacency cache
+        after a mutation, without rebuilding either eagerly. The next
+        access to self._graph/.vs/.es/.write_dot (via __getattr__) or to
+        native adjacency (via self._out_view) rebuilds from self._data on
+        demand. Every public mutating method must call this last (replaces
+        the old _sync_graph(), which rebuilt the igraph view unconditionally
+        on every call).
+        """
+        instance_dict = vars(self)
+        for name in ("_graph", "vs", "es", "write_dot"):
+            if name in instance_dict:
+                del instance_dict[name]
+        self._out_view.invalidate()
 
     def _resync_data(self):
         """
@@ -283,7 +346,16 @@ class Automata(ABC):
         igraph view from self._data when it's done, any such direct edit
         made since the last sync would otherwise be silently discarded.
         Every public mutating method must call this first.
+
+        No-op if the igraph view was never built (or was already
+        invalidated) since the last data mutation -- there is nothing to
+        reabsorb, and checking via "_graph" in self.__dict__ (rather than
+        hasattr, which would itself trigger the lazy build through
+        __getattr__) keeps a purely-native automaton from ever paying for
+        an igraph.Graph it never asked for.
         """
+        if "_graph" not in self.__dict__:
+            return
         self._data = from_igraph(self._graph)
 
     def delete_vertices(self, vs):
@@ -347,7 +419,7 @@ class Automata(ABC):
         self._data.probs = new_probs
         self._data.edge_attrs = new_edge_attrs
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     def delete_edges(self, es):
         """
@@ -370,7 +442,7 @@ class Automata(ABC):
         for key, values in self._data.edge_attrs.items():
             self._data.edge_attrs[key] = [values[i] for i in keep]
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     @abstractmethod
     def add_edge(self, source, target, label, prob=None, fill_out=False, **kwargs):
@@ -464,7 +536,7 @@ class Automata(ABC):
                 self._data.vertex_attrs[key] = [None] * idx
             self._data.vertex_attrs[key].append(value)
 
-        self._sync_graph()
+        self._invalidate_graph()
 
         return self.vs[idx]
 
@@ -522,20 +594,20 @@ class Automata(ABC):
             if key not in kwargs:
                 self._data.vertex_attrs[key].extend([None] * number_vertices)
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     # TODO <awintenb@umich.edu> - does this need to exist? Can it just be replaced by the assignment in the body
     def update_names(self, names):
         # update vertex names from list of names
         self._resync_data()
         self._data.names = list(names)
-        self._sync_graph()
+        self._invalidate_graph()
 
     def update_marked(self, marked):
         # update vertex markings from list of markings
         self._resync_data()
         self._data.marked = list(marked)
-        self._sync_graph()
+        self._invalidate_graph()
 
     # TODO <awintenb@umich.edu>  Should we instead use __copy__ and __deepcopy__?
     # TODO <awintenb@umich.edu> Should we keep this if it is overridden by DFA, NFA
@@ -682,44 +754,64 @@ class Automata(ABC):
         Snapshot this Automata as backend-agnostic AutomatonData (plain
         lists/sets, no igraph dependency).
 
-        This is a read-only export: today's storage is still igraph
-        underneath, so this builds a fresh snapshot on every call rather
-        than reflecting live state. See DESops.backends.protocol for the
-        shape and doc/scoping-report.md for where this is headed.
+        This is a read-only export: builds a fresh snapshot on every call
+        rather than reflecting live state, so mutating the result doesn't
+        write back to this Automata. If the igraph view has already been
+        built, reads through it (so a direct `g.vs[i][...] = ...` edit
+        made since the last mutating-method call is picked up, as before);
+        otherwise reads straight from self._data, never forcing an igraph
+        build just to answer to_data(). See DESops.backends.protocol.
 
         Returns
         -------
         DESops.backends.protocol.AutomatonData
         """
-        return from_igraph(self._graph)
+        self._resync_data()
+        if "_graph" in self.__dict__:
+            return from_igraph(self._graph)
+        labels = list(self._data.labels)
+        return AutomatonData(
+            names=list(self._data.names),
+            marked=list(self._data.marked),
+            edges=list(self._data.edges),
+            labels=labels,
+            # Matches from_igraph()'s convention: derived from the labels
+            # actually in use, not self._data.events (which mutating
+            # methods don't keep in sync -- self.events, the separate
+            # Automata-level attribute, is the maintained one).
+            events={label for label in labels if label != ""},
+            probs=list(self._data.probs) if self._data.probs is not None else None,
+            vertex_attrs={k: list(v) for k, v in self._data.vertex_attrs.items()},
+            edge_attrs={k: list(v) for k, v in self._data.edge_attrs.items()},
+        )
 
     # Methods to interface with graph variables & methods
 
     def vcount(self):
         """
         Return the number of vertices in the Automata.
-        Binding to igraph Graph `vcount` method.
-        This is the preferred method to find vertex count.
 
         Returns
         -------
         int
             Vertex count
         """
-        return self._graph.vcount()
+        if "_graph" in self.__dict__:
+            return self._graph.vcount()
+        return self._data.num_states
 
     def ecount(self):
         """
         Return the number of edges in the Automata.
-        Binding to igraph Graph `ecount` method.
-        This is the preferred method to find edge count.
 
         Returns
         -------
         int
             Edge count
         """
-        return self._graph.ecount()
+        if "_graph" in self.__dict__:
+            return self._graph.ecount()
+        return self._data.num_edges
 
     def next_states(self, index):
         """
@@ -735,7 +827,7 @@ class Automata(ABC):
         set
             The next states
         """
-        return {o.target for o in self.vs[index]["out"]}
+        return {t[0] for t in self._out_view["out"][index]}
 
     def active_events(self, index):
         """
@@ -751,7 +843,7 @@ class Automata(ABC):
         set
             The active events at the source
         """
-        return {o.label for o in self.vs[index]["out"]}
+        return {t[1] for t in self._out_view["out"][index]}
 
     def events_between(self, X1, X2):
         """
@@ -777,10 +869,11 @@ class Automata(ABC):
         if not isinstance(X2, Iterable):
             X2 = [X2]
 
+        out = self._out_view["out"]
         events = set()
         for x1 in X1:
             for x2 in X2:
-                events.update(o.label for o in self.vs[x1]["out"] if o.target == x2)
+                events.update(t[1] for t in out[x1] if t[0] == x2)
 
         return events
 
@@ -801,9 +894,9 @@ class Automata(ABC):
         int
             The index of the target vertex
         """
-        for out in self.vs[source]["out"]:
-            if out.label == event:
-                return out.target
+        for t in self._out_view["out"][source]:
+            if t[1] == event:
+                return t[0]
         return None
 
     # TODO: this is legacy, should replace instances of this

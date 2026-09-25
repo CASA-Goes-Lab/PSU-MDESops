@@ -174,6 +174,57 @@ def test_observer_native_dfa_input_matches_igraph():
     assert obs_native.ecount() == obs_igraph.ecount()
 
 
+# --- product --------------------------------------------------------------
+
+
+def test_product_native_matches_igraph():
+    g1 = util.load_model("models/textbook/fig_2-1.fsm")
+    g2 = util.load_model("models/textbook/fig_2-2.fsm")
+
+    p_igraph = d.composition.product(g1, g2, backend="igraph")
+    p_native = d.composition.product(g1, g2, backend="native")
+
+    assert p_native.vcount() == p_igraph.vcount()
+    assert p_native.ecount() == p_igraph.ecount()
+    assert p_native.vs["marked"] == p_igraph.vs["marked"]
+    assert p_native.vs["name"] == p_igraph.vs["name"]
+    assert _out_sets(p_native) == _out_sets(p_igraph)
+
+
+def test_product_native_three_automata_matches_igraph():
+    # Same chained-composition caveat as parallel's three-automata test:
+    # compare by language, not state index, since BFS visitation order
+    # over set(...) can diverge between backends after two rounds.
+    from DESops.core.operations.language_equivalence import compare_language
+
+    g1 = util.load_model("models/textbook/fig_2-1.fsm")
+    g2 = util.load_model("models/textbook/fig_2-2.fsm")
+    g3 = util.load_model("models/textbook/fig_2-21_G1.fsm")
+
+    p_igraph = d.composition.product(g1, g2, g3, backend="igraph")
+    p_native = d.composition.product(g1, g2, g3, backend="native")
+
+    assert p_native.vcount() == p_igraph.vcount()
+    assert p_native.ecount() == p_igraph.ecount()
+    assert compare_language(p_native, p_igraph, type="both")
+
+
+def test_product_native_empty_input():
+    g1 = d.DFA()
+    g2 = util.load_model("models/textbook/fig_2-1.fsm")
+    assert d.composition.product(g1, g2, backend="native").vcount() == 0
+
+
+def test_product_unknown_backend_raises():
+    g1 = util.load_model("models/textbook/fig_2-1.fsm")
+    g2 = util.load_model("models/textbook/fig_2-2.fsm")
+    try:
+        d.composition.product(g1, g2, backend="bdd")
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
 # --- unobservable reach (out_adjacency as a drop-in for the igraph "out") -
 
 

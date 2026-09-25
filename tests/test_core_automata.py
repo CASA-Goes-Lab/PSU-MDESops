@@ -233,3 +233,116 @@ def test_trans():
     g.add_edge(0, 1, d.Event("a"))
     assert g.trans(0, d.Event("a")) == 1
     assert g.trans(0, d.Event("z")) is None
+
+
+# --- lazy igraph view --------------------------------------------------------
+#
+# self._graph/.vs/.es/.write_dot are built on demand (via __getattr__), not
+# eagerly on every mutation -- self._data (AutomatonData) is the source of
+# truth. These tests check the laziness itself, not just its results (which
+# the tests above already cover): a DFA built and read purely through the
+# native API should never construct an igraph.Graph at all. See
+# doc/logs/v2-igraph-decoupling.md.
+
+
+def test_dfa_construction_stays_native():
+    g = d.DFA()
+    g.add_vertices(3)
+    g.add_edges([(0, 1), (1, 2)], [d.Event("a"), d.Event("b")])
+    assert "_graph" not in g.__dict__
+
+
+def test_dfa_add_edge_with_check_dfa_stays_native():
+    # check_DFA's duplicate-label check reads adjacency too -- must not
+    # force igraph on every single add_edge call.
+    g = d.DFA()
+    g.add_vertices(2)
+    g.add_edge(0, 1, d.Event("a"), check_DFA=True)
+    assert "_graph" not in g.__dict__
+
+
+def test_dfa_add_edge_check_dfa_still_raises_natively():
+    g = d.DFA()
+    g.add_vertices(2)
+    g.add_edge(0, 1, d.Event("a"), check_DFA=True)
+    with pytest.raises(Exception):
+        g.add_edge(0, 1, d.Event("a"), check_DFA=True)
+
+
+def test_native_read_methods_do_not_force_igraph():
+    g = d.DFA()
+    g.add_vertices(3)
+    g.add_edges([(0, 1), (0, 2)], [d.Event("a"), d.Event("b")])
+
+    assert g.vcount() == 3
+    assert g.ecount() == 2
+    assert g.next_states(0) == {1, 2}
+    assert g.active_events(0) == {d.Event("a"), d.Event("b")}
+    assert g.trans(0, d.Event("a")) == 1
+    assert g.events_between(0, 1) == {d.Event("a")}
+    data = g.to_data()
+    assert data.num_states == 3 and data.num_edges == 2
+
+    assert "_graph" not in g.__dict__
+
+
+def test_ur_from_set_does_not_force_igraph():
+    g = d.DFA()
+    g.add_vertices(3)
+    g.add_edges([(0, 1), (1, 2)], [d.Event("uo"), d.Event("b")])
+    g.Euo = {d.Event("uo")}
+    g.UR.Euo = g.Euo
+
+    result = g.UR.from_set({0}, {d.Event("uo")}, freeze_result=True)
+
+    assert result == frozenset({0, 1})
+    assert "_graph" not in g.__dict__
+
+
+def test_accessing_vs_lazily_builds_graph_and_is_correct():
+    g = d.DFA()
+    g.add_vertices(3)
+    g.add_edges([(0, 1), (1, 2)], [d.Event("a"), d.Event("b")])
+    assert "_graph" not in g.__dict__
+
+    assert g.vs["name"] == ["0", "1", "2"]
+
+    assert "_graph" in g.__dict__
+
+
+def test_mutation_after_lazy_build_invalidates_graph_again():
+    g = d.DFA()
+    g.add_vertices(2)
+    g.add_edge(0, 1, d.Event("a"))
+    g.vs  # force the lazy build
+    assert "_graph" in g.__dict__
+
+    g.add_edge(1, 0, d.Event("b"))
+
+    assert "_graph" not in g.__dict__
+    # and the mutation is correctly visible once rebuilt
+    assert g.vs["out"][1] == [(0, d.Event("b"))]
+
+
+def test_direct_vs_edit_is_absorbed_on_next_mutation():
+    # Consumer code throughout DESops mutates g.vs directly rather than
+    # exclusively through Automata's own methods; _resync_data() must still
+    # pick that up before the next mutation, exactly as before this change.
+    g = d.DFA()
+    g.add_vertices(2)
+    g.vs[0]["marked"] = True  # forces the lazy build as a side effect
+
+    g.add_vertex()  # any mutating method resyncs first
+
+    assert g.vs["marked"] == [True, False, None]
+
+
+def test_nfa_add_edges_return_value_forces_igraph_but_still_works():
+    # NFA.add_edge/add_edges return an igraph Edge/EdgeSeq (unlike DFA's,
+    # which return None), so calling them always builds the igraph view --
+    # that's an existing part of their public contract, not changed here.
+    g = d.NFA()
+    g.add_vertices(2)
+    edges = g.add_edges([(0, 1)], [d.Event("a")])
+    assert "_graph" in g.__dict__
+    assert edges[0]["label"] == d.Event("a")

@@ -16,7 +16,7 @@ class NFA(automata.Automata):
             self._data.vertex_attrs["init"] = [False] * self._data.num_states
             self._data.vertex_attrs["init"][0] = True
 
-        self._sync_graph()
+        self._invalidate_graph()
 
         self.type = "NFA"
 
@@ -59,7 +59,7 @@ class NFA(automata.Automata):
         self._remove_vertices_by_index(automata._vertex_indices(vs))
 
     def get_destinations(self, state: int, event: Event) -> Set[int]:
-        return {out[0] for out in self.vs[state]["out"] if out[1] == event}
+        return {out[0] for out in self._out_view["out"][state] if out[1] == event}
 
     def add_edge(self, source, target, label, prob=None, fill_out=True, **kwargs):
         """
@@ -98,7 +98,7 @@ class NFA(automata.Automata):
                 self._data.edge_attrs[key] = [None] * (self._data.num_edges - 1)
             self._data.edge_attrs[key].append(value)
 
-        self._sync_graph()
+        self._invalidate_graph()
         return self.es[self._data.num_edges - 1]
 
     def add_edges(self, pair_list, labels, probs=None, fill_out=True, **kwargs):
@@ -165,7 +165,7 @@ class NFA(automata.Automata):
             if key not in kwargs:
                 self._data.edge_attrs[key].extend([None] * len(pair_list))
 
-        self._sync_graph()
+        self._invalidate_graph()
         return self.es[old_count : old_count + len(pair_list)]
 
     def trans(self, source, event):
@@ -173,7 +173,7 @@ class NFA(automata.Automata):
         Return the set of target vertex indices reached when the given event occurs from the given source vertex index
         """
         targets = set()
-        for out in self.vs[source]["out"]:
-            if out.label == event:
-                targets.add(out.target)
+        for out in self._out_view["out"][source]:
+            if out[1] == event:
+                targets.add(out[0])
         return targets

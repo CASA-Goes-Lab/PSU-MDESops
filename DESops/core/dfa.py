@@ -80,7 +80,7 @@ class DFA(Automata):
             # label = Event(label)
             pass
         if check_DFA:
-            out_events = [e[1] for e in self.vs["out"][source]]
+            out_events = [e[1] for e in self._out_view["out"][source]]
             if label in out_events:
                 # Passive check: if adding this edge would create nondeterminism,
                 # do nothing. No exit (although possibly issue a warning?)
@@ -97,7 +97,7 @@ class DFA(Automata):
         for key in self._data.edge_attrs:
             self._data.edge_attrs[key].append(None)
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     def add_edges(self, pair_list, labels, check_DFA=True, fill_out=True, **kwargs):
         # TODO WE SHOULD ADD A WARNING IF IT CHECK_DFA IS DISABLE FOR UNKNOWN FUNCTIONS
@@ -123,10 +123,11 @@ class DFA(Automata):
                 modified_sources[source].append(labels[i])
 
             for source in modified_sources.keys():
-                out_events = set(el[1] for el in self.vs["out"][source])
+                existing_out = self._out_view["out"][source]
+                out_events = set(el[1] for el in existing_out)
                 out_events.update(modified_sources[source])
 
-                if len(out_events) != len(self.vs["out"][source]) + len(
+                if len(out_events) != len(existing_out) + len(
                     modified_sources[source]
                 ):
                     raise error.DeterminismError(
@@ -148,7 +149,7 @@ class DFA(Automata):
                 # rather than extends), not just the values for the new edges.
                 self._data.edge_attrs[key] = list(value)
 
-        self._sync_graph()
+        self._invalidate_graph()
 
     def check_DFA(self):
         """
