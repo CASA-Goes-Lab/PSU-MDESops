@@ -6,6 +6,7 @@ from importlib.metadata import version as _version
 
 from DESops import error, random_automata
 from DESops import sda as SDA
+from DESops.core.automaton import Automaton
 from DESops.core.dfa import DFA
 from DESops.core.event import Event
 from DESops.core.nfa import NFA
@@ -16,12 +17,14 @@ from DESops.core.operations.reverse import reverse
 from DESops.core.operations.language_equivalence import compare_language
 from DESops.io.fsm_to_bdd import read_fsm_to_bdd
 from DESops.io.fsm_to_igraph import read_fsm
+from DESops.io.fsm import read_automaton
 from DESops.io.igraph_pickle import *
 from DESops.io.igraph_to_fsm import write_fsm
 from DESops.opacity import opacity_verification
 from DESops.supervisory_control import supervisor
 from DESops.visualization.plot import plot
 from DESops.visualization.write_svg import write_svg
+from DESops.visualization import dot
 from DESops.diagnosis import diagnoser
 
 try:

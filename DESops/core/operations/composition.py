@@ -9,6 +9,7 @@ import pydash
 from tqdm import tqdm
 
 from DESops.core.automata import Automata, UnobservableReach
+from DESops.core.automaton import Automaton
 from DESops.core.dfa import DFA
 from DESops.core.event import Event
 from DESops.core.nfa import NFA
@@ -421,12 +422,75 @@ def parallel(*automata: DFA, backend: str = "igraph") -> DFA:
     DFA
         The parallel composition
     """
+    if automata and all(isinstance(g, Automaton) for g in automata):
+        return _parallel_automaton(*automata)
     if backend == "igraph":
         return _parallel_igraph(*automata)
     elif backend == "native":
         return _parallel_native(*automata)
     else:
         raise ValueError(f"Unknown backend: {backend!r}")
+
+
+def _parallel_automaton(*automata: Automaton) -> Automaton:
+    """
+    Parallel composition of DESops.core.automaton.Automaton inputs, folded
+    left to right. Shared events synchronize; private events interleave.
+    Unlike _parallel_igraph/_parallel_native, every combination of initial
+    states is a start state, so NFA inputs with several initial states work.
+    State names are (name1, name2) tuples, as in the old implementations.
+    """
+    if len(automata) < 2:
+        raise MissingAttributeError("More than one automaton are needed.")
+    if any(g.probabilistic for g in automata):
+        raise ValueError("parallel composition of probabilistic automata is not supported")
+
+    result = automata[0]
+    for other in automata[1:]:
+        result = _parallel_pair(result, other)
+    return result
+
+
+def _parallel_pair(G1: Automaton, G2: Automaton) -> Automaton:
+    out = Automaton(
+        events=G1.events | G2.events, Euc=G1.Euc | G2.Euc, Euo=G1.Euo | G2.Euo
+    )
+    if not G1.states or not G2.states:
+        return out
+
+    shared = G1.events & G2.events
+    index = {}
+    queue = deque()
+
+    def visit(x1, x2):
+        pair = (x1, x2)
+        if pair not in index:
+            s1, s2 = G1.states[x1], G2.states[x2]
+            index[pair] = out.add_state((s1.name, s2.name), s1.marked and s2.marked)
+            queue.append(pair)
+        return index[pair]
+
+    for x1 in sorted(G1.init):
+        for x2 in sorted(G2.init):
+            out.init.add(visit(x1, x2))
+
+    while queue:
+        x1, x2 = queue.popleft()
+        source = index[(x1, x2)]
+        out1, out2 = G1.states[x1].out, G2.states[x2].out
+        for event, targets1 in out1.items():
+            if event in shared:
+                for t1 in targets1:
+                    for t2 in out2.get(event, ()):
+                        out.add_transition(source, event, visit(t1, t2))
+            else:
+                for t1 in targets1:
+                    out.add_transition(source, event, visit(t1, x2))
+        for event, targets2 in out2.items():
+            if event not in shared:
+                for t2 in targets2:
+                    out.add_transition(source, event, visit(x1, t2))
+    return out
 
 
 def _parallel_igraph(*automata: DFA) -> DFA:
