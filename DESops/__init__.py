@@ -17,7 +17,8 @@ from DESops.core.operations.reverse import reverse
 from DESops.core.operations.language_equivalence import compare_language
 from DESops.io.fsm_to_bdd import read_fsm_to_bdd
 from DESops.io.fsm_to_igraph import read_fsm
-from DESops.io.fsm import read_automaton
+from DESops.io.fsm import read_automaton, write_automaton
+from DESops.io.cif import parse_cif, read_cif
 from DESops.io.igraph_pickle import *
 from DESops.io.igraph_to_fsm import write_fsm
 from DESops.opacity import opacity_verification

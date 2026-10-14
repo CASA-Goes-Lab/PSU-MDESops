@@ -1,0 +1,51 @@
+// Two-unit CRAC system cooling one room, uncontrolled.
+// After Maloney, Ganesh & Zuo (SimBuild 2026), reduced from four units to two.
+//
+// Heat quantities are in percent of ONE unit's nominal cooling capacity Qnom.
+// The paper rates each unit at 7 tons = 7 x 3.517 kW = 24.6 kW (= 100 %).
+// The paper's load is 10-70 kW for 4 units; halved for 2 units (same
+// load-to-capacity ratio, 71 % at peak) it is 5-35 kW, i.e. 5/24.6 = 20 % to
+// 35/24.6 = 142 % of one unit: at peak, one unit is not enough.
+
+controllable   on_1, off_1, on_2, off_2;
+uncontrollable load_up, load_dn, heat, cool;
+
+const int Q_MIN    = 10;   // removed by a unit held at PLR_min = 0.1
+const int Q_ACTIVE = 100;  // removed by a modulating unit, at most
+
+// IT load band, split where the cooling capacity changes (110 % = one unit
+// Active plus one at PLR_min).
+plant Load:
+  location Low:   initial; marked;   // 20-110 %
+    edge load_up goto High;
+  location High:           marked;   // 110-142 %
+    edge load_dn goto Low;
+end
+
+// A CRAC unit: held at PLR_min, or Active (modulating). The lead unit (highest
+// COP in the paper) starts Active.
+plant def CRAC(controllable on, off; alg bool lead):
+  location Min:    initial not lead; marked;
+    edge on goto Active;
+  location Active: initial lead;     marked;
+    edge off goto Min;
+end
+
+CRAC1: CRAC(on_1, off_1, true);
+CRAC2: CRAC(on_2, off_2, false);
+
+// Heat removed, and the edges of the current load band.
+alg int removed = (if CRAC1.Active: Q_ACTIVE else Q_MIN end)
+                + (if CRAC2.Active: Q_ACTIVE else Q_MIN end);
+alg int load_lo = if Load.Low: 20  else 110 end;
+alg int load_hi = if Load.Low: 110 else 142 end;
+
+// Room temperature: 0 = at setpoint, 1 = warm, 2 = hot. Active units modulate,
+// so they bring the room back to setpoint but not below it.
+plant Room:
+  disc int[0..2] T = 0;
+  location:
+    initial; marked;
+    edge heat when load_hi > removed, T < 2 do T := T + 1;
+    edge cool when load_lo < removed, T > 0 do T := T - 1;
+end

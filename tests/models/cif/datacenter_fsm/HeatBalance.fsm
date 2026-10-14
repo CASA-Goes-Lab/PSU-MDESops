@@ -1,0 +1,41 @@
+6
+
+Low_1on	1	6
+load_up	High_1on	uc	o
+on_1	Low_2on	c	o
+on_2	Low_2on	c	o
+off_1	Low_0on	c	o
+off_2	Low_0on	c	o
+cool	Low_1on	uc	o
+
+Low_0on	1	4
+load_up	High_0on	uc	o
+on_1	Low_1on	c	o
+on_2	Low_1on	c	o
+heat	Low_0on	uc	o
+
+Low_2on	1	4
+load_up	High_2on	uc	o
+off_1	Low_1on	c	o
+off_2	Low_1on	c	o
+cool	Low_2on	uc	o
+
+High_0on	1	4
+load_dn	Low_0on	uc	o
+on_1	High_1on	c	o
+on_2	High_1on	c	o
+heat	High_0on	uc	o
+
+High_1on	1	6
+load_dn	Low_1on	uc	o
+on_1	High_2on	c	o
+on_2	High_2on	c	o
+off_1	High_0on	c	o
+off_2	High_0on	c	o
+heat	High_1on	uc	o
+
+High_2on	1	4
+load_dn	Low_2on	uc	o
+off_1	High_1on	c	o
+off_2	High_1on	c	o
+cool	High_2on	uc	o

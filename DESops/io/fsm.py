@@ -131,3 +131,48 @@ def _name_index(names: List[Any]):
                 raise error.FileFormatError(f"transition to undeclared state {name!r}")
 
     return lookup
+
+
+def write_automaton(g: Automaton, path: str) -> None:
+    """
+    Write an Automaton as a DESUMA .fsm file that read_automaton reads back.
+
+    The initial state is written first (the format has exactly one), the rest
+    in index order. Tuple state names are written with repr(), as
+    read_automaton expects. Events with no transition are not recorded: the
+    format lists events only on transitions.
+    """
+    if g.states and len(g.init) != 1:
+        raise error.FileFormatError(
+            f".fsm needs exactly one initial state, this automaton has {len(g.init)}"
+        )
+
+    def text(name) -> str:
+        out = repr(name) if isinstance(name, tuple) else str(name)
+        if "\t" in out or "\n" in out:
+            raise error.FileFormatError(f"state name {out!r} contains a tab or newline")
+        if isinstance(name, str) and name.startswith("("):
+            raise error.FileFormatError(
+                f"state name {name!r} starts with '(' and would be read back as a tuple"
+            )
+        return out
+
+    order = sorted(range(g.num_states), key=lambda x: x not in g.init)
+    lines = [str(g.num_states), ""]
+    for x in order:
+        state = g.states[x]
+        rows = []
+        for event, targets in state.out.items():
+            label = getattr(event, "label", event)
+            c = "uc" if event in g.Euc else "c"
+            o = "uo" if event in g.Euo else "o"
+            for t in targets:
+                row = f"{label}\t{text(g.states[t].name)}\t{c}\t{o}"
+                if g.probabilistic:
+                    row += f"\t{state.prob[(event, t)]}"
+                rows.append(row)
+        lines.append(f"{text(state.name)}\t{1 if state.marked else 0}\t{len(rows)}")
+        lines.extend(rows)
+        lines.append("")
+    with open(path, "w") as f:
+        f.write("\n".join(lines))

@@ -1,0 +1,11 @@
+3
+
+OK	1	1
+heat	Warm	uc	o
+
+Warm	1	2
+heat	Hot	uc	o
+cool	OK	uc	o
+
+Hot	1	1
+cool	Warm	uc	o

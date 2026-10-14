@@ -1,0 +1,7 @@
+2
+
+Low	1	1
+load_up	High	uc	o
+
+High	1	1
+load_dn	Low	uc	o

@@ -49,3 +49,13 @@ class ConversionError(Exception):
 
 class DeterminismError(Exception):
     pass
+
+
+class UnsupportedFeatureError(FileFormatError):
+    # A construct of a file format (e.g. CIF) that the reader does not support.
+    pass
+
+
+class EfsmError(Exception):
+    # Invalid EFSM model or unfolding (DESops.core.efsm).
+    pass
