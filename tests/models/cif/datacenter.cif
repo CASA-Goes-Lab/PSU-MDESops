@@ -34,11 +34,13 @@ end
 CRAC1: CRAC(on_1, off_1, true);
 CRAC2: CRAC(on_2, off_2, false);
 
-// Heat removed, and the edges of the current load band.
+// Heat removed, and the smallest and largest load possible in the current
+// band. The exact load inside a band is not modeled; the guards on heat and
+// cool ask whether SOME load in the band would heat or cool the room.
 alg int removed = (if CRAC1.Active: Q_ACTIVE else Q_MIN end)
                 + (if CRAC2.Active: Q_ACTIVE else Q_MIN end);
-alg int load_lo = if Load.Low: 20  else 110 end;
-alg int load_hi = if Load.Low: 110 else 142 end;
+alg int load_min = if Load.Low: 20  else 110 end;
+alg int load_max = if Load.Low: 110 else 142 end;
 
 // Room temperature: 0 = at setpoint, 1 = warm, 2 = hot. Active units modulate,
 // so they bring the room back to setpoint but not below it.
@@ -46,6 +48,6 @@ plant Room:
   disc int[0..2] T = 0;
   location:
     initial; marked;
-    edge heat when load_hi > removed, T < 2 do T := T + 1;
-    edge cool when load_lo < removed, T > 0 do T := T - 1;
+    edge heat when load_max > removed, T < 2 do T := T + 1;
+    edge cool when load_min < removed, T > 0 do T := T - 1;
 end

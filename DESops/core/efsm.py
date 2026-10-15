@@ -21,6 +21,8 @@ Unfolding:
   linked when an expression of one reads the other's location or variable;
   shared events alone do not link them (parallel() handles those).
 - unfold(flat=True) unfolds the whole system into one automaton.
+- decompose() splits the system further, into automata that interact only
+  through shared events (see its docstring).
 Only reachable states are built. An update outside a variable's range raises
 EfsmError: guard the edge instead.
 """
@@ -142,10 +144,69 @@ class EfsmSystem:
             result["+".join(group)] = self._unfold_group(group)
         return result
 
+    def decompose(self, kind: Optional[str] = None) -> Dict[str, Automaton]:
+        """
+        Split the system into automata that interact only through shared
+        events, so their parallel composition equals unfold(flat=True) (same
+        generated and marked language). Per automaton A:
+
+        - "A.guards": guard conjuncts of A that read only other automata move
+          into a monitor, which tracks those automata (an unfolded copy that
+          follows their events) and allows A's guarded events only where the
+          conjuncts hold.
+        - "A.x", "A.y,z": A's variables that are never read or updated
+          together (in one conjunct, update, or initial/marked predicate)
+          become separate automata synchronized on A's events. "A" keeps the
+          locations and the variables tied to them; it is left out when it
+          constrains nothing. An automaton with one part keeps its name.
+
+        Conditions, else A is unfolded whole with every automaton it reads,
+        as unfold() would (key "A+B..."): no conjunct or update mixes A's
+        own state with another automaton's, no initial/marked predicate reads
+        another automaton, and each event's other-automaton conjuncts are the
+        same on all of A's edges for that event. A variable whose conjuncts or
+        updates for some event differ between edges stays with the locations.
+        kind: only automata of this kind, as in unfold().
+        """
+        names = [a.name for a in self.automata if kind is None or a.kind == kind]
+        result: Dict[str, Automaton] = {}
+        for n in names:
+            a = self.automaton(n)
+            split = _split(a)
+            if split is None:
+                group = self._closure([n], names)
+                result["+".join(group)] = self._unfold_group(group)
+                continue
+            parts, guards = split
+            for suffix, part in parts:
+                key = n if len(parts) == 1 or suffix is None else f"{n}.{suffix}"
+                result[key] = self._unfold_automata([part])
+            if guards is not None:
+                tracked = [self.automaton(m) for m in self._closure(_references(guards), names)]
+                result[guards.name] = self._unfold_automata(
+                    tracked + [guards], hidden={guards.name}
+                )
+        return result
+
+    def _closure(self, start, names: Sequence[str]) -> List[str]:
+        """start plus every automaton they read, transitively, in declaration order."""
+        seen, todo = set(start), list(start)
+        while todo:
+            for other in _references(self.automaton(todo.pop())):
+                if other not in names:
+                    raise EfsmError(f"{other} is read but is not being unfolded")
+                if other not in seen:
+                    seen.add(other)
+                    todo.append(other)
+        return [n for n in names if n in seen]
+
     # --- unfolding ------------------------------------------------------------
 
     def _unfold_group(self, names: List[str]) -> Automaton:
-        auts = [self.automaton(n) for n in names]
+        return self._unfold_automata([self.automaton(n) for n in names])
+
+    def _unfold_automata(self, auts: List[Efsm], hidden=frozenset()) -> Automaton:
+        """hidden: automata (stateless guard monitors) left out of state names."""
         # ("loc", aut) -> i; ("locidx", aut, location) -> k; ("var", aut, var) -> (i, j)
         pos = {}
         for i, a in enumerate(auts):
@@ -193,7 +254,7 @@ class EfsmSystem:
         }
 
         def name(s):
-            parts = [_state_name(a, s[i]) for i, a in enumerate(auts)]
+            parts = [_state_name(a, s[i]) for i, a in enumerate(auts) if a.name not in hidden]
             return parts[0] if len(parts) == 1 else tuple(parts)
 
         def is_marked(s):
@@ -367,6 +428,200 @@ def _expr_refs(expr: Expr) -> set:
     if tag == "call":
         return set().union(*(_expr_refs(x) for x in expr[2]))
     raise EfsmError(f"unknown expression {expr!r}")
+
+
+def _expr_atoms(expr: Expr) -> set:
+    """(automaton, variable name) for variables, (automaton, None) for locations."""
+    tag = expr[0]
+    if tag == "var":
+        return {(expr[1], expr[2])}
+    if tag == "loc":
+        return {(expr[1], None)}
+    if tag == "lit":
+        return set()
+    if tag == "un":
+        return _expr_atoms(expr[2])
+    if tag == "bin":
+        return _expr_atoms(expr[2]) | _expr_atoms(expr[3])
+    if tag == "if":
+        out = _expr_atoms(expr[2])
+        for c, v in expr[1]:
+            out |= _expr_atoms(c) | _expr_atoms(v)
+        return out
+    if tag == "call":
+        return set().union(*(_expr_atoms(x) for x in expr[2]))
+    raise EfsmError(f"unknown expression {expr!r}")
+
+
+_LOC = "@location"  # a's location, as a component next to its variables
+
+
+def _split(a: Efsm):
+    """
+    Parts of a for EfsmSystem.decompose(): ([(suffix, Efsm)], guards Efsm or
+    None), or None if a cannot be split from the automata it reads. Suffix
+    None is the part holding the locations.
+    """
+
+    def own(expr):
+        return {_LOC if v is None else v for aut, v in _expr_atoms(expr) if aut == a.name}
+
+    def remote(expr):
+        return {aut for aut, _ in _expr_atoms(expr) if aut != a.name}
+
+    parent = {c: c for c in [_LOC] + [v.name for v in a.variables]}
+
+    def find(c):
+        while parent[c] != c:
+            parent[c] = parent[parent[c]]
+            c = parent[c]
+        return c
+
+    def union(components):
+        components = list(components)
+        for c in components[1:]:
+            parent[find(c)] = find(components[0])
+
+    several = len(a.locations) > 1
+    loc_preds = [x for loc in a.locations for x in (loc.initial or []) + (loc.marked or [])]
+    for x in a.initial + a.marked + loc_preds:
+        if remote(x):
+            return None
+    for x in a.initial + a.marked:
+        union(own(x))
+    for x in loc_preds:
+        # With several locations, a location's predicate depends on which one it is.
+        union(own(x) | ({_LOC} if several else set()))
+
+    edges = [edge for loc in a.locations for edge in loc.edges]
+    remote_guards: Dict[str, Dict[tuple, list]] = {}
+    for edge in edges:
+        theirs = []
+        for x in edge.guard:
+            r, o = remote(x), own(x)
+            if r and o:
+                return None
+            if r:
+                theirs.append(x)
+            else:
+                union(o)
+        for var, x in edge.updates:
+            if remote(x):
+                return None
+            union({var} | own(x))
+        for e in edge.events:
+            remote_guards.setdefault(e, {})[tuple(sorted(map(repr, theirs)))] = theirs
+    if any(len(options) > 1 for options in remote_guards.values()):
+        return None
+
+    def in_part(x, root):
+        o = own(x)
+        if not o:
+            return root == find(_LOC)
+        return find(next(iter(o))) == root
+
+    def local(edge, root):
+        guard = [x for x in edge.guard if not remote(x) and in_part(x, root)]
+        updates = [(v, x) for v, x in edge.updates if find(v) == root]
+        return guard, updates
+
+    # A variable group can leave the locations only if, for every event, all
+    # edges with that event read and update it the same way.
+    changed = True
+    while changed:
+        changed = False
+        for root in {find(v.name) for v in a.variables} - {find(_LOC)}:
+            seen: Dict[str, set] = {}
+            for edge in edges:
+                guard, updates = local(edge, root)
+                for e in edge.events:
+                    seen.setdefault(e, set()).add(repr((sorted(map(repr, guard)), updates)))
+            if any(len(s) > 1 for s in seen.values()):
+                union([_LOC, root])
+                changed = True
+                break
+
+    loc_root = find(_LOC)
+    roots = [loc_root]
+    for v in a.variables:
+        if find(v.name) not in roots:
+            roots.append(find(v.name))
+
+    parts = []
+    covered = set()  # events constrained by a variable part or the guards
+    for root in roots[1:]:
+        variables = [v for v in a.variables if find(v.name) == root]
+        by_event = {}
+        for edge in edges:
+            guard, updates = local(edge, root)
+            if guard or updates:
+                for e in edge.events:
+                    by_event.setdefault(e, Edge((e,), guard, updates))
+        covered |= set(by_event)
+        # Location-level predicates reach here only with a single location
+        # (with several, they are tied to the locations above).
+        initial = a.initial + [x for loc in a.locations for x in loc.initial or []]
+        marked = a.marked + [x for loc in a.locations for x in loc.marked or []]
+        part = Efsm(
+            a.name,
+            a.kind,
+            [Location(None, initial=[], marked=[], edges=list(by_event.values()))],
+            variables,
+            set(by_event),
+            initial=[x for x in initial if in_part(x, root)],
+            marked=[x for x in marked if in_part(x, root)],
+        )
+        parts.append((",".join(v.name for v in variables), part))
+
+    guards = None
+    theirs = {e: next(iter(options.values())) for e, options in remote_guards.items()}
+    theirs = {e: g for e, g in theirs.items() if g}
+    if theirs:
+        guards = Efsm(
+            f"{a.name}.guards",
+            a.kind,
+            [Location(None, initial=[], marked=[],
+                      edges=[Edge((e,), list(g)) for e, g in theirs.items()])],
+            alphabet=set(theirs),
+        )
+        covered |= set(theirs)
+
+    def keep(preds):
+        return None if preds is None else [x for x in preds if in_part(x, loc_root)]
+
+    locations = [
+        Location(
+            loc.name,
+            keep(loc.initial),
+            keep(loc.marked),
+            [Edge(edge.events, *local(edge, loc_root), edge.target) for edge in loc.edges],
+        )
+        for loc in a.locations
+    ]
+    main = Efsm(
+        a.name,
+        a.kind,
+        locations,
+        [v for v in a.variables if find(v.name) == loc_root],
+        set(a.alphabet),
+        initial=[x for x in a.initial if in_part(x, loc_root)],
+        marked=[x for x in a.marked if in_part(x, loc_root)],
+    )
+    with_edges = {e for edge in a.locations[0].edges for e in edge.events} if a.locations else set()
+    trivial = (
+        len(locations) == 1
+        and not main.variables
+        and locations[0].initial == []
+        and locations[0].marked == []
+        and not main.initial
+        and not main.marked
+        and all(not edge.guard and not edge.updates for edge in locations[0].edges)
+        and main.alphabet <= with_edges
+        and main.alphabet <= covered
+    )
+    if not trivial:
+        parts.insert(0, (None, main))
+    return parts, guards
 
 
 def _references(a: Efsm) -> set:

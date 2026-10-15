@@ -324,3 +324,102 @@ def test_write_automaton_rejects_what_fsm_cannot_hold(tmp_path):
     h.add_state("(x)", init=True)
     with pytest.raises(error.FileFormatError, match="starts with"):
         d.write_automaton(h, str(tmp_path / "h.fsm"))
+
+
+# --- decompose() ---------------------------------------------------------------
+
+
+def decomposes_exactly(system):
+    """decompose()'s parts compose to the flat unfolding."""
+    parts = list(system.decompose().values())
+    composed = parts[0] if len(parts) == 1 else d.composition.parallel(*parts)
+    return same_language(composed, system.unfold(flat=True))
+
+
+TURN_ROOM = """
+    controllable on, off, done;
+    uncontrollable heat, cool;
+    plant Unit:
+      location Off: initial; marked; edge on goto On;
+      location On: marked; edge off goto Off;
+    end
+    plant Room:
+      disc int[0..2] T = 0;
+      disc bool reacted = true;
+      location:
+        initial; marked reacted;
+        edge heat when Unit.Off, T < 2, reacted do T := T + 1, reacted := false;
+        edge cool when Unit.On, T > 0, reacted do T := T - 1, reacted := false;
+        edge done when not reacted do reacted := true;
+    end
+"""
+
+
+def test_decompose_moves_other_automata_guards_to_a_monitor_and_splits_variables():
+    system = d.parse_cif(TURN_ROOM)
+    parts = system.decompose()
+    assert list(parts) == ["Unit", "Room.T", "Room.reacted", "Room.guards"]
+    assert {s.name for s in parts["Room.T"].states} == {"T=0", "T=1", "T=2"}
+    assert [s.marked for s in parts["Room.reacted"].states] == [True, False]
+    # The monitor tracks Unit and allows heat only when it is Off.
+    assert by_name(parts["Room.guards"]) == {
+        ("Off", "on", "On"), ("On", "off", "Off"), ("Off", "heat", "Off"), ("On", "cool", "On")
+    }
+    assert decomposes_exactly(system)
+
+
+def test_decompose_datacenter_matches_the_flat_plant():
+    system = d.read_cif(str(MODELS / "datacenter.cif"))
+    parts = system.decompose()
+    assert list(parts) == ["Load", "CRAC1", "CRAC2", "Room", "Room.guards"]
+    assert decomposes_exactly(system)
+
+
+def test_decompose_keeps_an_automaton_whole_when_a_conjunct_mixes_owners():
+    system = d.parse_cif(TURN_ROOM.replace("Unit.Off, T < 2", "(Unit.Off or T = 0), T < 2"))
+    assert list(system.decompose()) == ["Unit", "Unit+Room"]
+    assert decomposes_exactly(system)
+
+
+def test_decompose_keeps_an_automaton_whole_when_an_events_guards_differ_by_edge():
+    system = d.parse_cif("""
+        controllable a, b;
+        plant P:
+          location X: initial; marked; edge a when Q.Y goto Z;
+          location Z: marked; edge a goto X;
+        end
+        plant Q:
+          location Y: initial; marked; edge b goto W;
+          location W: marked; edge b goto Y;
+        end
+    """)
+    assert list(system.decompose()) == ["P+Q", "Q"]
+    assert decomposes_exactly(system)
+
+
+def test_decompose_ties_a_variable_to_the_locations_when_edges_differ():
+    system = d.parse_cif("""
+        controllable a, b;
+        plant P:
+          disc int[0..1] n = 0;
+          location X: initial; marked; edge a when n = 0 do n := 1 goto Z;
+          location Z: marked; edge a goto X; edge b when n = 1 do n := 0;
+        end
+    """)
+    assert list(system.decompose()) == ["P"]
+    assert decomposes_exactly(system)
+
+
+def test_decompose_keeps_the_location_part_when_it_constrains_events():
+    system = d.parse_cif("""
+        controllable a, b;
+        plant P:
+          disc int[0..2] n = 0;
+          location: initial; marked;
+            edge a when n < 2 do n := n + 1;
+            edge b;
+        end
+    """)
+    # b is only in P: dropping the location part would lose it.
+    assert list(system.decompose()) == ["P", "P.n"]
+    assert decomposes_exactly(system)
