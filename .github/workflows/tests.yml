@@ -3,11 +3,16 @@ name: Tests
 on:
   push:
     branches: [master, v2]
+    paths: ["DESops-lib/**", ".github/workflows/tests.yml"]
   pull_request:
+    paths: ["DESops-lib/**", ".github/workflows/tests.yml"]
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: DESops-lib
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +26,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+          cache-dependency-path: DESops-lib/pyproject.toml
 
       - name: Install DESops
         run: |

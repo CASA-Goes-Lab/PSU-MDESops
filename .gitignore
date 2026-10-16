@@ -73,8 +73,8 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
-docs/source/api/
+DESops-lib/docs/_build/
+DESops-lib/docs/source/api/
 
 # PyBuilder
 .pybuilder/
@@ -157,12 +157,15 @@ Examples/
 .idea/
 
 # Edisyn tmp directory
-tests/edisyn/
+DESops-lib/tests/edisyn/
 edisyn/
 
 # Bosy test directory
-tests/bosy/
+DESops-lib/tests/bosy/
 
 # temp
 temp.prism
 temp.props
+
+# Lean build output (DESops-proof; large once Mathlib is fetched)
+.lake/
