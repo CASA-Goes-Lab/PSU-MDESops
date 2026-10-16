@@ -59,3 +59,9 @@ class UnsupportedFeatureError(FileFormatError):
 class EfsmError(Exception):
     # Invalid EFSM model or unfolding (DESops.core.efsm).
     pass
+
+
+class InvalidAutomatonError(Exception):
+    """An Automaton fails the well-formedness conditions of
+    DESops-proof/spec/automaton.md (checked by DESops.verified)."""
+    pass

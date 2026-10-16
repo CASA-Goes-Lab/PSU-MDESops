@@ -1,0 +1,20 @@
+name = "DESopsProof"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["DESopsProof"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+# Mathlib's copyright-header check, off for now. Whether files get a header (and whose) is undecided.
+linter.style.header = false
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.35.0"
+
+[[lean_lib]]
+name = "DESopsProof"

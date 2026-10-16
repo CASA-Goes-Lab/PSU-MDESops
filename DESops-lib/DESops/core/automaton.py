@@ -65,6 +65,10 @@ class Automaton:
         self.probabilistic = probabilistic
         self._nondeterministic = 0
         self._incoming: Optional[List[Dict[Event_t, List[int]]]] = None
+        # Set by validate(): None, "automaton" or "dfa". Cleared by every mutating method;
+        # direct edits of init/events/Euc/Euo/marked/out after validation are unsupported
+        # (DESops-proof/spec/automaton.md, decision 7).
+        self._valid: Optional[str] = None
 
     # --- kind ---------------------------------------------------------------
 
@@ -101,6 +105,7 @@ class Automaton:
         if init:
             self.init.add(index)
         self._incoming = None
+        self._valid = None
         return index
 
     def add_states(
@@ -150,6 +155,7 @@ class Automaton:
         self.init = {new_index[i] for i in self.init if i in new_index}
         self._nondeterministic = nondeterministic
         self._incoming = None
+        self._valid = None
 
     # --- transitions ----------------------------------------------------------
 
@@ -170,6 +176,8 @@ class Automaton:
             raise ValueError("probabilistic automaton: transition needs a prob")
         if not self.probabilistic and prob is not None:
             raise ValueError("prob given, but automaton is not probabilistic")
+        if not 0 <= source < len(self.states):
+            raise IndexError(f"no state {source}")
         if not 0 <= target < len(self.states):
             raise IndexError(f"no state {target}")
 
@@ -189,6 +197,7 @@ class Automaton:
             state.prob[(event, target)] = prob
         self.events.add(event)
         self._incoming = None
+        self._valid = None
         return True
 
     def add_transitions(self, transitions: Iterable[Tuple]) -> None:
@@ -206,6 +215,7 @@ class Automaton:
             del state.out[event]
         state.prob.pop((event, target), None)
         self._incoming = None
+        self._valid = None
 
     def transitions(self) -> Iterator[Tuple[int, Event_t, int]]:
         """Every transition as (source, event, target)."""
@@ -235,6 +245,30 @@ class Automaton:
             self._incoming = incoming
         return self._incoming[x]
 
+    # --- validation -------------------------------------------------------------
+
+    def validate(self, deterministic: bool = False) -> None:
+        """
+        Check the well-formedness conditions of DESops-proof/spec/automaton.md (W1-W3, bool
+        marking, index ranges) and, if `deterministic`, determinism. Raises
+        InvalidAutomatonError naming the first failing condition.
+
+        The check is DESops.verified.check, proved with Nagini to accept exactly the valid
+        automata. The result is remembered until the next mutating method call, so validating
+        again is free.
+        """
+        if self._valid == "dfa" or (self._valid == "automaton" and not deterministic):
+            return
+        from DESops.verified.wrapper import check_or_raise
+
+        check_or_raise(self, deterministic)
+        self._valid = "dfa" if deterministic else "automaton"
+
+    @property
+    def is_validated(self) -> bool:
+        """True if validate() succeeded and nothing was modified since (through the methods)."""
+        return self._valid is not None
+
     # --- misc -----------------------------------------------------------------
 
     def copy(self) -> "Automaton":
@@ -246,6 +280,7 @@ class Automaton:
             other.states.append(new)
         other.init = set(self.init)
         other._nondeterministic = self._nondeterministic
+        other._valid = self._valid
         return other
 
     def __repr__(self):

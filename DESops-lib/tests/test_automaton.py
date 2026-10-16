@@ -72,6 +72,16 @@ def test_transition_to_missing_state_raises():
         g.add_transition(0, c, 7)
 
 
+def test_transition_from_missing_state_raises():
+    g = chain()
+    # -1 must not wrap around to the last state
+    for source in (-1, 7):
+        with pytest.raises(IndexError, match=f"no state {source}"):
+            g.add_transition(source, c, 0)
+    assert g.num_transitions == 2
+    assert c not in g.events
+
+
 def test_index_of():
     g = chain()
     assert g.index_of("x1") == 1
