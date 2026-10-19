@@ -265,7 +265,8 @@ def test_runs_without_nagini_installed():
     """The verified modules fall back to no-op contracts when nagini_contracts is missing."""
     code = (
         "import sys; sys.modules['nagini_contracts'] = None; "
-        "sys.modules['nagini_contracts.contracts'] = None\n"
+        "sys.modules['nagini_contracts.contracts'] = None; "
+        "sys.modules['nagini_contracts.obligations'] = None\n"
         "from DESops.core.automaton import Automaton\n"
         "g = Automaton(events=['a']); g.add_state('x', init=True); g.add_transition(0, 'a', 0)\n"
         "g.validate(deterministic=True); print(g.is_validated)\n"

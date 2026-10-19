@@ -43,7 +43,14 @@ else:
     _contracts.Predicate = lambda func: func
     _contracts.__all__ = _NAMES + ["Pure", "Predicate"]
 
+    # Termination obligations (check.py: Requires/Invariant(MustTerminate(...))).
+    _obligations = types.ModuleType("nagini_contracts.obligations")
+    setattr(_obligations, "MustTerminate", _noop)
+    setattr(_obligations, "__all__", ["MustTerminate"])
+
     _package = types.ModuleType("nagini_contracts")
     _package.contracts = _contracts
+    setattr(_package, "obligations", _obligations)
     sys.modules["nagini_contracts"] = _package
     sys.modules["nagini_contracts.contracts"] = _contracts
+    sys.modules["nagini_contracts.obligations"] = _obligations
