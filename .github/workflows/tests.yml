@@ -3,16 +3,16 @@ name: Tests
 on:
   push:
     branches: [master, v2]
-    paths: ["DESops-lib/**", ".github/workflows/tests.yml"]
+    paths: ["certisc-lib/**", ".github/workflows/tests.yml"]
   pull_request:
-    paths: ["DESops-lib/**", ".github/workflows/tests.yml"]
+    paths: ["certisc-lib/**", ".github/workflows/tests.yml"]
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: DESops-lib
+        working-directory: certisc-lib
     strategy:
       fail-fast: false
       matrix:
@@ -26,17 +26,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
-          cache-dependency-path: DESops-lib/pyproject.toml
+          cache-dependency-path: certisc-lib/pyproject.toml
 
-      - name: Install DESops
+      - name: Install certisc
         run: |
           python -m pip install --upgrade pip
-          # The 'dd' dependency ships no wheel and its legacy setup.py needs
-          # pkg_resources, which setuptools>=81 no longer bundles. Pre-install
-          # a compatible setuptools and build without isolation so 'dd' picks
-          # it up. See doc/scoping-report.md for details.
-          pip install "setuptools<81" wheel
-          pip install --no-build-isolation -e ".[dev]"
+          pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest

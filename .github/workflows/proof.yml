@@ -3,9 +3,9 @@ name: Proofs
 on:
   push:
     branches: [master, v2]
-    paths: ["DESops-proof/**", ".github/workflows/proof.yml"]
+    paths: ["certisc-proof/**", ".github/workflows/proof.yml"]
   pull_request:
-    paths: ["DESops-proof/**", ".github/workflows/proof.yml"]
+    paths: ["certisc-proof/**", ".github/workflows/proof.yml"]
 
 jobs:
   lean:
@@ -15,4 +15,4 @@ jobs:
       # Installs elan, fetches the Mathlib cache, and runs `lake build`.
       - uses: leanprover/lean-action@v1
         with:
-          lake-package-directory: DESops-proof
+          lake-package-directory: certisc-proof

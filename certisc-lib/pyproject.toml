@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "certisc"
+version = "0.1.0"
+description = "Certified supervisory control: discrete-event-system algorithms verified with Nagini and proved in Lean."
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["license.txt"]
+authors = [
+    { name = "Romulo Meira Goes", email = "r.meiragoes@gmail.com" },
+]
+requires-python = ">=3.11"
+# No runtime dependencies: the contract functions fall back to no-ops (src/core_aut/_contracts.py).
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+# Formal verification with Nagini (needs Java; Nagini 1.3 requires Python >= 3.12).
+verify = ["nagini>=1.3.1; python_version >= '3.12'"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["core_aut*", "ops_aut*"]
+
+# py.typed: lets Nagini (via mypy) analyse imports between the packages
+[tool.setuptools.package-data]
+core_aut = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -15,7 +15,7 @@ the math to the Lean names. Proofs get a short **Proof:** sketch in math.
 | Math | Lean |
 |---|---|
 | event set $\Sigma$ | type `α` |
-| states $X = \{0, \dots, n-1\}$ | type `Fin n` |
+| states $X = \{0, \dots, n-1\}$ | type `Fin n` (the general lemmas: any type `σ` with decidable `=`) |
 | $S \subseteq X$ (finite) | `S : Finset (Fin n)` |
 | $f : X \times \Sigma \to 2^X$ | `f : Fin n → α → Finset (Fin n)`, curried: $f(x, e)$ is `f x e` |
 | word $s \in \Sigma^*$ | `s : List α` |
@@ -39,8 +39,8 @@ compare two transition functions $f, f'$ on the same states.
 
 namespace DESopsProof
 
-/- Throughout: `α` is the event type $\Sigma$ and `n` the number of states. -/
-variable {α : Type} {n : ℕ}
+/- Throughout: `α` is the event type $\Sigma$ and `σ` the state type (`Fin n` for an `Automaton`). -/
+variable {α : Type} {σ : Type} [DecidableEq σ]
 
 /-! ## Successor sets -/
 
@@ -49,7 +49,7 @@ $$\delta_f(S, e) = \bigcup_{x \in S} f(x, e),$$
 the states reached from $S$ by the event $e$.
 
 **Lean:** `step f S e = S.biUnion (fun x => f x e)`. -/
-def step (f : Fin n → α → Finset (Fin n)) (S : Finset (Fin n)) (e : α) : Finset (Fin n) :=
+def step (f : σ → α → Finset (σ)) (S : Finset (σ)) (e : α) : Finset (σ) :=
   S.biUnion (fun x => f x e)
 
 /-- The extended transition function $f^* : 2^X \times \Sigma^* \to 2^X$, the states reached
@@ -60,30 +60,30 @@ The spec defines it from the right, $f^*(S, s \cdot e) = \delta_f(f^*(S, s), e)$
 by `run_append` below. Recursion on the head is what Lean's `List` gives directly.
 
 **Lean:** `run f S s` is $f^*(S, s)$; the two equations are `run_nil` and `run_cons`. -/
-def run (f : Fin n → α → Finset (Fin n)) : Finset (Fin n) → List α → Finset (Fin n)
+def run (f : σ → α → Finset (σ)) : Finset (σ) → List α → Finset (σ)
   | S, [] => S
   | S, e :: s => run f (step f S e) s
 
 section run
 
-variable (f : Fin n → α → Finset (Fin n))
+variable (f : σ → α → Finset (σ))
 
 /-- $f^*(S, \varepsilon) = S$. Holds by definition (`rfl`). -/
-@[simp] theorem run_nil (S : Finset (Fin n)) : run f S [] = S := rfl
+@[simp] theorem run_nil (S : Finset (σ)) : run f S [] = S := rfl
 
 /-- $f^*(S, e \cdot s) = f^*(\delta_f(S, e), s)$. Holds by definition (`rfl`). -/
-@[simp] theorem run_cons (S : Finset (Fin n)) (e : α) (s : List α) :
+@[simp] theorem run_cons (S : Finset (σ)) (e : α) (s : List α) :
     run f S (e :: s) = run f (step f S e) s := rfl
 
 /-- $y \in \delta_f(S, e) \iff \exists x \in S,\ y \in f(x, e)$.
 
 **Proof:** unfold the union (`simp [step]`). -/
-theorem mem_step {S : Finset (Fin n)} {e : α} {y : Fin n} :
+theorem mem_step {S : Finset (σ)} {e : α} {y : σ} :
     y ∈ step f S e ↔ ∃ x ∈ S, y ∈ f x e := by
   simp [step]
 
 /-- $\delta_f(\emptyset, e) = \emptyset$: a union over no states is empty. -/
-@[simp] theorem step_empty (e : α) : step f (∅ : Finset (Fin n)) e = ∅ := by
+@[simp] theorem step_empty (e : α) : step f (∅ : Finset (σ)) e = ∅ := by
   simp [step]
 
 /-- $f^*(\emptyset, s) = \emptyset$ for every word $s$.
@@ -91,7 +91,7 @@ theorem mem_step {S : Finset (Fin n)} {e : α} {y : Fin n} :
 **Proof:** induction on $s$. Base: $f^*(\emptyset, \varepsilon) = \emptyset$.
 Step: $f^*(\emptyset, e \cdot s) = f^*(\delta_f(\emptyset, e), s) = f^*(\emptyset, s) = \emptyset$
 by `step_empty` and the induction hypothesis. -/
-@[simp] theorem run_empty (s : List α) : run f (∅ : Finset (Fin n)) s = ∅ := by
+@[simp] theorem run_empty (s : List α) : run f (∅ : Finset (σ)) s = ∅ := by
   induction s with
   | nil => rfl
   | cons e s ih => simp [ih]
@@ -100,7 +100,7 @@ by `step_empty` and the induction hypothesis. -/
 
 **Proof:** induction on $s$, for every $S$ (`generalizing S`), since the step case changes $S$
 to $\delta_f(S, e)$. -/
-theorem run_append (S : Finset (Fin n)) (s t : List α) :
+theorem run_append (S : Finset (σ)) (s t : List α) :
     run f S (s ++ t) = run f (run f S s) t := by
   induction s generalizing S with
   | nil => rfl
@@ -111,7 +111,7 @@ $$f^*(S, s \cdot t) \neq \emptyset \implies f^*(S, s) \neq \emptyset.$$
 
 **Proof:** by contradiction. If $f^*(S, s) = \emptyset$, then
 $f^*(S, s \cdot t) = f^*(\emptyset, t) = \emptyset$ (`run_append`, `run_empty`). -/
-theorem run_nonempty_of_append {S : Finset (Fin n)} {s t : List α}
+theorem run_nonempty_of_append {S : Finset (σ)} {s t : List α}
     (h : (run f S (s ++ t)).Nonempty) : (run f S s).Nonempty := by
   rw [run_append] at h
   rw [Finset.nonempty_iff_ne_empty]
@@ -129,7 +129,7 @@ For any $f$ and set of initial states $X_0$ (not necessarily a well-formed autom
 $$L(f, X_0) = \{\, s \in \Sigma^* \mid f^*(X_0, s) \neq \emptyset \,\}.$$
 
 **Lean:** `gen f X0`. -/
-def gen (f : Fin n → α → Finset (Fin n)) (X0 : Finset (Fin n)) : Language α :=
+def gen (f : σ → α → Finset (σ)) (X0 : Finset (σ)) : Language α :=
   {s | (run f X0 s).Nonempty}
 
 /-- Marked language: the words that lead from $X_0$ to some marked state,
@@ -137,7 +137,7 @@ $$L_m(f, X_0, X_m) = \{\, s \in \Sigma^* \mid f^*(X_0, s) \cap X_m \neq \emptyse
 
 **Lean:** `mkd f X0 m`, with $X_m = \{x \mid$ `m x = true` $\}$; the intersection is written as
 $\exists y \in f^*(X_0, s),\ y \in X_m$. -/
-def mkd (f : Fin n → α → Finset (Fin n)) (X0 : Finset (Fin n)) (m : Fin n → Bool) :
+def mkd (f : σ → α → Finset (σ)) (X0 : Finset (σ)) (m : σ → Bool) :
     Language α :=
   {s | ∃ y ∈ run f X0 s, m y = true}
 
@@ -147,16 +147,16 @@ $$Ac(f, X_0) = \bigcup_{s \in \Sigma^*} f^*(X_0, s)
 
 **Lean:** `reach f X0`. It is a `Set`, not a `Finset`, because it is defined by a quantifier over
 all words. -/
-def reach (f : Fin n → α → Finset (Fin n)) (X0 : Finset (Fin n)) : Set (Fin n) :=
+def reach (f : σ → α → Finset (σ)) (X0 : Finset (σ)) : Set (σ) :=
   {y | ∃ s, y ∈ run f X0 s}
 
 /-- $s \in L(f, X_0) \iff f^*(X_0, s) \neq \emptyset$. True by definition (`Iff.rfl`). -/
-theorem mem_gen {f : Fin n → α → Finset (Fin n)} {X0 : Finset (Fin n)} {s : List α} :
+theorem mem_gen {f : σ → α → Finset (σ)} {X0 : Finset (σ)} {s : List α} :
     s ∈ gen f X0 ↔ (run f X0 s).Nonempty := Iff.rfl
 
 /-- $s \in L_m(f, X_0, X_m) \iff \exists y \in f^*(X_0, s),\ y \in X_m$.
 True by definition (`Iff.rfl`). -/
-theorem mem_mkd {f : Fin n → α → Finset (Fin n)} {X0 : Finset (Fin n)} {m : Fin n → Bool}
+theorem mem_mkd {f : σ → α → Finset (σ)} {X0 : Finset (σ)} {m : σ → Bool}
     {s : List α} : s ∈ mkd f X0 m ↔ ∃ y ∈ run f X0 s, m y = true := Iff.rfl
 
 /-! ## Automaton -/
@@ -303,7 +303,7 @@ theorem mem_E_of_mem_L {s : List α} (hs : s ∈ G.L) : ∀ e ∈ s, e ∈ G.E :
 **Proof:** take $a, b \in \delta_f(S, e)$, say $a \in f(x, e)$ and $b \in f(x', e)$ with
 $x, x' \in S$. Since $\lvert S \rvert \le 1$, $x = x'$; since $\lvert f(x, e) \rvert \le 1$, $a = b$.
 (`Finset.card_le_one`: $\lvert S \rvert \le 1 \iff$ any two elements of $S$ are equal.) -/
-theorem card_step_le_one (f : Fin n → α → Finset (Fin n)) {S : Finset (Fin n)} {e : α}
+theorem card_step_le_one (f : σ → α → Finset (σ)) {S : Finset (σ)} {e : α}
     (hS : S.card ≤ 1) (hf : ∀ x, (f x e).card ≤ 1) : (step f S e).card ≤ 1 := by
   rw [Finset.card_le_one] at hS ⊢
   intro a ha b hb
@@ -316,8 +316,8 @@ theorem card_step_le_one (f : Fin n → α → Finset (Fin n)) {S : Finset (Fin 
 $\lvert S \rvert \le 1 \implies \lvert f^*(S, s) \rvert \le 1$.
 
 **Proof:** induction on $s$, for every $S$, applying `card_step_le_one` at each step. -/
-theorem card_run_le_one (f : Fin n → α → Finset (Fin n)) (hf : ∀ x e, (f x e).card ≤ 1) :
-    ∀ (S : Finset (Fin n)) (s : List α), S.card ≤ 1 → (run f S s).card ≤ 1 := by
+theorem card_run_le_one (f : σ → α → Finset (σ)) (hf : ∀ x e, (f x e).card ≤ 1) :
+    ∀ (S : Finset (σ)) (s : List α), S.card ≤ 1 → (run f S s).card ≤ 1 := by
   intro S s
   induction s generalizing S with
   | nil => exact id
@@ -348,7 +348,7 @@ $$f'^*(X_0, s \cdot e) = \bigcup_{x \in f'^*(X_0, s)} f'(x, e)
   = \bigcup_{x \in f^*(X_0, s)} f(x, e) = f^*(X_0, s \cdot e),$$
 where the third equality holds because every $x \in f^*(X_0, s)$ is reachable (by the word $s$).
 `Finset.biUnion_congr` is "equal index sets and equal terms give equal unions". -/
-theorem run_congr_reach {f f' : Fin n → α → Finset (Fin n)} {X0 : Finset (Fin n)}
+theorem run_congr_reach {f f' : σ → α → Finset (σ)} {X0 : Finset (σ)}
     (hf : ∀ x ∈ reach f X0, ∀ e, f' x e = f x e) (s : List α) :
     run f' X0 s = run f X0 s := by
   induction s using List.reverseRecOn with

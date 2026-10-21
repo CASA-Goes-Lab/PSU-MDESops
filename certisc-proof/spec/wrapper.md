@@ -1,6 +1,10 @@
 # Spec: the wrapper around verified code
 
-Status: **implemented 2026-10-16** in `DESops-lib/DESops/verified/`. The checker verifies with Nagini (`nagini DESops/verified/check.py`, about 15 s).
+**Layout B (2026-10-21):** `encode` writes each state's transitions sorted by event number (ties by target). `check_automaton` verifies it (`sorted_ok`, error code 8, checked right after code 2), so a validated automaton guarantees it.
+
+Status: **implemented 2026-10-16** in `legacy/DESops-lib/DESops/verified/`. The checker verifies with Nagini (`nagini DESops/verified/check.py`, about 15 s).
+
+**Moved 2026-10-20:** the verified code now lives in the standalone package `certisc` (`certisc-lib/src/`, top-level packages `core_aut` (checker, encoding, wrapper) and `ops_aut` (parallel)). It no longer depends on the old library. The old library, including its own copy of `DESops/verified/` and `Automaton.validate()`, is in `legacy/DESops-lib/`. In `certisc`, the entry point is `check_or_raise(G, deterministic=False)`, applied to `certisc.Automaton`, a plain data container with the same fields as the old class. It has no `_valid` flag. Section 8 lists the current files. The rest of this note describes the design as it was implemented in the old library.
 
 Every verified operation (`validate`, later `parallel`, ...) runs inside the same wrapper. The
 wrapper moves an `Automaton` into plain lists that Nagini can reason about, calls the verified
@@ -270,23 +274,31 @@ condition fails.
 ## 8. Files
 
 ```
-DESops-lib/DESops/verified/
-├── __init__.py        how to verify; installs the contract fallbacks
-├── _contracts.py      runtime only: no-op stand-ins if Nagini is not installed, and a no-op
-│                      `Ensures` if it is (the real one is @overload-only and raises when called)
-├── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
-├── encoding.py        trusted: event table, encode, decode
-└── wrapper.py         trusted: encode, run check_automaton, raise InvalidAutomatonError
+certisc-lib/src/
+├── core_aut/                  public layer
+│   ├── __init__.py            exports Automaton, State, InvalidAutomatonError, check_or_raise
+│   ├── automaton.py           trusted: Automaton / State, a plain data container (no checks)
+│   ├── encoding.py            trusted: event table, encode (blocks sorted by event), decode
+│   ├── error.py               InvalidAutomatonError
+│   ├── wrapper.py             trusted: encode, run check_automaton, raise InvalidAutomatonError
+│   ├── _strip.py              trusted: removes contracts and lemma calls before running
+│   └── verified_core/         internal
+│       ├── __init__.py        installs the contract fallbacks first
+│       ├── _contracts.py      runtime only: no-op stand-ins if Nagini is not installed, and a
+│       │                      no-op `Ensures` if it is (the real one raises when called)
+│       └── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
+└── ops_aut/                   public layer: next_states (basic_ops.py)
+    └── verified_ops/          internal
+        ├── basic_ops.py       VERIFIED: next_states
+        ├── parallel.py        VERIFIED (in progress): parallel composition core
+        └── parallel_check.py  VERIFIED: checker for the parallel output (soundness)
 ```
 
-- **In `core/automaton.py`:** `Automaton.validate(deterministic=False)`, the `is_validated`
-  property, and the flag `_valid` (`None` / `"automaton"` / `"dfa"`). Every mutating method clears
-  the flag; `copy()` keeps it.
-- **In `error.py`:** `InvalidAutomatonError`.
-- **Tests:** `tests/test_verified.py`, 24 tests:
+- **Tests:** `certisc-lib/tests/core_aut/test_check.py`, 16 tests:
   - one rejection per condition;
   - the encoding example of section 4;
-  - the flag;
   - 200 random round trips;
   - 500 random automata compared with an independent reading of the spec;
   - a run without Nagini.
+- The old library's version, with `Automaton.validate()`, the `_valid` flag and its tests
+  (`tests/test_verified.py`, 24 tests), is in `legacy/DESops-lib/`.

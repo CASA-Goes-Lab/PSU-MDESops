@@ -9,13 +9,13 @@ DESops is installed with a plain Python virtual environment and `pip` — no ext
 ### Step 1: Clone Repository
 
     $ git clone git@github.com:CASA-Goes-Lab/PSU-MDESops.git
-    $ cd PSU-MDESops/DESops-lib
+    $ cd PSU-MDESops/legacy/DESops-lib
 
-The library lives in the `DESops-lib/` folder of the repository; the commands below are run from there.
+The library lives in the `legacy/DESops-lib/` folder of the repository; the commands below are run from there.
 To install only the library without cloning (no `-e`, so not editable), pip can install from that folder directly:
 
     $ pip install "setuptools<81" wheel
-    $ pip install --no-build-isolation "git+https://github.com/CASA-Goes-Lab/PSU-MDESops.git@v2#subdirectory=DESops-lib"
+    $ pip install --no-build-isolation "git+https://github.com/CASA-Goes-Lab/PSU-MDESops.git@v2#subdirectory=legacy/DESops-lib"
 
 ### Step 2: Create and activate a virtual environment
 
@@ -116,7 +116,7 @@ This repository employs [pytest](https://docs.pytest.org/en/latest/) to write te
 All tests are located in `tests` directory, and must be written with the formats of
 `pytest`.
 
-Run the tests from `DESops-lib/` (some tests open model files by paths relative to it):
+Run the tests from `legacy/DESops-lib/` (some tests open model files by paths relative to it):
 ```
 $ pytest
 ```

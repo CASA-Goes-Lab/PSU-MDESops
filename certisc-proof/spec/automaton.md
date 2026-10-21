@@ -2,8 +2,13 @@
 
 Status: **agreed 2026-10-16** (decisions 1–8). §3–§4 are formalized in Lean (§7). The wrapper and the Nagini precondition are in [wrapper.md](wrapper.md).
 
-Target class: the new `Automaton` (`DESops-lib/DESops/core/automaton.py`). The old
+Target class: the new `Automaton` (`legacy/DESops-lib/DESops/core/automaton.py`). The old
 `DFA`/`NFA` classes are not covered.
+
+**Moved 2026-10-20:** that class is now in `legacy/DESops-lib/`. The standalone package
+`certisc` (`certisc-lib/src/core_aut/automaton.py`) has an `Automaton` with the same fields
+(`states`, `events`, `Euc`, `Euo`, `init`, `State.marked`, `State.out`). The definitions below
+apply to it unchanged. The `_valid` flag (decision 7) exists only in the legacy class.
 
 ## 1. Decisions
 
