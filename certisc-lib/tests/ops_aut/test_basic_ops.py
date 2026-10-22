@@ -70,3 +70,24 @@ def test_public_next_states():
         assert False, "state out of range must raise"
     except ValueError:
         pass
+
+
+def test_library_runs_without_nagini_installed():
+    """The whole public API imports and runs when nagini_contracts is missing (as on CI, which
+    installs only the `dev` extra). Guards the runtime stand-ins in verified_core/_contracts.py,
+    e.g. PSeq, which verified code uses in type annotations."""
+    import subprocess
+    import sys
+    code = (
+        "import sys; sys.modules['nagini_contracts'] = None; "
+        "sys.modules['nagini_contracts.contracts'] = None; "
+        "sys.modules['nagini_contracts.obligations'] = None\n"
+        "from core_aut import Automaton\n"
+        "from ops_aut import next_states\n"
+        "g = Automaton(events=['a']); g.add_state('x', init=True); g.add_state('y')\n"
+        "g.add_transition(0, 'a', 1)\n"
+        "print(next_states(g, [0], 'a'))\n"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "[1]"

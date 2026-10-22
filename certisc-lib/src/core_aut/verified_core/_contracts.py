@@ -41,7 +41,21 @@ else:
         setattr(_contracts, _name, _noop)
     _contracts.Pure = lambda func: func
     _contracts.Predicate = lambda func: func
-    _contracts.__all__ = _NAMES + ["Pure", "Predicate"]
+
+    # Nagini's value types (PSeq, PSet, PMultiset). They appear in type annotations, which
+    # Python evaluates when a function is defined (e.g. `o: PSeq[int]`), and as calls inside
+    # contracts (e.g. `PSeq(x)`), so each needs to be subscriptable and callable.
+    class _ValueType:
+        def __class_getitem__(cls, item):
+            return cls
+
+        def __init__(self, *args):
+            pass
+
+    _TYPES = ["PSeq", "PSet", "PMultiset"]
+    for _name in _TYPES:
+        setattr(_contracts, _name, type(_name, (_ValueType,), {}))
+    _contracts.__all__ = _NAMES + ["Pure", "Predicate"] + _TYPES
 
     # Termination obligations (check.py: Requires/Invariant(MustTerminate(...))).
     _obligations = types.ModuleType("nagini_contracts.obligations")
