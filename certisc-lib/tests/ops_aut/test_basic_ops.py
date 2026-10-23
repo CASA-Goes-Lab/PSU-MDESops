@@ -10,7 +10,7 @@ import types
 from pathlib import Path
 
 import ops_aut.verified_ops
-from core_aut.encoding import encode, event_table
+from core_aut.trusted.encoding import encode, event_table
 
 from tests.ops_aut.test_parallel import _random, _Strip
 

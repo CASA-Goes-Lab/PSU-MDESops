@@ -278,15 +278,19 @@ certisc-lib/src/
 ├── core_aut/                  public layer
 │   ├── __init__.py            exports Automaton, State, InvalidAutomatonError, check_or_raise
 │   ├── automaton.py           trusted: Automaton / State, a plain data container (no checks)
-│   ├── encoding.py            trusted: event table, encode (blocks sorted by event), decode
-│   ├── error.py               InvalidAutomatonError
-│   ├── wrapper.py             trusted: encode, run check_automaton, raise InvalidAutomatonError
-│   ├── _strip.py              trusted: removes contracts and lemma calls before running
+│   ├── valid.py               ValidAutomaton: read-only, made by validate() after the check
+│   ├── py.typed               marker so Nagini (via mypy) reads core_aut when imported
+│   ├── trusted/               trusted helpers
+│   │   ├── encoding.py        event table, encode (blocks sorted by event), decode
+│   │   ├── error.py           InvalidAutomatonError
+│   │   ├── wrapper.py         encode, run check_automaton, raise InvalidAutomatonError
+│   │   └── _strip.py          removes contracts and lemma calls before running
 │   └── verified_core/         internal
 │       ├── __init__.py        installs the contract fallbacks first
 │       ├── _contracts.py      runtime only: no-op stand-ins if Nagini is not installed, and a
 │       │                      no-op `Ensures` if it is (the real one raises when called)
 │       └── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
+├── io_aut/                    trusted readers/writers: read_aut, write_aut (JSON), read_fsm
 └── ops_aut/                   public layer: next_states (basic_ops.py)
     └── verified_ops/          internal
         ├── basic_ops.py       VERIFIED: next_states

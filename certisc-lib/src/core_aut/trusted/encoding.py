@@ -8,7 +8,7 @@ Not verified. Kept to plain copying so it can be checked by reading, and tested 
 from typing import Any, Dict, Iterable, List, Optional
 
 from core_aut.automaton import Automaton
-from core_aut.error import InvalidAutomatonError
+from core_aut.trusted.error import InvalidAutomatonError
 
 
 class Encoded:

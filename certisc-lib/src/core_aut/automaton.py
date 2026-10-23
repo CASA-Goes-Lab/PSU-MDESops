@@ -2,7 +2,7 @@
 Automaton: a plain container for G = (X, E, delta, X0, Xm) plus Euc and Euo.
 
 Trusted, not verified. It only holds data and checks nothing; whether an automaton is valid is
-decided by the verified checker (core_aut.wrapper.check_or_raise). Fields, as in
+decided by the verified checker (core_aut.trusted.wrapper.check_or_raise). Fields, as in
 certisc-proof/spec/automaton.md:
 
 - X      -> self.states: list[State]; a state is identified by its index.

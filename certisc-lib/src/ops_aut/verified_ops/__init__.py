@@ -5,7 +5,7 @@ Nagini-verified operations (internal; users call ops_aut's public functions).
 - parallel.py        verified (in progress): the parallel composition core
 - parallel_check.py  verified: checker for the parallel core's output (soundness)
 
-All work on core_aut's encoding (core_aut/encoding.py). Verify, from certisc-lib/
+All work on core_aut's encoding (core_aut/trusted/encoding.py). Verify, from certisc-lib/
 (Python >= 3.12, `verify` extra, Java):
 
     nagini src/ops_aut/verified_ops/basic_ops.py

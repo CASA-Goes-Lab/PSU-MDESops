@@ -32,7 +32,7 @@ Python. What is *not* proved is listed in §6.
 ## 2. What the verified code sees: the encoding
 
 Users work with `Automaton` objects (`core_aut/automaton.py`). Before verified code runs, the
-trusted function `encode` (`core_aut/encoding.py`) copies the automaton into plain lists:
+trusted function `encode` (`core_aut/trusted/encoding.py`) copies the automaton into plain lists:
 
 | List | Meaning |
 |---|---|
@@ -44,6 +44,10 @@ trusted function `encode` (`core_aut/encoding.py`) copies the automaton into pla
 State x owns the positions `block(x) = [start[x], start[x+1])`. Position k is the transition
 `x --evt[k]--> dst[k]`. Within each block the transitions are **sorted by event**, so the
 transitions of one state on one event are consecutive.
+
+`encode` does the sorting, and `encode` is trusted. But the sorting is not *trusted*: the verified
+checker re-checks it (condition 8 in §3), so a sorting bug in `encode` would be reported as an
+invalid automaton, never passed on to the verified operations.
 
 Notation used below: `x --e-->_k y` means "position k is in `block(x)`, `evt[k] = e`,
 `dst[k] = y`", i.e. the transition `x --e--> y`.
@@ -82,8 +86,12 @@ Together these define `valid_automaton(…, deterministic)` in `check.py`.
 
 ### Why it matters
 
-Every verified operation takes "the automaton is valid" as a **precondition**. `check_or_raise`
-establishes it, so no verified operation ever runs on malformed input. And once an automaton
+Every verified operation takes "the automaton is valid" as a **precondition**. `validate(G)`
+establishes it once and returns a read-only **`ValidAutomaton`** (`core_aut/valid.py`): the
+checked encoding, stored as tuples so it cannot change afterwards. Operations take it and do not
+check again, and "valid" cannot go stale. The readers (`io_aut.read_aut`, `read_fsm`) return a
+`ValidAutomaton` too: they are trusted code that only builds the automaton, and validity always
+comes from the verified checker. So no verified operation ever runs on malformed input. And once an automaton
 passes, the Lean theorems about well-formed automata apply to it:
 - L is prefix-closed (`L_of_isPrefix`);
 - Lm ⊆ L (`Lm_le_L`);
@@ -191,9 +199,11 @@ Each verified file opens with a glossary of the notation (`Requires`, `Ensures`,
 
 | Piece | Why it is trusted | How it is checked instead |
 |---|---|---|
-| `encode` / `decode` (`core_aut/encoding.py`) | plain copying between `Automaton` and lists | round-trip tests; sortedness test |
+| `encode` / `decode` (`core_aut/trusted/encoding.py`) | plain copying between `Automaton` and lists | round-trip tests; sortedness test |
 | `_strip.py` | removes contracts and lemma calls before running | only removes statements with no runtime effect; tests compare results |
-| the public layer (`check_or_raise`, `ops_aut.next_states`) | glue: validate, encode, call, translate back | tests against direct computation |
+| the public layer (`validate`, `check_or_raise`, `ops_aut.next_states`) | glue: validate, encode, call, translate back | tests against direct computation |
+| `ValidAutomaton` (`core_aut/valid.py`) | read-only by construction (tuples, no setters); made only by `validate` and the readers | tests that it cannot be modified or created directly |
+| the readers (`io_aut`) | parse files and build an `Automaton` | validity is decided by the verified checker afterwards; round-trip and format-error tests |
 | the hand check Lean ↔ Nagini | definitions in two languages | written out in `certisc-proof/spec/`, reviewed by a person |
 | Nagini, Viper, Z3 | the verifier itself | standard tools |
 | the Lean kernel and Mathlib | the proof checker | standard tools |
@@ -204,7 +214,7 @@ From `certisc-lib/`, with the `verify` extra (Python ≥ 3.12, Java):
 
     nagini src/core_aut/verified_core/check.py         # Verification successful, ~18 s
     nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~25–31 s
-    pytest                                             # 24 passed
+    pytest                                             # 38 passed
 
 From `certisc-proof/`:
 

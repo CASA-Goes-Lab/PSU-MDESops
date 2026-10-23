@@ -18,7 +18,7 @@ from pathlib import Path
 
 import ops_aut.verified_ops
 from core_aut import Automaton
-from core_aut.encoding import encode, event_table
+from core_aut.trusted.encoding import encode, event_table
 
 CORE = Path(ops_aut.verified_ops.__file__).parent / "parallel.py"
 CONTRACTS = {"Requires", "Ensures", "Invariant", "Assert", "Assume", "Fold", "Unfold", "Decreases"}

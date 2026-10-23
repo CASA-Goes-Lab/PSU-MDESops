@@ -14,7 +14,7 @@ import pytest
 
 from core_aut import Automaton, InvalidAutomatonError, check_or_raise
 from core_aut.verified_core.check import check_automaton
-from core_aut.encoding import decode, encode, event_table
+from core_aut.trusted.encoding import decode, encode, event_table
 
 
 def chain():
