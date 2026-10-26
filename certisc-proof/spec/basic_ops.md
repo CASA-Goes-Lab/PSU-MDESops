@@ -88,3 +88,80 @@ The two searches use `block_sorted` (pairwise order in a block). `block_of` gets
 `sorted_ok`. Each step method asserts the quantified body of its postcondition explicitly: Nagini
 does not re-establish a quantified function over a list that was just written (see
 `doc/wip/parallel/README.md`, lessons 4–6).
+
+## 2. `active_events`: the events enabled at a set of states
+
+Status: **verified 2026-10-23** (same file, Nagini; the whole file takes about 25–27 s).
+
+**Math / Lean.**
+
+    Σ_f(S) = { e | δ_f(S, e) ≠ ∅ }                          Lean: active f S   (Automaton.lean)
+    e ∈ active f S  ⟺  ∃ x ∈ S, f(x, e) ≠ ∅                 Lean: mem_active
+    active G.f S ⊆ E   (for a valid automaton, by W1)        Lean: Automaton.active_subset_E
+
+New in Lean: the definition and these two lemmas, about 20 lines. `lake build` passes, with only
+the standard axioms.
+
+**Python.**
+
+    active_events(n, m, start, evt, dst, in_E, S, emark, out, src, via)
+
+| Input | Meaning | Precondition |
+|---|---|---|
+| automaton | as for `next_states` | `input_ok` (blocks, sorted, transitions) |
+| `S` | list of state indices (repeats allowed) | `∀ j: S[j] ∈ [0,n)` |
+| `emark` | one entry per **event** number | `|emark| = m`, all −1 |
+| `out`, `src`, `via` | outputs | empty |
+
+`emark` is a list over events, not a dict. Nagini compares dict keys as objects, so it cannot
+prove `evt[t] in pos` from `evt[t] == e` and `e in pos`; list indices compare by value. Its cost
+is m, the size of the alphabet, per call, independent of n. The public `ops_aut.active_events`
+allocates it.
+
+| Postcondition | Math |
+|---|---|
+| in range, no duplicates (`marks_ok`) | `∀ i: out[i] ∈ [0,m) ∧ emark[out[i]] = i`; `∀ e: emark[e] ≠ −1 → out[emark[e]] = e` |
+| sound | `∀ i: ev_at(src[i], via[i], out[i])`: `via[i] ∈ block(S[src[i]])` and `evt[via[i]] = out[i]` |
+| complete | `∀ j ∈ [0,|S|), ∀ k ∈ block(S[j]): emark[evt[k]] ≥ 0` |
+
+**Match with Lean** (checked by hand). With the encoding, `f(x, e) ≠ ∅` ⟺ some `k ∈ block(x)`
+has `evt[k] = e`:
+- *sound* gives ⊆ (witness `x = S[src[i]]`);
+- *complete* gives ⊇ (`emark[e] ≥ 0` ⟺ e is an entry of `out`, by `marks_ok`).
+
+So the entries of `out` are exactly `active f S`.
+
+**Algorithm** (the scalability choices of `next_states`). For each state of S, the block is
+sorted by event. The loop reads the first transition of each run of one event, adds the event if
+new (`visit_event`), and jumps past the run with the verified `upper_bound`.
+
+**Proof structure.**
+- Outer loop (`active_events`): calls `ev_scan(j)` for each state, then `ev_next_j`.
+- `ev_scan(j)` covers one block, with the invariants `marks_ok`, `ev_sound`, and
+  `ev_complete_upto(j, k)` ("the event of every transition of S[0 … j−1], and of S[j] before k,
+  is marked").
+- Lemmas:
+  - `block_events` (the block is valid and sorted, and its events are `< m`);
+  - `ev_enter` (positions before the block are not S[j]'s);
+  - `ev_run` (a run found by `upper_bound` has a single event, now marked);
+  - `ev_next_j`.
+
+**What it took** (recorded in `doc/logs/formal-verification.md`):
+- the dict → event-list change;
+- `ev_at`, a single function for "transition k of S[j] is on event e", to match terms;
+- splitting the inner loop into `ev_scan`;
+- `block_events`, so the inner loop does not carry `input_ok`: the slim version cut `ev_scan`
+  from 201 s to a few seconds.
+
+**Speed** (contracts stripped, 100,000 states, 20 events, ms per call):
+
+| deg | \|S\| | plain Python (set comprehension) | verified |
+|---:|---:|---:|---:|
+| 3 | 1,000 | 0.14 | 1.0 |
+| 3 | 50,000 | 7.1 | 54 |
+| 30 | 1,000 | 0.71 | 7.0 |
+| 30 | 50,000 | 35 | 340 |
+
+7–10× slower than a C-level set comprehension: each run costs a call to `visit_event` and
+`upper_bound` (Python loops). Typical use is small sets (one state, a supervisor's estimate),
+where both take about a millisecond or less.

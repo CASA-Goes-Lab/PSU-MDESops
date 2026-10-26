@@ -91,3 +91,36 @@ def test_library_runs_without_nagini_installed():
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
     assert out.stdout.strip() == "[1]"
+
+
+def test_active_events_verified_core():
+    rng = random.Random(10)
+    for trial in range(300):
+        events = rng.sample(["a", "b", "c", "d"], rng.randint(1, 4))
+        g = _random(rng.randint(1, 8), events, rng)
+        table = event_table([g])
+        enc = encode(g, table)
+        S = [rng.randrange(enc.n) for _ in range(rng.randint(0, enc.n + 2))]   # may repeat
+        emark, out, src, via = [-1] * enc.m, [], [], []
+        ops.active_events(enc.n, enc.m, enc.start, enc.evt, enc.dst, enc.in_E, S, emark,
+                          out, src, via)
+        expected = {table[e] for x in S for e in g.states[x].out}
+        assert set(out) == expected and len(out) == len(expected), trial
+        for i, e in enumerate(out):              # witnesses and marks
+            x, k = S[src[i]], via[i]
+            assert enc.start[x] <= k < enc.start[x + 1] and enc.evt[k] == e and emark[e] == i
+        assert all(emark[e] == -1 for e in range(enc.m) if e not in expected)
+
+
+def test_public_active_events():
+    from ops_aut import active_events
+    rng = random.Random(11)
+    for trial in range(200):
+        events = rng.sample(["a", "b", "c"], rng.randint(1, 3))
+        g = _random(rng.randint(1, 8), events, rng)
+        S = [rng.randrange(g.num_states) for _ in range(rng.randint(0, 5))]
+        expected = {e for x in S for e in g.states[x].out}
+        got = active_events(g, S)
+        assert set(got) == expected and len(got) == len(expected), trial
+        got2, sources = active_events(g, S, witnesses=True)
+        assert got2 == got and all(x in S and e in g.states[x].out for e, x in zip(got, sources))

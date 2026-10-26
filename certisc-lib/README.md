@@ -8,7 +8,7 @@ Certified supervisory control for discrete event systems. The Python code is ver
         trusted/                 trusted helpers: encoding, wrapper, _strip, error
         verified_core/           Nagini-verified implementations (internal): check.py
     src/io_aut/                  public: read_aut, write_aut (JSON), read_fsm (DESUMA import)
-    src/ops_aut/                 public: next_states
+    src/ops_aut/                 public: next_states, active_events
         verified_ops/            Nagini-verified implementations (internal):
                                  basic_ops.py, parallel.py (in progress), parallel_check.py
     tests/                       one folder per package
@@ -72,7 +72,7 @@ next_states(V, [0], "a")                 # [1], without checking again
 
 From `certisc-lib/`:
 
-    $ pytest                                              # 38 passed
+    $ pytest                                              # 42 passed
     $ nagini src/core_aut/verified_core/check.py          # about 20 s
     $ nagini src/ops_aut/verified_ops/basic_ops.py        # about 30 s
     $ nagini src/ops_aut/verified_ops/parallel.py         # about 30 s

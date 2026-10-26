@@ -48,3 +48,31 @@ def next_states(G: Union[ValidAutomaton, Automaton], states: Iterable[int], even
     if witnesses:
         return out, [S[j] for j in src]
     return out
+
+
+def active_events(G: Union[ValidAutomaton, Automaton], states: Iterable[int], *,
+                  witnesses: bool = False,
+                  backend: str = "verified") -> Union[List[Any], Tuple[List[Any], List[int]]]:
+    """The events enabled at some state of `states` (event labels), each once.
+
+    With witnesses=True, also a list `sources`: event events[i] is enabled at the state
+    sources[i] (a state of `states`).
+
+    Raises InvalidAutomatonError if G is not a valid automaton, ValueError for a state index
+    out of range or an unknown backend."""
+    if backend not in _BACKENDS:
+        raise ValueError(f"unknown backend {backend!r}; available: {_BACKENDS}")
+    V = G if isinstance(G, ValidAutomaton) else validate(G)
+    S = list(states)
+    for x in S:
+        if not (isinstance(x, int) and 0 <= x < V.num_states):
+            raise ValueError(f"{x!r} is not a state index of G")
+    enc = V._encoding()
+    emark = [-1] * enc.m                     # one entry per event number (alphabet size)
+    out, src, via = [], [], []
+    _verified.active_events(enc.n, enc.m, enc.start, enc.evt, enc.dst, enc.in_E, S, emark,
+                            out, src, via)
+    labels = [V._event_of[e] for e in out]
+    if witnesses:
+        return labels, [S[j] for j in src]
+    return labels

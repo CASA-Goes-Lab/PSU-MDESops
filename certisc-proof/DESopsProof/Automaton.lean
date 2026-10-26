@@ -121,6 +121,28 @@ theorem run_nonempty_of_append {S : Finset (σ)} {s t : List α}
 
 end run
 
+/-! ## Active events -/
+
+/-- The events enabled at some state of $S$:
+$$\Sigma_f(S) = \{\, e \mid \delta_f(S, e) \neq \emptyset \,\}.$$
+
+**Lean:** `active f S`, a `Set α` (a property of each event). -/
+def active (f : σ → α → Finset σ) (S : Finset σ) : Set α :=
+  {e | (step f S e).Nonempty}
+
+/-- $e \in \Sigma_f(S) \iff \exists x \in S,\ f(x, e) \neq \emptyset$.
+
+**Proof:** $\delta_f(S, e) \neq \emptyset$ means some $y \in f(x, e)$ with $x \in S$
+(`mem_step`), in both directions. -/
+theorem mem_active {f : σ → α → Finset σ} {S : Finset σ} {e : α} :
+    e ∈ active f S ↔ ∃ x ∈ S, (f x e).Nonempty := by
+  constructor
+  · rintro ⟨y, hy⟩
+    obtain ⟨x, hx, hyx⟩ := (mem_step f).1 hy
+    exact ⟨x, hx, y, hyx⟩
+  · rintro ⟨x, hx, y, hy⟩
+    exact ⟨y, (mem_step f).2 ⟨x, hx, hy⟩⟩
+
 /-! ## Languages of a transition structure
 
 For any $f$ and set of initial states $X_0$ (not necessarily a well-formed automaton). -/
@@ -294,6 +316,14 @@ theorem mem_E_of_run_nonempty :
 **Proof:** `mem_E_of_run_nonempty` with $S = X_0$. -/
 theorem mem_E_of_mem_L {s : List α} (hs : s ∈ G.L) : ∀ e ∈ s, e ∈ G.E :=
   G.mem_E_of_run_nonempty _ _ hs
+
+/-- The active events of any set of states are events of $G$: $\Sigma_f(S) \subseteq E$.
+
+**Proof:** an active event has some $f(x, e) \neq \emptyset$ (`mem_active`), so $e \in E$ by (W1). -/
+theorem active_subset_E (S : Finset (Fin G.n)) : active G.f S ⊆ (G.E : Set α) := by
+  intro e he
+  obtain ⟨x, -, hne⟩ := mem_active.1 he
+  exact Finset.mem_coe.2 (G.wf_E x e hne)
 
 /-! ### Lemma 5: a deterministic automaton is in at most one state -/
 

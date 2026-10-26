@@ -1,8 +1,9 @@
 # What is verified in certisc, and why it works
 
-This note covers the two verified pieces that exist so far:
+This note covers the verified pieces that exist so far:
 - **`check_automaton`**: is an automaton well formed?
 - **`next_states`**: which states can one event reach from a set of states?
+- **`active_events`**: which events can occur at a set of states?
 
 Other operations will get their own sections as they are verified. Design history and
 measurements are in `doc/logs/`; the spec notes are in `certisc-proof/spec/`.
@@ -185,6 +186,28 @@ So **the entries of `out` are exactly `step f S e`**, each listed once.
 - A faster implementation (e.g. a NumPy backend) can replace the body, as long as it satisfies
   the same contract: re-verified if it is Nagini code, or tested against this contract if it is not.
 
+## 4b. `active_events`: the events enabled at a set of states
+
+**Where:** `ops_aut/verified_ops/basic_ops.py`. Called by the public
+`ops_aut.active_events(G, states, witnesses=False)`, which returns event labels.
+
+**Lean:** `active f S = {e | step f S e ≠ ∅}`, with `mem_active` (e is active ⟺ some state of S
+has an e-transition) and `Automaton.active_subset_E` (active events are in E, by W1).
+
+**Proved:**
+- in range;
+- no duplicates;
+- sound: each event comes with a state of S and a transition on it;
+- complete: the event of every transition of every state of S is in the result.
+
+Sound and complete together give exactly `active f S`. Details: `certisc-proof/spec/basic_ops.md` §2.
+
+**Why it works:** the same techniques as `next_states` (positions, witnesses, small steps),
+plus two of its own:
+- the loop jumps over each run of one event with the verified `upper_bound`;
+- event positions are kept in a list over event numbers, since Nagini cannot reason about dict
+  membership by value.
+
 ## 5. Reading the code
 
 Every Nagini line in `basic_ops.py` carries two comments:
@@ -214,7 +237,7 @@ From `certisc-lib/`, with the `verify` extra (Python ≥ 3.12, Java):
 
     nagini src/core_aut/verified_core/check.py         # Verification successful, ~18 s
     nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~25–31 s
-    pytest                                             # 38 passed
+    pytest                                             # 42 passed
 
 From `certisc-proof/`:
 
