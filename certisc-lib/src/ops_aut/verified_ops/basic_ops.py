@@ -58,6 +58,8 @@ from nagini_contracts.obligations import MustTerminate
 
 # The well-formedness predicates of the verified validity checker (needs core_aut/py.typed).
 from core_aut.verified_core.check import block_sorted, blocks_ok, sorted_ok, transitions_ok
+# The active-event index (verified checker: core_aut/verified_core/active_index.py).
+from core_aut.verified_core.active_index import nxt, run_ok, seg_ok
 
 
 # --- specification ---------------------------------------------------------------------------
@@ -1131,4 +1133,299 @@ def active_events(n: int, m: int, start: List[int], evt: List[int], dst: List[in
         Invariant(ev_complete_upto(start, evt, S, ToSeq(emark), j, 0))
         ev_scan(n, m, start, evt, dst, in_E, S, emark, out, src, via, j)   # cover block(S[j])
         ev_next_j(start, evt, S, ToSeq(emark), j, start[S[j] + 1], j + 1)  # lemma: next j
+        j += 1
+
+
+# --- active_events over the index -------------------------------------------------------------
+# The same operation and the same guarantees as active_events, but the runs of each block come
+# from the active-event index (A, H) of the automaton, checked once by check_index, instead of a
+# binary search per run: the run of head i ends at nxt(i) (H[i+1], or the end of the block).
+# Notation: for x = S[j], lo = start[x], hi = start[x+1], a0 = A[x], a1 = A[x+1].
+
+
+@Pure
+def runs_ok(evt: List[int], H: List[int], lo: int, hi: int, a0: int, a1: int) -> bool:
+    """Every head of the state is correct (the part of seg_ok the scan needs)."""
+    # Why: read access.
+    Requires(Acc(list_pred(evt), 1 / 8) and Acc(list_pred(H), 1 / 8))
+    # Math: 0 ≤ a0 ≤ a1 ≤ |H|
+    Requires(0 <= a0 and a0 <= a1 and a1 <= len(H))
+    # Math: ∀ i ∈ [a0,a1): run_ok(lo, hi, a1, i)
+    # Why: seg_ok without its pairwise part (increasing events), which the scan does not use;
+    #      a lighter loop invariant (with seg_ok in the loop, Nagini ran over 15 minutes).
+    return Forall(int, lambda i: (Implies(a0 <= i and i < a1, run_ok(evt, H, lo, hi, a1, i)),
+                                  [[run_ok(evt, H, lo, hi, a1, i)]]))
+
+
+def seg_runs(evt: List[int], H: List[int], lo: int, hi: int, a0: int, a1: int) -> None:
+    """Lemma: seg_ok gives the facts the scan of one block needs."""
+    # Why: read access (1/8: the caller keeps a share).
+    Requires(Acc(list_pred(evt), 1 / 8) and Acc(list_pred(H), 1 / 8))
+    # Math: termination measure 1.
+    Requires(MustTerminate(1))
+    # Math: 0 ≤ a0 ≤ a1 ≤ |H| ∧ seg_ok(lo, hi, a0, a1)
+    Requires(0 <= a0 and a0 <= a1 and a1 <= len(H) and seg_ok(evt, H, lo, hi, a0, a1))
+    # Why: gives the permissions back.
+    Ensures(Acc(list_pred(evt), 1 / 8) and Acc(list_pred(H), 1 / 8))
+    # Math: 0 ≤ a0 ≤ a1 ≤ |H| ∧ (a0 = a1 ⟺ lo = hi) ∧ (a0 < a1 → H[a0] = lo) ∧ runs_ok(lo, hi, a0, a1)
+    # Why: where the scan starts (k = lo = H[a0]), and each head's run.
+    Ensures(0 <= a0 and a0 <= a1 and a1 <= len(H))
+    Ensures((a0 == a1) == (lo == hi) and Implies(a0 < a1, H[a0] == lo)
+            and runs_ok(evt, H, lo, hi, a0, a1))
+
+
+def ev_run_idx(start: List[int], evt: List[int], S: List[int], H: List[int], mk: PSeq[int],
+               lo: int, hi: int, a1: int, i: int, j: int, k: int, b: int, e: int) -> None:
+    """Lemma: the run of head i (positions k = H[i] .. b-1) is covered once its event is marked."""
+    # Why: read access (1/8: the caller keeps a share).
+    Requires(Acc(list_pred(start), 1 / 8) and Acc(list_pred(evt), 1 / 8)
+             and Acc(list_pred(S), 1 / 8) and Acc(list_pred(H), 1 / 8))
+    # Math: termination measure 1.
+    Requires(MustTerminate(1))
+    # Math: 0 ≤ i < a1 ≤ |H| ∧ run_ok(lo, hi, a1, i) ∧ k = H[i] ∧ b = nxt(i)
+    # Why: head i is correct (from the index), and [k, b) is its run.
+    Requires(0 <= i and i < a1 and a1 <= len(H) and run_ok(evt, H, lo, hi, a1, i))
+    Requires(k == H[i] and b == nxt(H, hi, a1, i))
+    # Math: evt[k] = e ∧ e ∈ [0,|mk|) ∧ mk[e] ≥ 0 ∧ ev_complete_upto(mk, j, k)
+    # Why: visit_event just marked the run's event; everything before k is covered.
+    Requires(evt[k] == e and 0 <= e and e < len(mk) and mk[e] >= 0)
+    Requires(ev_complete_upto(start, evt, S, mk, j, k))
+    # Why: gives the permissions back.
+    Ensures(Acc(list_pred(start), 1 / 8) and Acc(list_pred(evt), 1 / 8)
+            and Acc(list_pred(S), 1 / 8) and Acc(list_pred(H), 1 / 8))
+    # Math: k < b ≤ hi ∧ ev_complete_upto(mk, j, b)
+    # Why: the loop advances and stays in the block; the run is covered.
+    Ensures(k < b and b <= hi and ev_complete_upto(start, evt, S, mk, j, b))
+    # Math: ∀ t ∈ [k,b): evt[t] = e
+    # Why (hint): run_ok: the run is constant, on evt[H[i]] = evt[k] = e.
+    Assert(Forall(int, lambda t: (Implies(k <= t and t < b, evt[t] == e), [[evt[t]]])))
+    # Math: ∀ t ∈ [k,b): mk[evt[t]] ≥ 0
+    # Why (hint): every event of the run is e, which is marked.
+    Assert(Forall(int, lambda t: (Implies(k <= t and t < b,
+                                          0 <= evt[t] and evt[t] < len(mk) and mk[evt[t]] >= 0),
+                                  [[evt[t]]])))
+    # Math: the body of ev_complete_upto(mk, j, b).
+    # Why (hint): with the facts above, written out (as in ev_run).
+    Assert(Forall(int, lambda kk: (Implies(
+        0 <= kk and kk < len(evt),
+        Forall(int, lambda jj: (Implies(
+            in_block(start, evt, S, jj, kk) and (jj < j or (jj == j and kk < b)),
+            0 <= evt[kk] and evt[kk] < len(mk) and mk[evt[kk]] >= 0),
+            [[in_block(start, evt, S, jj, kk)]]))),
+        [[evt[kk]]])))
+
+
+def ev_scan_idx(n: int, m: int, start: List[int], evt: List[int], dst: List[int],
+                in_E: List[bool], A: List[int], H: List[int], S: List[int], emark: List[int],
+                out: List[int], src: List[int], via: List[int], j: int,
+                lo: int, hi: int, a0: int, a1: int) -> None:
+    """Cover the block [lo, hi) of the state S[j]: add the event of each head of S[j] (heads
+    a0 .. a1-1 of the index)."""
+    # Why: read access (1/4: the caller keeps 1/4, so the inputs are known unchanged after).
+    Requires(Acc(list_pred(start), 1 / 4) and Acc(list_pred(evt), 1 / 4)
+             and Acc(list_pred(dst), 1 / 4) and Acc(list_pred(in_E), 1 / 4)
+             and Acc(list_pred(S), 1 / 4) and Acc(list_pred(A), 1 / 4)
+             and Acc(list_pred(H), 1 / 4))
+    # Why: write access to emark and the three result lists.
+    Requires(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+             and Acc(list_pred(via)))
+    # Math: termination measure 4 (calls visit_event, measure 2).
+    Requires(MustTerminate(4))
+    # Math: input_ok ∧ ∀ j' ∈ [0,|S|): S[j'] ∈ [0,n) ∧ j ∈ [0,|S|) ∧ |A| = n+1
+    Requires(input_ok(n, m, start, evt, dst, in_E))
+    Requires(Forall(int, lambda jj: (Implies(0 <= jj and jj < len(S),
+                                             0 <= S[jj] and S[jj] < n), [[S[jj]]])))
+    Requires(0 <= j and j < len(S) and len(A) == n + 1)
+    # Math: lo = start[S[j]] ∧ hi = start[S[j]+1] ∧ a0 = A[S[j]] ∧ a1 = A[S[j]+1]
+    # Why: the block and the heads of S[j], read by the caller.
+    Requires(0 <= S[j] and S[j] < n and lo == start[S[j]] and hi == start[S[j] + 1]
+             and a0 == A[S[j]] and a1 == A[S[j] + 1])
+    # Math: 0 ≤ a0 ≤ a1 ≤ |H| ∧ (a0 = a1 ⟺ lo = hi) ∧ (a0 < a1 → H[a0] = lo) ∧ runs_ok(lo, hi, a0, a1)
+    # Why: the index is correct for S[j] (seg_runs applied by the caller to index_ok at S[j]).
+    #      Not seg_ok itself: its pairwise part, unfolded here, made the proof time out.
+    Requires(0 <= a0 and a0 <= a1 and a1 <= len(H))
+    Requires((a0 == a1) == (lo == hi) and Implies(a0 < a1, H[a0] == lo)
+             and runs_ok(evt, H, lo, hi, a0, a1))
+    # Math: sizes ∧ marks_ok(emark, out) ∧ ev_sound(out, src, via) ∧ ev_complete_upto(emark, j, 0)
+    # Why: the outer loop's invariants at the start of S[j].
+    Requires(len(emark) == m and len(src) == len(out) and len(via) == len(out))
+    Requires(marks_ok(ToSeq(emark), ToSeq(out)))
+    Requires(ev_sound(start, evt, S, ToSeq(out), ToSeq(src), ToSeq(via)))
+    Requires(ev_complete_upto(start, evt, S, ToSeq(emark), j, 0))
+    # Why: gives the permissions back.
+    Ensures(Acc(list_pred(start), 1 / 4) and Acc(list_pred(evt), 1 / 4)
+            and Acc(list_pred(dst), 1 / 4) and Acc(list_pred(in_E), 1 / 4)
+            and Acc(list_pred(S), 1 / 4) and Acc(list_pred(A), 1 / 4)
+            and Acc(list_pred(H), 1 / 4))
+    Ensures(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+            and Acc(list_pred(via)))
+    # Math: j ∈ [0,|S|) ∧ S[j] ∈ [0,|start|-1)
+    # Why: so start[S[j] + 1] can be read below (post-state).
+    Ensures(0 <= j and j < len(S) and 0 <= S[j] and S[j] + 1 < len(start))
+    # Math: sizes ∧ marks_ok ∧ ev_sound ∧ ev_complete_upto(emark, j, start[S[j]+1])
+    # Why: the whole block of S[j] is now covered.
+    Ensures(len(emark) == m and len(src) == len(out) and len(via) == len(out))
+    Ensures(marks_ok(ToSeq(emark), ToSeq(out)))
+    Ensures(ev_sound(start, evt, S, ToSeq(out), ToSeq(src), ToSeq(via)))
+    Ensures(ev_complete_upto(start, evt, S, ToSeq(emark), j, start[S[j] + 1]))
+    x = S[j]                                 # the current state
+    block_events(n, m, start, evt, dst, in_E, x)   # lemma: block(x) valid, events < m
+    ev_enter(start, evt, S, ToSeq(emark), j)          # lemma: covered up to (j, lo)
+    i = a0                                   # current head
+    k = lo                                   # its position: H[i] (or hi once i = a1)
+    while i < a1:                            # for each head of x: one run, one event
+        # Why: permissions (input_ok is not carried: the facts needed are below).
+        Invariant(Acc(list_pred(start), 1 / 4) and Acc(list_pred(evt), 1 / 4)
+                  and Acc(list_pred(dst), 1 / 4) and Acc(list_pred(in_E), 1 / 4)
+                  and Acc(list_pred(S), 1 / 4) and Acc(list_pred(A), 1 / 4)
+                  and Acc(list_pred(H), 1 / 4))
+        Invariant(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+                  and Acc(list_pred(via)))
+        # Math: measure a1 - i + 3, decreasing.
+        Invariant(MustTerminate(a1 - i + 3))
+        # Math: start, evt, S, H unchanged.
+        Invariant(ToSeq(start) == Old(ToSeq(start)) and ToSeq(evt) == Old(ToSeq(evt))
+                  and ToSeq(S) == Old(ToSeq(S)) and ToSeq(H) == Old(ToSeq(H)))
+        # Math: ∀ t ∈ [lo,hi): evt[t] ∈ [0,m)
+        # Why: from block_events; replaces input_ok in the loop.
+        Invariant(Forall(int, lambda t: (Implies(lo <= t and t < hi, 0 <= evt[t] and evt[t] < m),
+                                         [[evt[t]]])))
+        # Math: j ∈ [0,|S|) ∧ x = S[j] ∈ [0,n) ∧ |start| = n+1 ∧ lo = start[x] ∧ hi = start[x+1]
+        #       ∧ 0 ≤ lo ∧ hi ≤ T
+        # Why: the block is a valid range of positions (so evt[k] can be read).
+        Invariant(0 <= j and j < len(S) and x == S[j] and 0 <= x and x < n)
+        Invariant(len(start) == n + 1 and lo == start[x] and hi == start[x + 1]
+                  and 0 <= lo and hi <= len(evt))
+        # Math: 0 ≤ a0 ≤ i ≤ a1 ≤ |H| ∧ runs_ok(lo, hi, a0, a1)
+        Invariant(0 <= a0 and a0 <= i and i <= a1 and a1 <= len(H)
+                  and runs_ok(evt, H, lo, hi, a0, a1))
+        # Math: lo ≤ k ≤ hi ∧ (i < a1 → k = H[i]) ∧ (i = a1 → k = hi)
+        # Why: k is where the current run starts; after the last head, the end of the block.
+        Invariant(lo <= k and k <= hi and Implies(i < a1, k == H[i]) and Implies(i == a1, k == hi))
+        # Math: sizes; marks_ok; ev_sound; ev_complete_upto(emark, j, k)
+        Invariant(len(emark) == m and len(src) == len(out) and len(via) == len(out))
+        Invariant(marks_ok(ToSeq(emark), ToSeq(out)))
+        Invariant(ev_sound(start, evt, S, ToSeq(out), ToSeq(src), ToSeq(via)))
+        Invariant(ev_complete_upto(start, evt, S, ToSeq(emark), j, k))
+        # Math: run_ok(lo, hi, a1, i)
+        # Why (hint): runs_ok at head i.
+        Assert(run_ok(evt, H, lo, hi, a1, i))
+        # Math: k = H[i] < nxt(i) ≤ hi
+        # Why (hint): from run_ok, so k is a position of the block (evt[k] can be read).
+        Assert(H[i] < nxt(H, hi, a1, i) and nxt(H, hi, a1, i) <= hi)
+        e = evt[k]                                                # the event of this run
+        visit_event(start, evt, S, m, emark, out, src, via, j, k)  # add e if new
+        if i + 1 < a1:                       # b = nxt(i): one past the run
+            b = H[i + 1]                     # the next head
+        else:
+            b = hi                           # the end of the block (last head)
+        # Math: b = nxt(i)
+        # Why (hint): joins the two branches into one fact (the rest of the proof has one path).
+        Assert(b == nxt(H, hi, a1, i))
+        ev_run_idx(start, evt, S, H, ToSeq(emark), lo, hi, a1, i, j, k, b, e)  # lemma: run covered
+        k = b
+        ni = i + 1
+        i = ni
+
+
+def active_events_idx(n: int, m: int, start: List[int], evt: List[int], dst: List[int],
+                      in_E: List[bool], A: List[int], H: List[int], S: List[int],
+                      emark: List[int], out: List[int], src: List[int], via: List[int]) -> None:
+    """active_events, reading the runs from the active-event index (A, H).
+
+    Same inputs and outputs as active_events, plus the index, which must be correct (index_ok,
+    as check_index guarantees). Proved: the same four properties (spec: basic_ops.md §3)."""
+    # Why: read access to the automaton, the index and S.
+    Requires(Acc(list_pred(start), 1 / 2) and Acc(list_pred(evt), 1 / 2)
+             and Acc(list_pred(dst), 1 / 2) and Acc(list_pred(in_E), 1 / 2)
+             and Acc(list_pred(A), 1 / 2) and Acc(list_pred(H), 1 / 2)
+             and Acc(list_pred(S), 1 / 2))
+    # Why: write access to emark and the three outputs.
+    Requires(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+             and Acc(list_pred(via)))
+    # Math: termination measure |S| + 8.
+    Requires(MustTerminate(len(S) + 8))
+    # Math: input_ok
+    Requires(input_ok(n, m, start, evt, dst, in_E))
+    # Math: index_ok(n, start, evt, A, H) (active_index.py), the parts used: |A| = n+1 and
+    #       ∀ y ∈ [0,n): 0 ≤ A[y] ≤ A[y+1] ≤ |H| ∧ seg_ok(start[y], start[y+1], A[y], A[y+1])
+    # Why: the index is correct (what check_index guarantees).
+    Requires(len(A) == n + 1 and len(start) == n + 1)
+    Requires(Forall(int, lambda y: (
+        Implies(0 <= y and y < n,
+                0 <= A[y] and A[y] <= A[y + 1] and A[y + 1] <= len(H)
+                and seg_ok(evt, H, start[y], start[y + 1], A[y], A[y + 1])),
+        [[A[y + 1]]])))
+    # Math: ∀ j ∈ [0,|S|): S[j] ∈ [0,n)
+    Requires(Forall(int, lambda j: (Implies(0 <= j and j < len(S), 0 <= S[j] and S[j] < n),
+                                    [[S[j]]])))
+    # Math: |emark| = m ∧ ∀ e ∈ [0,m): emark[e] = -1 ∧ |out| = |src| = |via| = 0
+    Requires(len(emark) == m and all_clear(ToSeq(emark)))
+    Requires(len(out) == 0 and len(src) == 0 and len(via) == 0)
+    # Why: gives the permissions back.
+    Ensures(Acc(list_pred(start), 1 / 2) and Acc(list_pred(evt), 1 / 2)
+            and Acc(list_pred(dst), 1 / 2) and Acc(list_pred(in_E), 1 / 2)
+            and Acc(list_pred(A), 1 / 2) and Acc(list_pred(H), 1 / 2)
+            and Acc(list_pred(S), 1 / 2))
+    Ensures(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+            and Acc(list_pred(via)))
+    # Math: input_ok ∧ |emark| = m ∧ |src| = |out| ∧ |via| = |out|
+    Ensures(input_ok(n, m, start, evt, dst, in_E))
+    Ensures(len(emark) == m and len(src) == len(out) and len(via) == len(out))
+    # THE RESULT (as active_events).
+    # Math: in range and no duplicates: marks_ok(emark, out)
+    Ensures(marks_ok(ToSeq(emark), ToSeq(out)))
+    # Math: sound: ∀ i: ev_at(src[i], via[i], out[i])
+    Ensures(ev_sound(start, evt, S, ToSeq(out), ToSeq(src), ToSeq(via)))
+    # Math: complete: ∀ j ∈ [0,|S|). ∀ k ∈ block(S[j]): emark[evt[k]] ≥ 0
+    Ensures(ev_complete_upto(start, evt, S, ToSeq(emark), len(S), 0))
+    # Math: ∀ e ∈ [0,|emark|): emark[e] = -1
+    # Why (hint): all_clear written out, so that marks_ok holds before the loop (empty result).
+    Assert(Forall(int, lambda y: (Implies(0 <= y and y < len(emark), ToSeq(emark)[y] == -1),
+                                  [[ToSeq(emark)[y]]])))
+    j = 0                                        # position in S
+    while j < len(S):                            # for each state of S
+        # Why: the loop keeps its permissions.
+        Invariant(Acc(list_pred(start), 1 / 2) and Acc(list_pred(evt), 1 / 2)
+                  and Acc(list_pred(dst), 1 / 2) and Acc(list_pred(in_E), 1 / 2)
+                  and Acc(list_pred(A), 1 / 2) and Acc(list_pred(H), 1 / 2)
+                  and Acc(list_pred(S), 1 / 2))
+        Invariant(Acc(list_pred(emark)) and Acc(list_pred(out)) and Acc(list_pred(src))
+                  and Acc(list_pred(via)))
+        # Math: measure |S| - j + 6, decreasing.
+        Invariant(MustTerminate(len(S) - j + 6))
+        # Math: the input lists are unchanged.
+        Invariant(ToSeq(start) == Old(ToSeq(start)) and ToSeq(evt) == Old(ToSeq(evt))
+                  and ToSeq(dst) == Old(ToSeq(dst)) and ToSeq(in_E) == Old(ToSeq(in_E))
+                  and ToSeq(A) == Old(ToSeq(A)) and ToSeq(H) == Old(ToSeq(H))
+                  and ToSeq(S) == Old(ToSeq(S)))
+        # Math: input_ok ∧ index_ok (the parts used) ∧ S in range ∧ 0 ≤ j ≤ |S|
+        Invariant(input_ok(n, m, start, evt, dst, in_E))
+        Invariant(len(A) == n + 1 and len(start) == n + 1)
+        Invariant(Forall(int, lambda y: (
+            Implies(0 <= y and y < n,
+                    0 <= A[y] and A[y] <= A[y + 1] and A[y + 1] <= len(H)
+                    and seg_ok(evt, H, start[y], start[y + 1], A[y], A[y + 1])),
+            [[A[y + 1]]])))
+        Invariant(Forall(int, lambda jj: (Implies(0 <= jj and jj < len(S),
+                                                  0 <= S[jj] and S[jj] < n), [[S[jj]]])))
+        Invariant(0 <= j and j <= len(S))
+        # Math: sizes; marks_ok; ev_sound; ev_complete_upto(emark, j, 0)
+        Invariant(len(emark) == m and len(src) == len(out) and len(via) == len(out))
+        Invariant(marks_ok(ToSeq(emark), ToSeq(out)))
+        Invariant(ev_sound(start, evt, S, ToSeq(out), ToSeq(src), ToSeq(via)))
+        Invariant(ev_complete_upto(start, evt, S, ToSeq(emark), j, 0))
+        # Math: x = S[j]: 0 ≤ A[x] ≤ A[x+1] ≤ |H| ∧ seg_ok(start[x], start[x+1], A[x], A[x+1])
+        # Why (hint): the index fact at y = S[j] (mentioning A[S[j]+1] triggers it).
+        Assert(0 <= S[j] and S[j] < n and A[S[j] + 1] <= len(H))
+        Assert(seg_ok(evt, H, start[S[j]], start[S[j] + 1], A[S[j]], A[S[j] + 1]))
+        x = S[j]                                 # the current state
+        lo = start[x]                            # its block: [lo, hi)
+        hi = start[x + 1]
+        a0 = A[x]                                # its heads: a0 .. a1-1 (in H)
+        a1 = A[x + 1]
+        seg_runs(evt, H, lo, hi, a0, a1)         # lemma: runs_ok, and lo starts the first run
+        ev_scan_idx(n, m, start, evt, dst, in_E, A, H, S, emark, out, src, via, j,
+                    lo, hi, a0, a1)              # cover block(S[j])
+        ev_next_j(start, evt, S, ToSeq(emark), j, start[S[j] + 1], j + 1)          # lemma: next j
         j += 1

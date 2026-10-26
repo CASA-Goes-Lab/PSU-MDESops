@@ -4,6 +4,8 @@ This note covers the verified pieces that exist so far:
 - **`check_automaton`**: is an automaton well formed?
 - **`next_states`**: which states can one event reach from a set of states?
 - **`active_events`**: which events can occur at a set of states?
+- **the active-event index**: a per-state list of run heads, built by trusted code and accepted
+  only by a verified checker; `active_events` reads it on a `ValidAutomaton`.
 
 Other operations will get their own sections as they are verified. Design history and
 measurements are in `doc/logs/`; the spec notes are in `certisc-proof/spec/`.
@@ -142,7 +144,7 @@ fact by one position.
 | Guarantee | Math |
 |---|---|
 | in range | `∀ i: out[i] ∈ [0, n)` |
-| no duplicates; `pos` gives positions | `∀ i: pos[out[i]] = i`, and `∀ y ∈ keys(pos): out[pos[y]] = y` |
+| no duplicates **as objects**; `pos` gives positions | `∀ i: pos[out[i]] = i`, and `∀ y ∈ keys(pos): out[pos[y]] = y`. Distinct *values* are true at runtime and tested, but **not proved**: Nagini compares dict keys as objects (see below) |
 | sound (with witnesses) | `∀ i: S[src[i]] --e-->_{via[i]} out[i]` |
 | complete | `∀ j, ∀ k: S[j] --e-->_k y → y ∈ keys(pos)` |
 | termination | `MustTerminate` |
@@ -165,7 +167,7 @@ So **the entries of `out` are exactly `step f S e`**, each listed once.
 - **Witnesses instead of "there exists".** Soundness would naturally say "there is an x in S
   with…". The code stores the x and the transition (`src`, `via`), so every fact is about a
   specific position. Nagini handles that easily; "there exists" over a growing list it does not.
-- **Positions instead of a set.** `pos[y]` names where y is in `out`. That gives "no duplicates"
+- **Positions instead of a set.** `pos[y]` names where y is in `out`. That gives "no duplicates" (as objects: Nagini models dict keys as objects, so equal numbers held by different objects are not identified; distinct values are not proved)
   (two equal entries would have one position) and lets completeness be stated without "there exists".
 - **Loop invariants.**
   - `pos_ok`: `pos` and `out` agree;
@@ -208,6 +210,25 @@ plus two of its own:
 - event positions are kept in a list over event numbers, since Nagini cannot reason about dict
   membership by value.
 
+## 4c. The active-event index
+
+**Where:** checker `core_aut/verified_core/active_index.py` (`check_index`); builder
+`core_aut/trusted/active_index.py`; consumer `active_events_idx` in
+`ops_aut/verified_ops/basic_ops.py`.
+
+**What:** for each state x, the positions where the runs of its sorted block start (one run per
+event). The active events of x can then be read directly, with no search.
+
+**How it is trusted:** it is certified, not verified. The builder is plain code. The verified
+`check_index` proves `Result → index_ok` (every state's heads start its runs, in order, with
+strictly increasing events), so a wrong index is rejected, never used. A `ValidAutomaton` builds
+and checks it on first use and keeps it; it is not stored in files.
+
+**Proved for `active_events_idx`:** the same four properties as §4b, given `index_ok`.
+`ops_aut.active_events` uses it for a `ValidAutomaton` (1.5–3.6× faster per call on large
+automata), and the §4b version for a plain `Automaton`. Lean needs nothing new: the index is a
+representation, not new mathematics. Details: `certisc-proof/spec/basic_ops.md` §3.
+
 ## 5. Reading the code
 
 Every Nagini line in `basic_ops.py` carries two comments:
@@ -224,6 +245,7 @@ Each verified file opens with a glossary of the notation (`Requires`, `Ensures`,
 |---|---|---|
 | `encode` / `decode` (`core_aut/trusted/encoding.py`) | plain copying between `Automaton` and lists | round-trip tests; sortedness test |
 | `_strip.py` | removes contracts and lemma calls before running | only removes statements with no runtime effect; tests compare results |
+| the active-index builder (`core_aut/trusted/active_index.py`) | plain code, one scan | its result is accepted only by the verified `check_index` |
 | the public layer (`validate`, `check_or_raise`, `ops_aut.next_states`) | glue: validate, encode, call, translate back | tests against direct computation |
 | `ValidAutomaton` (`core_aut/valid.py`) | read-only by construction (tuples, no setters); made only by `validate` and the readers | tests that it cannot be modified or created directly |
 | the readers (`io_aut`) | parse files and build an `Automaton` | validity is decided by the verified checker afterwards; round-trip and format-error tests |
@@ -236,8 +258,9 @@ Each verified file opens with a glossary of the notation (`Requires`, `Ensures`,
 From `certisc-lib/`, with the `verify` extra (Python ≥ 3.12, Java):
 
     nagini src/core_aut/verified_core/check.py         # Verification successful, ~18 s
-    nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~25–31 s
-    pytest                                             # 42 passed
+    nagini src/core_aut/verified_core/active_index.py  # Verification successful, ~55–95 s
+    nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~160–310 s
+    pytest                                             # 45 passed
 
 From `certisc-proof/`:
 

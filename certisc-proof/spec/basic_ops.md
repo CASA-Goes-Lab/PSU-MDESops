@@ -34,10 +34,19 @@ what to return: `out` only, or with the witnesses.
 | Postcondition | Math |
 |---|---|
 | in range | `∀ i ∈ [0,|out|): out[i] ∈ [0,n)` |
-| no duplicates, `pos` = positions (`pos_ok`) | `∀ i: pos[out[i]] = i`, and `∀ y ∈ keys(pos): out[pos[y]] = y` |
+| no duplicates **as objects** (see the caveat below), `pos` = positions (`pos_ok`) | `∀ i: pos[out[i]] = i`, and `∀ y ∈ keys(pos): out[pos[y]] = y` |
 | sound | `∀ i: S[src[i]] --e-->_{via[i]} out[i]` |
 | complete | `∀ j ∈ [0,|S|), ∀ k: S[j] --e-->_k y → y ∈ keys(pos)` |
 | terminates | `MustTerminate` |
+
+**Caveat (found 2026-10-26): "no duplicates" for `next_states` holds for objects, not values.**
+Nagini models a dict as a map from *objects* to objects (`dict_acc : Map[Ref, Ref]`), while `==`
+on integers compares values. Nothing in its model says two integer objects with the same value
+are the same object. So `pos_ok` proves that no two positions of `out` hold the **same object**,
+not that they hold different **numbers**. Soundness, completeness and range are unaffected (each
+is proved for a specific object, then read as its value). Distinct values hold at runtime (Python
+dicts compare by value) and are tested, but they are **not proved**. `active_events` does not have
+this gap: its marks are a list indexed by value (§2).
 
 **Design history** (all three versions are verified):
 1. **S as n booleans:** every call costs n (85 ms for 10 states at 1 M states).
@@ -165,3 +174,69 @@ new (`visit_event`), and jumps past the run with the verified `upper_bound`.
 7–10× slower than a C-level set comprehension: each run costs a call to `visit_event` and
 `upper_bound` (Python loops). Typical use is small sets (one state, a supervisor's estimate),
 where both take about a millisecond or less.
+
+## 3. The active-event index, and `active_events` over it
+
+Status: **checker verified 2026-10-26** (`core_aut/verified_core/active_index.py`, whole file
+54–93 s); `active_events_idx` **verified 2026-10-26** (`basic_ops.py`, whole file 163–307 s).
+
+**What it is.** A representation of the automaton, not new mathematics, so Lean needs nothing
+new. For each state x, blocks are sorted by event, so each event of x is one *run* of
+consecutive transitions. The index lists where each run starts:
+
+    A[x] .. A[x+1]-1     the positions in H of the run heads of x      (|A| = n+1, A[0] = 0, A[n] = |H|)
+    H[i]                 a head: the first transition of a run; its event is evt[H[i]]
+    nxt(i)               the end of head i's run: H[i+1], or start[x+1] for the last head of x
+
+So the active events of x are `evt[H[A[x]]], …, evt[H[A[x+1]-1]]`, strictly increasing.
+
+**Certified, not verified, construction.** A trusted builder (`core_aut/trusted/active_index.py`)
+computes (A, H) in one scan. The verified `check_index` accepts it only if it is correct, so a
+bug in the builder can only make the build fail. A `ValidAutomaton` builds and checks the index
+on first use and keeps it (a private slot; it depends only on the frozen encoding). A
+`ValidAutomaton` read from JSON is the same: nothing is stored in the file.
+
+**Correctness (`index_ok`)**, stated in full in the contracts (see the note in
+`active_index.py`):
+
+| Part | Math |
+|---|---|
+| shape | `n ≥ 0 ∧ |A| = |start| = n+1 ∧ A[0] = 0 ∧ A[n] = |H|` |
+| per state | `∀ x ∈ [0,n): 0 ≤ A[x] ≤ A[x+1] ≤ |H| ∧ seg_ok(start[x], start[x+1], A[x], A[x+1])` |
+| `seg_ok(s0,s1,a0,a1)` | `(a0 = a1 ⟺ s0 = s1) ∧ (a0 < a1 → H[a0] = s0) ∧ ∀ i ∈ [a0,a1): run_ok(i) ∧ ∀ i1 < i2: evt[H[i1]] < evt[H[i2]]` |
+| `run_ok(i)` | `s0 ≤ H[i] < nxt(i) ≤ s1 ∧ ∀ t ∈ [H[i], nxt(i)): evt[t] = evt[H[i]] ∧ (i+1 < a1 → evt[H[i]] ≠ evt[H[i+1]])` |
+
+`check_index(n, start, evt, A, H)` requires `blocks_ok ∧ sorted_ok` (from `check_automaton`)
+and ensures `Result → index_ok`.
+
+**`active_events_idx`** has the same contract as `active_events` (§2), plus the index and
+`index_ok` as a precondition. The only change in the algorithm: the end of each run is `nxt(i)`,
+read from the index, instead of a binary search (`upper_bound`).
+
+**Proof structure.**
+- The outer loop reads the block and the heads of `S[j]` (`lo, hi, a0, a1`) and applies the lemma
+  `seg_runs`, which turns `seg_ok` into `runs_ok` (only the per-head `run_ok` facts) and
+  `H[a0] = lo`.
+- `ev_scan_idx` loops over the heads with `runs_ok` in its invariant, and `ev_run_idx` (instead of
+  `ev_run`) covers one run, using `run_ok` instead of sortedness.
+- With `seg_ok` itself in `ev_scan_idx`, the proof ran over 15 minutes: its pairwise part
+  (`Forall2`, no trigger) was unfolded into every step. With `runs_ok`, `ev_scan_idx` takes
+  23–31 s.
+- `b = nxt(i)` is written as an inline `if` (with a hint `b = nxt(i)`), not a call to `nxt`. The
+  call verifies faster (whole file 44–50 s) but costs a Python function call per run, which
+  cancelled the speed-up.
+
+**Public API.** `active_events(V, S)` on a `ValidAutomaton` uses the index. On a plain
+`Automaton` it uses §2, because the automaton is validated on every call and building the index
+each time would cost more than it saves. `active_events_at(G, x)` is `active_events(G, [x])`.
+
+**Speed** (contracts stripped, random automata, best of 3; S = all states; final code):
+
+| n | m | T | binary search (§2) | index | speed-up | index build + check (once) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 100,000 | 10 | 500,000 | 0.140 s | 0.095 s | 1.5× | 0.20 s |
+| 100,000 | 50 | 2,000,000 | 1.138 s | 0.315 s | 3.6× | 1.00 s |
+| 20,000 | 5 | 1,000,000 | 0.054 s | 0.022 s | 2.4× | 0.11 s |
+
+The 1.138 s is noisy: the same case measured 0.72–0.73 s in other runs, which gives 2.3×. The build
+costs about one to three all-state calls, and is paid once per `ValidAutomaton`.

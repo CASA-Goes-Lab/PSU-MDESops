@@ -81,7 +81,7 @@ class _States:
 class ValidAutomaton:
     """A validated automaton (read-only). Create it with validate(G) or io_aut.read_aut."""
 
-    __slots__ = ("_enc", "_event_of", "_number", "_names", "_deterministic")
+    __slots__ = ("_enc", "_event_of", "_number", "_names", "_deterministic", "_active")
 
     def __init__(self, *args, **kwargs):
         raise TypeError("ValidAutomaton is made by validate(G) or a reader (io_aut), "
@@ -99,6 +99,7 @@ class ValidAutomaton:
         object.__setattr__(self, "_number", {e: k for k, e in enumerate(event_of)})
         object.__setattr__(self, "_names", tuple(names))
         object.__setattr__(self, "_deterministic", deterministic)
+        object.__setattr__(self, "_active", None)       # active-event index, built on first use
         return self
 
     def __setattr__(self, name, value):
@@ -211,6 +212,14 @@ class ValidAutomaton:
 
     def _encoding(self) -> Encoded:
         return self._enc
+
+    def _active_index(self) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+        """The active-event index (A, H) (core_aut/trusted/active_index.py): built and checked by
+        the verified checker on first use, then kept (it depends only on the frozen encoding)."""
+        if self._active is None:
+            from core_aut.trusted.active_index import checked_active_index
+            object.__setattr__(self, "_active", checked_active_index(self._enc))
+        return self._active
 
     def _event_number(self, event: Any) -> Optional[int]:
         """The number of `event` in the encoding, or None if no transition or set uses it."""

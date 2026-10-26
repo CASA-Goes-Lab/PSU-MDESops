@@ -10,6 +10,7 @@ import types
 from pathlib import Path
 
 import ops_aut.verified_ops
+from core_aut.trusted.active_index import build_active_index
 from core_aut.trusted.encoding import encode, event_table
 
 from tests.ops_aut.test_parallel import _random, _Strip
@@ -101,15 +102,17 @@ def test_active_events_verified_core():
         table = event_table([g])
         enc = encode(g, table)
         S = [rng.randrange(enc.n) for _ in range(rng.randint(0, enc.n + 2))]   # may repeat
-        emark, out, src, via = [-1] * enc.m, [], [], []
-        ops.active_events(enc.n, enc.m, enc.start, enc.evt, enc.dst, enc.in_E, S, emark,
-                          out, src, via)
+        A, H = build_active_index(enc.n, enc.start, enc.evt)
         expected = {table[e] for x in S for e in g.states[x].out}
-        assert set(out) == expected and len(out) == len(expected), trial
-        for i, e in enumerate(out):              # witnesses and marks
-            x, k = S[src[i]], via[i]
-            assert enc.start[x] <= k < enc.start[x + 1] and enc.evt[k] == e and emark[e] == i
-        assert all(emark[e] == -1 for e in range(enc.m) if e not in expected)
+        for f, index in ((ops.active_events, ()), (ops.active_events_idx, (A, H))):
+            emark, out, src, via = [-1] * enc.m, [], [], []
+            f(enc.n, enc.m, enc.start, enc.evt, enc.dst, enc.in_E, *index, S, emark,
+              out, src, via)
+            assert set(out) == expected and len(out) == len(expected), trial
+            for i, e in enumerate(out):              # witnesses and marks
+                x, k = S[src[i]], via[i]
+                assert enc.start[x] <= k < enc.start[x + 1] and enc.evt[k] == e and emark[e] == i
+            assert all(emark[e] == -1 for e in range(enc.m) if e not in expected)
 
 
 def test_public_active_events():
@@ -124,3 +127,23 @@ def test_public_active_events():
         assert set(got) == expected and len(got) == len(expected), trial
         got2, sources = active_events(g, S, witnesses=True)
         assert got2 == got and all(x in S and e in g.states[x].out for e, x in zip(got, sources))
+
+
+def test_active_events_valid_automaton_and_at():
+    """A ValidAutomaton uses the active-event index; the result is the same as for the
+    Automaton (binary-search version)."""
+    from core_aut import validate
+    from ops_aut import active_events, active_events_at
+    rng = random.Random(12)
+    for trial in range(200):
+        events = rng.sample(["a", "b", "c", "d"], rng.randint(1, 4))
+        g = _random(rng.randint(1, 8), events, rng)
+        V = validate(g)
+        S = [rng.randrange(g.num_states) for _ in range(rng.randint(0, 5))]
+        expected = {e for x in S for e in g.states[x].out}
+        got, sources = active_events(V, S, witnesses=True)
+        assert set(got) == expected and len(got) == len(expected), trial
+        assert all(x in S and e in g.states[x].out for e, x in zip(got, sources))
+        x = rng.randrange(g.num_states)
+        assert sorted(active_events_at(V, x)) == sorted(g.states[x].out), trial
+        assert sorted(active_events_at(g, x)) == sorted(g.states[x].out), trial
