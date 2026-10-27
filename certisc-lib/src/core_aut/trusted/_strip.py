@@ -5,9 +5,16 @@ Verification is done on the source as written. Before running, two kinds of stat
 removed, because they have no runtime meaning and some would fail at runtime (e.g. Old(...) is
 None outside Nagini):
 1. contract statements: Requires, Ensures, Invariant, Assert, Assume, Fold, Unfold, Decreases;
-2. calls to lemmas: functions whose body is empty once the contracts are removed. Only calls
-   that stand alone as statements, with arguments that are names, constants or arithmetic, so
-   nothing with a side effect is dropped.
+2. calls to lemmas. A lemma is a function whose body, once the contracts are removed, does
+   nothing: it is empty, or holds only calls to lemmas (itself included: a recursive lemma, i.e.
+   a proof by induction), assignments of simple values to locals, and `if` statements with
+   simple conditions around such statements. Only calls that stand alone as statements are
+   dropped, with simple arguments: names, constants, arithmetic, list reads (indices proved in
+   range), len(...), and the contract functions ToSeq(...) / Old(...) (no-ops at runtime). So nothing
+   with a side effect is dropped.
+3. ToSeq(...) and Old(...) left in the code (as arguments of a real call, e.g. values passed
+   only for the proof) become None, which is what they return at runtime, when their argument
+   is simple. Same result, without the call.
 
 Nothing else changes, so the stripped module computes exactly what the verified one does.
 """
@@ -17,7 +24,28 @@ import types
 from pathlib import Path
 
 CONTRACTS = {"Requires", "Ensures", "Invariant", "Assert", "Assume", "Fold", "Unfold", "Decreases"}
-_SIMPLE = (ast.Name, ast.Constant, ast.BinOp, ast.UnaryOp)
+_SIMPLE = (ast.Name, ast.Constant, ast.BinOp, ast.UnaryOp, ast.BoolOp, ast.Compare,
+           ast.Subscript, ast.operator, ast.unaryop, ast.boolop, ast.cmpop, ast.expr_context)
+_VALUE_CONTRACTS = {"ToSeq", "Old", "len"}   # side-effect-free calls allowed in lemma arguments
+
+
+def _simple(node) -> bool:
+    """No side effect: names, constants, arithmetic, comparisons, list reads l[i] (in verified
+    code Nagini proves every index in range), len(...), and ToSeq/Old calls."""
+    for x in ast.walk(node):
+        if isinstance(x, ast.Call):
+            if not (isinstance(x.func, ast.Name) and x.func.id in _VALUE_CONTRACTS):
+                return False
+        elif not isinstance(x, _SIMPLE):
+            return False
+    return True
+
+
+def _is_lemma_call(stmt, names) -> bool:
+    call = stmt.value if isinstance(stmt, ast.Expr) else None
+    return (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+            and call.func.id in names and not call.keywords
+            and all(_simple(a) for a in call.args))
 
 
 class _DropStatements(ast.NodeTransformer):
@@ -31,9 +59,7 @@ class _DropStatements(ast.NodeTransformer):
         call = node.value
         if isinstance(call, ast.Call) and isinstance(call.func, ast.Name) \
                 and call.func.id in self.names:
-            if not self.simple_args_only or all(
-                    isinstance(a, _SIMPLE) and not any(isinstance(x, ast.Call) for x in ast.walk(a))
-                    for a in call.args):
+            if not self.simple_args_only or _is_lemma_call(node, self.names):
                 return None
         return node
 
@@ -45,21 +71,52 @@ class _DropStatements(ast.NodeTransformer):
         return node
 
 
+def _does_nothing(stmts, names) -> bool:
+    """Every statement is a docstring, pass, a lemma call, an assignment of a simple value to a
+    local name (dead: a lemma returns nothing), or an if (simple condition) whose branches do
+    nothing."""
+    for s in stmts:
+        if isinstance(s, ast.Pass) or (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant)):
+            continue
+        if _is_lemma_call(s, names):
+            continue
+        if isinstance(s, ast.Assign) and len(s.targets) == 1 and isinstance(s.targets[0], ast.Name) \
+                and _simple(s.value):
+            continue
+        if isinstance(s, ast.If) and _simple(s.test) and _does_nothing(s.body, names) \
+                and _does_nothing(s.orelse, names):
+            continue
+        return False
+    return True
+
+
 def _lemmas(tree):
-    """Top-level functions whose body is only a docstring and/or pass (after stripping)."""
-    names = set()
-    for f in tree.body:
-        if isinstance(f, ast.FunctionDef):
-            body = [s for s in f.body
-                    if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))]
-            if all(isinstance(s, ast.Pass) for s in body):
-                names.add(f.name)
-    return names
+    """Top-level functions that do nothing (after stripping the contracts). Computed as a
+    greatest fixed point, so a lemma may call itself or other lemmas."""
+    funcs = {f.name: f for f in tree.body if isinstance(f, ast.FunctionDef)}
+    names = set(funcs)
+    while True:
+        keep = {n for n in names if _does_nothing(funcs[n].body, names)}
+        if keep == names:
+            return names
+        names = keep
+
+
+class _NoneForValueContracts(ast.NodeTransformer):
+    """ToSeq(x) / Old(x) with a simple argument -> None (their runtime value)."""
+
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if isinstance(node.func, ast.Name) and node.func.id in ("ToSeq", "Old") \
+                and not node.keywords and all(_simple(a) for a in node.args):
+            return ast.copy_location(ast.Constant(None), node)
+        return node
 
 
 def strip_source(source: str) -> ast.Module:
     tree = _DropStatements(CONTRACTS, simple_args_only=False).visit(ast.parse(source))
     tree = _DropStatements(_lemmas(tree), simple_args_only=True).visit(tree)
+    tree = _NoneForValueContracts().visit(tree)
     return ast.fix_missing_locations(tree)
 
 

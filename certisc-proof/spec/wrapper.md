@@ -284,16 +284,21 @@ certisc-lib/src/
 │   │   ├── encoding.py        event table, encode (blocks sorted by event), decode
 │   │   ├── error.py           InvalidAutomatonError
 │   │   ├── wrapper.py         encode, run check_automaton, raise InvalidAutomatonError
-│   │   └── _strip.py          removes contracts and lemma calls before running
+│   │   ├── active_index.py    builds the active-event index; accepted only by check_index
+│   │   └── _strip.py          removes contracts and lemma calls (recursive lemmas included)
+│   │                          before running; ToSeq/Old left in code become None
 │   └── verified_core/         internal
 │       ├── __init__.py        installs the contract fallbacks first
 │       ├── _contracts.py      runtime only: no-op stand-ins if Nagini is not installed, and a
 │       │                      no-op `Ensures` if it is (the real one raises when called)
-│       └── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
+│       ├── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
+│       └── active_index.py    VERIFIED: check_index (the active-event index is correct)
 ├── io_aut/                    trusted readers/writers: read_aut, write_aut (JSON), read_fsm
-└── ops_aut/                   public layer: next_states (basic_ops.py)
+└── ops_aut/                   public layer: next_states, active_events(_at) (basic_ops.py),
+    │                          reachable (reach.py)
     └── verified_ops/          internal
-        ├── basic_ops.py       VERIFIED: next_states
+        ├── basic_ops.py       VERIFIED: next_states, active_events (+ over the index)
+        ├── reach.py           VERIFIED: reachable
         ├── parallel.py        VERIFIED (in progress): parallel composition core
         └── parallel_check.py  VERIFIED: checker for the parallel output (soundness)
 ```

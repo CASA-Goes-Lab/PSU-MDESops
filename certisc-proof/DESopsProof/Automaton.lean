@@ -181,6 +181,96 @@ True by definition (`Iff.rfl`). -/
 theorem mem_mkd {f : σ → α → Finset (σ)} {X0 : Finset (σ)} {m : σ → Bool}
     {s : List α} : s ∈ mkd f X0 m ↔ ∃ y ∈ run f X0 s, m y = true := Iff.rfl
 
+/-! ## Reachability certificates
+
+A program cannot check `reach` directly: it quantifies over all words. The lemmas below reduce it
+to facts about a finite list of states $out_0, \dots, out_{N-1}$ that a program can check one
+transition at a time (`spec/reach.md`):
+- **contains $X_0$** and **closed** give $Ac \subseteq \{out_i\}$ (R1, `reach_subset_of_closed`);
+- **witnesses** (each $out_i$ is initial, or has a transition from an earlier $out_p$) give
+  $\{out_i\} \subseteq Ac$ (R2, `mem_reach_of_witness`).
+
+Together: `reach_eq_of_certificate`. -/
+
+/-- $R$ is closed under $f$: $\forall x \in R,\ \forall e,\ f(x, e) \subseteq R$. -/
+def Closed (f : σ → α → Finset σ) (R : Set σ) : Prop :=
+  ∀ x ∈ R, ∀ e, ∀ y ∈ f x e, y ∈ R
+
+/-- $X_0 \subseteq Ac(f, X_0)$: an initial state is reached by the empty word. -/
+theorem mem_reach_of_mem {f : σ → α → Finset σ} {X0 : Finset σ} {x : σ} (hx : x ∈ X0) :
+    x ∈ reach f X0 :=
+  ⟨[], hx⟩
+
+/-- $Ac(f, X_0)$ is closed: if $x$ is reachable and $y \in f(x, e)$, then $y$ is reachable.
+
+**Proof:** if $x \in f^*(X_0, s)$, then $y \in \delta_f(f^*(X_0, s), e) = f^*(X_0, s \cdot e)$
+(`run_append`, `mem_step`). -/
+theorem mem_reach_of_step {f : σ → α → Finset σ} {X0 : Finset σ} {x y : σ} {e : α}
+    (hx : x ∈ reach f X0) (hy : y ∈ f x e) : y ∈ reach f X0 := by
+  obtain ⟨s, hs⟩ := hx
+  refine ⟨s ++ [e], ?_⟩
+  rw [run_append]
+  simp only [run_cons, run_nil]
+  exact (mem_step f).2 ⟨x, hs, hy⟩
+
+/-- **R1.** If $X_0 \subseteq R$ and $R$ is closed under $f$, then $Ac(f, X_0) \subseteq R$
+($Ac$ is the least closed set containing $X_0$).
+
+**Proof:** for every word $s$ and every $S \subseteq R$: $f^*(S, s) \subseteq R$, by induction on
+$s$ for every $S$. The step case uses closure: $\delta_f(S, e) \subseteq R$. Then take $S = X_0$. -/
+theorem reach_subset_of_closed {f : σ → α → Finset σ} {X0 : Finset σ} {R : Set σ}
+    (h0 : ∀ x ∈ X0, x ∈ R) (hR : Closed f R) : reach f X0 ⊆ R := by
+  have key : ∀ (s : List α) (S : Finset σ), (∀ x ∈ S, x ∈ R) → ∀ y ∈ run f S s, y ∈ R := by
+    intro s
+    induction s with
+    | nil => intro S hS y hy; exact hS y hy
+    | cons e s ih =>
+      intro S hS y hy
+      refine ih (step f S e) ?_ y hy
+      intro z hz
+      obtain ⟨x, hx, hz⟩ := (mem_step f).1 hz
+      exact hR x (hS x hx) e z hz
+  rintro y ⟨s, hs⟩
+  exact key s X0 h0 y hs
+
+/-- **R2.** If each $out_i$ ($i < N$) is initial or has a transition from an earlier $out_p$
+($p < i$), then every $out_i$ is reachable.
+
+**Proof:** strong induction on $i$. If $out_i \in X_0$: `mem_reach_of_mem`. Otherwise
+$out_i \in f(out_p, e)$ with $p < i$, and $out_p$ is reachable by the induction hypothesis:
+`mem_reach_of_step`. -/
+theorem mem_reach_of_witness {f : σ → α → Finset σ} {X0 : Finset σ} (out : ℕ → σ) (N : ℕ)
+    (hw : ∀ i < N, out i ∈ X0 ∨ ∃ p < i, ∃ e, out i ∈ f (out p) e) :
+    ∀ i < N, out i ∈ reach f X0 := by
+  intro i
+  refine Nat.strong_induction_on i ?_
+  intro i ih hi
+  rcases hw i hi with h | ⟨p, hp, e, he⟩
+  · exact mem_reach_of_mem h
+  · exact mem_reach_of_step (ih p hp (lt_trans hp hi)) he
+
+/-- **Certificate.** If the list $out_0, \dots, out_{N-1}$
+- contains $X_0$: $\forall x \in X_0,\ \exists i < N,\ out_i = x$;
+- is closed: $\forall i < N,\ \forall e,\ \forall y \in f(out_i, e),\ \exists j < N,\ out_j = y$;
+- has witnesses: as in R2;
+
+then it lists exactly the reachable states: $Ac(f, X_0) = \{out_i \mid i < N\}$.
+
+This is what the verified `reachable` establishes (`spec/reach.md`), with $X_0$ the start states.
+
+**Proof:** ⊆ by R1 with $R = \{out_i\}$; ⊇ by R2. -/
+theorem reach_eq_of_certificate {f : σ → α → Finset σ} {X0 : Finset σ} (out : ℕ → σ) (N : ℕ)
+    (h0 : ∀ x ∈ X0, ∃ i < N, out i = x)
+    (hc : ∀ i < N, ∀ e, ∀ y ∈ f (out i) e, ∃ j < N, out j = y)
+    (hw : ∀ i < N, out i ∈ X0 ∨ ∃ p < i, ∃ e, out i ∈ f (out p) e) :
+    reach f X0 = {y | ∃ i < N, out i = y} := by
+  apply Set.Subset.antisymm
+  · apply reach_subset_of_closed h0
+    rintro x ⟨i, hi, rfl⟩ e y hy
+    exact hc i hi e y hy
+  · rintro y ⟨i, hi, rfl⟩
+    exact mem_reach_of_witness out N hw i hi
+
 /-! ## Automaton -/
 
 /-- An automaton

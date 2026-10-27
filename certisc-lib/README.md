@@ -5,12 +5,13 @@ Certified supervisory control for discrete event systems. The Python code is ver
 [`../certisc-proof/`](../certisc-proof/).
 
     src/core_aut/                public: Automaton, ValidAutomaton, validate, check_or_raise
-        trusted/                 trusted helpers: encoding, wrapper, _strip, error
-        verified_core/           Nagini-verified implementations (internal): check.py
+        trusted/                 trusted helpers: encoding, wrapper, _strip, error, active_index
+        verified_core/           Nagini-verified implementations (internal): check.py,
+                                 active_index.py (checker for the active-event index)
     src/io_aut/                  public: read_aut, write_aut (JSON), read_fsm (DESUMA import)
-    src/ops_aut/                 public: next_states, active_events
-        verified_ops/            Nagini-verified implementations (internal):
-                                 basic_ops.py, parallel.py (in progress), parallel_check.py
+    src/ops_aut/                 public: next_states, active_events, active_events_at, reachable
+        verified_ops/            Nagini-verified implementations (internal): basic_ops.py,
+                                 reach.py, parallel.py (in progress), parallel_check.py
     tests/                       one folder per package
 
 Public functions validate the automaton, encode it (core_aut/trusted/encoding.py), and call an

@@ -6,6 +6,7 @@ This note covers the verified pieces that exist so far:
 - **`active_events`**: which events can occur at a set of states?
 - **the active-event index**: a per-state list of run heads, built by trusted code and accepted
   only by a verified checker; `active_events` reads it on a `ValidAutomaton`.
+- **`reachable`**: which states can be reached from a set of start states?
 
 Other operations will get their own sections as they are verified. Design history and
 measurements are in `doc/logs/`; the spec notes are in `certisc-proof/spec/`.
@@ -229,6 +230,32 @@ and checks it on first use and keeps it; it is not stored in files.
 automata), and the §4b version for a plain `Automaton`. Lean needs nothing new: the index is a
 representation, not new mathematics. Details: `certisc-proof/spec/basic_ops.md` §3.
 
+## 4d. `reachable`: the states reachable from a set of states
+
+**Where:** `ops_aut/verified_ops/reach.py`. Called by the public
+`ops_aut.reachable(G, states=None, witnesses=False)` (default start: the initial states).
+
+**Lean:** `reach f X0 = {y | ∃ s, y ∈ f*(X0, s)}` (already there). New in `Automaton.lean`:
+- R1, `reach_subset_of_closed`: a closed set containing X0 contains `reach`;
+- R2, `mem_reach_of_witness`: a list where each entry is in X0, or has a transition from an
+  earlier entry, lists only reachable states;
+- `reach_eq_of_certificate`: the two together. `lake build` passes, standard axioms only.
+
+**Proved** (Nagini): the result
+- is in range, with no duplicates;
+- contains the start states;
+- is closed: every transition of a listed state goes to a listed state;
+- has witnesses: each entry is a start state or is reached from an earlier entry.
+
+These are exactly the hypotheses of `reach_eq_of_certificate`, so the result is exactly
+`reach f S`. Termination is proved too: a count of the marked states shows the list never
+exceeds n entries. Details: `certisc-proof/spec/reach.md`.
+
+**Why it works:** breadth-first, with the output list as the queue and a list of n marks. Each
+invariant is carried across "add one state" by its own small lemma. Two techniques were new:
+- recursive lemmas (proofs by induction) for the count;
+- predicates over sequence values rather than lists, so the inputs stay known unchanged.
+
 ## 5. Reading the code
 
 Every Nagini line in `basic_ops.py` carries two comments:
@@ -244,7 +271,7 @@ Each verified file opens with a glossary of the notation (`Requires`, `Ensures`,
 | Piece | Why it is trusted | How it is checked instead |
 |---|---|---|
 | `encode` / `decode` (`core_aut/trusted/encoding.py`) | plain copying between `Automaton` and lists | round-trip tests; sortedness test |
-| `_strip.py` | removes contracts and lemma calls before running | only removes statements with no runtime effect; tests compare results |
+| `_strip.py` | removes contracts and lemma calls (recursive lemmas included) before running; turns `ToSeq(...)`/`Old(...)` left in code into `None`, their runtime value | only removes statements with no runtime effect (`tests/core_aut/test_strip.py`); tests compare results |
 | the active-index builder (`core_aut/trusted/active_index.py`) | plain code, one scan | its result is accepted only by the verified `check_index` |
 | the public layer (`validate`, `check_or_raise`, `ops_aut.next_states`) | glue: validate, encode, call, translate back | tests against direct computation |
 | `ValidAutomaton` (`core_aut/valid.py`) | read-only by construction (tuples, no setters); made only by `validate` and the readers | tests that it cannot be modified or created directly |
@@ -260,7 +287,8 @@ From `certisc-lib/`, with the `verify` extra (Python ≥ 3.12, Java):
     nagini src/core_aut/verified_core/check.py         # Verification successful, ~18 s
     nagini src/core_aut/verified_core/active_index.py  # Verification successful, ~55–95 s
     nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~160–310 s
-    pytest                                             # 45 passed
+    nagini src/ops_aut/verified_ops/reach.py           # Verification successful, ~20 s
+    pytest                                             # 50 passed
 
 From `certisc-proof/`:
 
