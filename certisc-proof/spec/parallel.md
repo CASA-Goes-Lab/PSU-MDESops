@@ -1,215 +1,235 @@
-# Spec: parallel composition
+# Spec: parallel composition and product
 
-Status: **draft 2026-10-20, for review.** Lean side (§3–§4) **proved** 2026-10-20 (`DESopsProof/Parallel.lean`). Nagini side: see §5. Builds on [automaton.md](automaton.md) (definitions, §3–§4)
-and [wrapper.md](wrapper.md) (encoding, verified checker). Code: `certisc-lib/src/ops_aut/verified_ops/parallel.py`.
+Status: **draft 2026-10-29, fresh start; reviewed by the user 2026-10-29** (answers in §9).
+Nothing implemented yet.
+This replaces the draft of 2026-10-20 (in git history, `git show HEAD:certisc-proof/spec/parallel.md`).
+That draft predates `ValidAutomaton`, the per-automaton event numbering, and the
+"trusted builder + verified checker" pattern (indices, `delete_states`); see "What changed".
 
-## 1. Decisions
+## 1. Definitions (math)
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | A shared event is controllable in one input and uncontrollable in the other (or observable in one, unobservable in the other) | **Reject**: `InvalidAutomatonError`. The check is verified (§5, N0). |
-| 2 | Lean state type | `run`, `gen`, `mkd`, `reach` are generalized from `Fin n` to any state type `σ` with `DecidableEq`. `Automaton` keeps `Fin n`. The product's states are pairs `Fin n1 × Fin n2`. |
-| 3 | Division of work | Nagini proves **local** facts about each output state (§5). Lean proves the product's languages (§3) and a generic bridge from local facts to languages (§4). |
-| 4 | DFA in ⇒ DFA out | **Required** (user, 2026-10-20). Needs distinct pairs: N5 in Nagini, L5 in Lean. |
-| 5 | Where N2a/N2b are proved | **Proposed (Claude, 2026-10-20), for review:** by a verified *checker* run on the core's output, not inside the core (§5a). |
+Inputs: two valid automata `G1 = (X1, E1, Euc1, Euo1, f1, X01, Xm1)` and `G2 = (X2, ...)`.
 
-## 2. Definition
+Both operations run on pairs of states and differ only in what an event does. Per event `e`, a
+**mode**:
 
-Inputs: `G1 = (n1, E1, Euc1, Euo1, f1, X01, Xm1)` and `G2 = (n2, …)`, both well formed (W1–W3).
-
-**Agreement:** for every `e ∈ E1 ∩ E2`, `e ∈ Euc1 ⟺ e ∈ Euc2` and `e ∈ Euo1 ⟺ e ∈ Euo2`.
-Composition is defined only for agreeing inputs (decision 1).
-
-**Product** `G1 ‖ G2`, over the states `X1 × X2` (pairs):
-
-| Part | Definition |
-|---|---|
-| events | `E = E1 ∪ E2`, `Euc = Euc1 ∪ Euc2`, `Euo = Euo1 ∪ Euo2` |
-| transitions | `f∥((x1, x2), e)` = see below |
-| initial | `X0 = X01 × X02` |
-| marked | `(x1, x2)` marked ⟺ `x1 ∈ Xm1` and `x2 ∈ Xm2` |
-
-    f∥((x1, x2), e) = f1(x1, e) × f2(x2, e)     if e ∈ E1 ∩ E2   (both move)
-                    = f1(x1, e) × {x2}          if e ∈ E1 \ E2   (G1 alone)
-                    = {x1} × f2(x2, e)          if e ∈ E2 \ E1   (G2 alone)
-                    = ∅                         otherwise
-
-A shared event blocks wherever one side can't execute it (`f1(x1, e) = ∅` gives `∅`), including
-events in `E1` that label no transition of `G1` (automaton.md §3).
-
-## 3. Lean: the product and its languages
-
-New module `DESopsProof/Parallel.lean`.
-
-- **(L0) Refactor:** `step`, `run`, `gen`, `mkd`, `reach` and their lemmas work for any `σ` (decision 2).
-  A *transition system* `TS σ α` is `(f : σ → α → Finset σ, X0 : Finset σ, marked : σ → Bool)`,
-  without well-formedness. An `Automaton` gives one with `σ = Fin n`.
-- **(L1) Definition:** `par G1 G2 : TS (Fin G1.n × Fin G2.n) α`, as in §2.
-- **(L2) Languages.** With `P_i(s)` = `s` with every event outside `E_i` erased (`List.filter`):
-
-      s ∈ L(G1 ‖ G2)  ⟺  s ∈ (E1 ∪ E2)*  ∧  P1(s) ∈ L(G1)   ∧  P2(s) ∈ L(G2)
-      s ∈ Lm(G1 ‖ G2) ⟺  s ∈ (E1 ∪ E2)*  ∧  P1(s) ∈ Lm(G1)  ∧  P2(s) ∈ Lm(G2)
-
-  Key lemma: from a product of sets the run stays a product, for `s ∈ (E1 ∪ E2)*`:
-
-      run∥(S1 × S2, s) = run1(S1, P1(s)) × run2(S2, P2(s))
-
-- **(L2') Determinism:** `G1`, `G2` deterministic ⟹ `|X0| ≤ 1` and `|f∥(x, e)| ≤ 1`.
-
-## 4. Lean: from local facts to languages (generic)
-
-Used by `parallel` now, and later by every operation whose verified core builds an automaton
-state by state (observer, supervisor synthesis, ...).
-
-**Setting.** `H` has states `0 … k−1`, transitions `fH`, initial `X0H`, marking `mH`. `T` is a transition
-system over `σ`. `φ : Fin k → σ` labels each state of `H` with a state of `T`. For a set `S` of
-`H`-states, `φ(S) = {φ(i) | i ∈ S}`.
-
-**(L3) Bridge theorem.** If
-
-| | hypothesis |
-|---|---|
-| start | `φ(X0H) = X0_T` |
-| step | for every `i` and `e`: `φ(fH(i, e)) = f_T(φ(i), e)` |
-| marking | for every `i`: `mH(i) = marked_T(φ(i))` |
-
-then `L(H) = L(T)` and `Lm(H) = Lm(T)`.
-
-**Proof:** by induction on `s`, `φ(run_H(X0H, s)) = run_T(X0_T, s)`. The base case is *start*;
-each event uses *step* (the image of a union is the union of the images). A set is nonempty iff
-its image is, which gives `L`. *Marking* gives `Lm`.
-
-Not needed for the languages: injectivity of `φ` (two states with one label behave identically)
-and reachability of `H`'s states (the induction never uses it). Injectivity is needed for
-determinism (L5).
-
-**(L4) The output is a well-formed automaton.** For `T = G1 ‖ G2` and the hypotheses of (L3), `H`
-with events `E1 ∪ E2` satisfies W1–W3:
-- W1 comes from *step* and §2;
-- W2 holds by definition;
-- W3: if `k > 0`, the pair type is nonempty, so `n1, n2 > 0`, so `X01 × X02 ≠ ∅`, so `X0H ≠ ∅` by *start*.
-
-**(L5) DFA in ⇒ DFA out.** If moreover `φ` is injective (distinct labels) and `T` is deterministic
-(`|X0_T| ≤ 1`, `|f_T(x, e)| ≤ 1`), then `H` is deterministic: `|X0H| = |φ(X0H)| = |X0_T| ≤ 1` and
-`|fH(i, e)| = |φ(fH(i, e))| = |f_T(φ(i), e)| ≤ 1` (an injective map keeps sizes). With (L2') this gives:
-`G1`, `G2` deterministic ⟹ `H` deterministic.
-
-**Composition:** (L3) + (L2) give `L(H) = P1⁻¹ L(G1) ∩ P2⁻¹ L(G2) ∩ (E1 ∪ E2)*`, and the same for `Lm`.
-
-## 5. Nagini: postconditions of the core
-
-The encoding is from wrapper.md §4: transitions grouped by state, events numbered `0 … m−1`. Output
-state `i` is the pair `(p1[i], p2[i])`. Its transitions are positions `ostart[i] … ostart[i+1]−1` of
-`oevt` / `odst`.
-
-`has1(x, e, y)` means "some position `j` of state `x`'s block in G1 has `evt1[j] = e` and `dst1[j] = y`"; likewise `has2`.
-
-**Synchronous move** `sync(x1, x2, e, y1, y2)`, the list form of `f∥`:
-
-    in_E1[e] and in_E2[e]:      has1(x1, e, y1) and has2(x2, e, y2)
-    in_E1[e] and not in_E2[e]:  has1(x1, e, y1) and y2 == x2
-    not in_E1[e] and in_E2[e]:  y1 == x1 and has2(x2, e, y2)
-
-| # | Postcondition (on success) | Gives (L3) | Status |
+| mode | `f((x1, x2), e)` | parallel `‖` | product `×` |
 |---|---|---|---|
-| N0 | Separate verified function `check_agree` returns True ⟺ agreement (§2) | decision 1 | to do |
-| N1 | Every output state is a pair of input states; blocks well formed; every target is an output state | φ well defined | **proved** (core) |
-| N2a | *Sound:* each position `k` in block `i` satisfies `sync(p1[i], p2[i], oevt[k], p1[odst[k]], p2[odst[k]])` | step ⊆ | **proved** (checker `check_sound`, §5a) |
-| N2b | *Complete:* for each input move `sync(p1[i], p2[i], e, y1, y2)` there is a position `k` in block `i` with `oevt[k] = e`, `p1[odst[k]] = y1`, `p2[odst[k]] = y2` | step ⊇ | in progress (checker `check_complete`, §5a) |
-| N3 | `oinit[i] == (init1[p1[i]] and init2[p2[i]])`, and every pair of initial states is some output state | start | to do |
-| N4 | `omarked[i] == (marked1[p1[i]] and marked2[p2[i]])`; `in_E`, `in_Euc`, `in_Euo` of the output are the element-wise `or` | marking, events | to do |
-| N5 | *Distinct:* `i != j` ⟹ `(p1[i], p2[i]) != (p1[j], p2[j])` | φ injective (L5) | **proved** (core) |
+| `both` | `f1(x1, e) × f2(x2, e)` | `e ∈ E1 ∩ E2` | `e ∈ E1 ∩ E2` |
+| `left` | `f1(x1, e) × {x2}` | `e ∈ E1 \ E2` | never |
+| `right` | `{x1} × f2(x2, e)` | `e ∈ E2 \ E1` | never |
+| `none` | `∅` | otherwise | otherwise |
 
-N2b and N3 contain "there is". In Nagini these are easiest with **witness lists** returned by the
-core. For example, each input position records the output position it produced, and the postcondition
-states that the record is correct. That is an implementation choice, made when the code is written.
+Common to both:
 
-The core gains the inputs `marked1/2`, `in_Euc1/2`, `in_Euo1/2` and the outputs `oinit`, `omarked`, and
-the output event lists.
+| part | definition |
+|---|---|
+| initial | `X01 × X02` |
+| marked | `(x1, x2)` marked ⟺ `x1 ∈ Xm1` and `x2 ∈ Xm2` |
+| states kept | only the pairs **reachable** from `X01 × X02` (the builder searches forward) |
+| `Euc`, `Euo` | unions of the inputs' sets, restricted to the output's events |
 
-**Dropped from the earlier plan** (formal-verification log, 2026-10-18): reachability witnesses (old P4)
-and separate closure (old P3; N2b includes it). (L3) needs neither.
+Output events: `E1 ∪ E2` for both (question 2: union). In the product, private events stay in
+the alphabet but are never enabled (mode `none`).
 
-**N5 and the pair key (done).** Distinct pairs need lookups that never miss an existing pair, i.e.
-injectivity of the key `x1 * n2 + x2`. Keying the map by the tuple `(x1, x2)` does not work in
-Nagini: dictionary keys are compared by object identity, so even `(a, b) in index` right after
-`index[(a, b)] = 5` cannot be proved. Instead the key is a `@Pure` function `key`, its injectivity
-is a lemma (`key_injective`), and the only nonlinear fact, `c >= 0, n2 >= 0 ⟹ c * n2 >= 0`, is a
-pure inductive lemma (`mul_nonneg`). No quantifier mentions the multiplication. The map
-invariant `map_ok` states both directions (each state's key maps to it; each key maps to a state
-with that key), and `distinct` follows.
+Languages (projection `Pi` erases events outside `Ei`):
 
-## 5a. Where the proofs live (decision 5, proposed)
+    L(G1 ‖ G2) = P1⁻¹ L(G1) ∩ P2⁻¹ L(G2)  over (E1 ∪ E2)*,   same for Lm
+    L(G1 × G2) = L(G1) ∩ L(G2),                               same for Lm
 
-**What was tried.** Proving N2a inside the core, with the facts carried through the BFS as loop
-invariants. Every variant timed out in Z3 (more than 10 minutes), even for a straight-line method
-(`move`) that adds one state and one transition. The cause is that the soundness facts read the
-pair lists and the output lists at indices taken from other lists, and every `get_or_add` and
-`emit` changes those lists, so Z3 has to re-prove the whole quantifier after each step. Without
-the soundness postcondition, the same method verifies in 22 s.
+## 2. Lean
 
-**What works.** A separate, verified function `check_sound` (`src/ops_aut/verified_ops/parallel_check.py`)
-walks the finished output in the order the core emits it, and checks each output transition
-against the next expected synchronous move. It records witnesses: `ostate[k]` (the state that
-transition `k` leaves), `osrc1[k]`, `osrc2[k]` (the input transitions used, `-1` for a side that
-stays). Proved (Nagini, about 65 s): if it returns True, every output transition is a synchronous
-move, in the witness form:
+**Done 2026-10-29** (`lake build` passes, no `sorry`; the results use only `propext`,
+`Classical.choice`, `Quot.sound`). As built: `Mode`, `syncF`, `comp`, `parMode`, `prodMode`,
+`parF_eq_syncF`, `par_eq_comp`, `prod`, `run_prodF`, `mem_prod_L`, `mem_prod_Lm`, `prod_det`;
+`IsComposition` (fields `step_sound`, `step_complete`, `init_sound`, `init_complete`, `marked`,
+`E`, `Euc`, `Euo`) with `image_f`, `image_X0`, `L`, `Lm`, `det`, `par_L`, `par_Lm`, `prod_L`,
+`prod_Lm`, `par_det`, `prod_det`. Per-mode membership lemmas for the hand check:
+`mem_syncF_both`, `mem_syncF_left`, `mem_syncF_right`, `syncF_none`. The old `output` section
+(tied to the 2026-10-20 Nagini plan) was replaced by `IsComposition`; `H` is now any
+`Automaton` (W1–W3 come from the validity pass).
 
-    ostart[i] <= k < ostart[i + 1]  for i = ostate[k]                (k is in the block of i)
-    osrc1[k] >= 0:  osrc1[k] in the block of p1[i] in G1, evt1[osrc1[k]] == oevt[k],
-                    dst1[osrc1[k]] == p1[odst[k]]
-    osrc1[k] <  0:  p1[odst[k]] == p1[i] and oevt[k] not in E1
-    (likewise for G2)
+Plan as drafted:
 
-With W1 of the inputs this is `sync(p1[i], p2[i], oevt[k], p1[odst[k]], p2[odst[k]])` (§5). The
-library will raise if the check fails; so every result it returns is proved sound. The tests show
-it never fails on the core's output (300 random pairs), and that it rejects corrupted outputs.
+`DESopsProof/Parallel.lean` (2026-10-20) already proves the parallel case: `parF`, `par`,
+`mem_par_L`, `mem_par_Lm`, `par_det`, and the generic bridge (`gen_eq_of_labels`,
+`mkd_eq_of_labels`, `det_of_labels`, `output`). The math has not changed; the plan is to keep
+it and generalize:
 
-**Completeness (N2b), in progress.** A second pass over the now fixed lists, `check_complete`,
-checks that each synchronous move of each state is some output transition of that state. The
-predicates and a lemma verify; the walk's loop invariants still time out. Drafts and notes:
-`doc/wip/parallel/` (outer repository).
+- **(L1) by modes:** `syncF mode f1 f2`, with `parF` and a new `prodF` as two choices of `mode`.
+  `par` and `prod` are transition systems over `Fin n1 × Fin n2`.
+- **(L2) languages:** `mem_par_L`/`Lm` (exist); new `mem_prod_L`/`Lm`
+  (`s ∈ L(G1 × G2) ⟺ s ∈ L(G1) ∧ s ∈ L(G2)`; the run is the pair of runs, no projection).
+- **(L3) bridge (exists):** if `φ(X0H) = X0`, `φ(fH(i, e)) = f(φ(i), e)` and `mH(i) = m(φ(i))`,
+  then `L(H) = L(T)` and `Lm(H) = Lm(T)`. Needs neither injectivity of `φ` nor reachability.
+- **(L4) the checker's facts give (L3)'s hypotheses.** A new statement in the form Nagini checks
+  (witness arrays, below), as `IsDeletion` was for `delete_states`: `IsComposition`.
+- **(L5) determinism (exists, `det_of_labels`):** needs `φ` injective. See question 4.
 
-**Why this is sound.** The guarantee is about what the library returns: a checker that is proved
-to return True only for correct outputs certifies each result. What it does not prove is that
-the core never makes the check fail; that is covered by tests, like the fuel bound.
+Event identity: Lean has one alphabet `α`; the two inputs share it. The Python side has one
+event numbering per automaton, so the mapping between numberings is part of the trusted
+boundary (§4, question 3).
 
-## 6. Matching the two sides (checked by hand)
+## 3. Python: mechanism
 
-| Lean | Nagini | Same because |
+**Decision (user, 2026-10-29): a verified search, not a checker.** The forward search over pairs is
+itself the verified code: at each new state, the transitions it adds are proved good (loop
+invariants), and the lists it writes are already the grouped encoding (block `i` is written while
+`i` is processed). The Lean target is unchanged (`IsComposition`). Reasons: no extra checking
+pass at runtime (in delete the check costs about 3.5× the build); the lessons of `reach.py` (a
+verified search that writes its output, 20 s) address what timed out on 2026-10-20 (re-proving
+the facts about earlier entries after each append). If the in-search proofs fail, we look at the
+options then (the user: "not going with the checker yet").
+
+Plan:
+1. **Experiment first:** the predicate "every transition so far is a correct move" and the
+   methods that append one state and one transition while keeping it (the step that timed out on
+   2026-10-20). Measure.
+2. If it verifies quickly: the full search (initial pairs, one method per output state, the
+   pair lookup, completeness per finished state).
+3. Pair lookup (proposal, to confirm): a trusted dict `(x1, x2) → i`; a "found j" answer is
+   checked in the verified code (`p1[j] = x1`, `p2[j] = x2`); a wrong "new" answer can only add
+   a duplicate state (languages still right, `IsComposition` needs no distinct labels). A
+   bound of `n1·n2` new states gives termination.
+
+The table and lists below are from the draft (a trusted builder + checker); the lists
+(`p1`, `p2`, `src1`, `src2`, completeness witnesses) carry over as the search's outputs.
+
+
+Same pattern as `delete_states`: trusted code builds, verified code checks, the result is
+returned only if the check passes.
+
+| step | where | trusted / verified |
 |---|---|---|
-| `f∥` (§2) | `sync` (§5) | the three cases are identical; `has1(x, e, y)` ⟺ `y ∈ f1(x, e)` by the encoding (wrapper.md §4) |
-| *step*, `⊆` and `⊇` | N2a, N2b | with `φ(i) = (p1[i], p2[i])` and `fH(i, e)` = the set of `odst[k]` for `k` in block `i` with `oevt[k] = e` |
-| *start* | N3 | `X0H` = the set of `i` with `oinit[i]` |
-| *marking* | N4 | `mH(i) = omarked[i]` |
-| `φ` injective | N5 | literal |
-| `Agree` | N0 | literal |
+| events: output table, maps `m1`, `m2` (input number → output number), modes | `ops_aut/basic_ops.py` | trusted (by names) |
+| agreement of `Euc`/`Euo` on shared events (reject if not) | checker | verified (question 1) |
+| build: forward search over pairs, dict `(x1, x2) → i` | `core_aut/trusted/compose.py` | trusted |
+| check: the output is exactly the reachable composition | `ops_aut/verified_ops/compose.py` | verified |
+| validity of the output | `validate_encoded` (as delete) | verified (the extra pass; see §6) |
+| names: `(name1, name2)` pairs | wrapper | trusted |
 
-## 7. Trusted, not proved
+No fuel bound and no pigeonhole argument are needed any more: the search is trusted code; only
+its finished output is checked.
 
-- **Encoding and decoding** (wrapper.md §3–§4).
-- **The hand check of §6.**
-- **Stripping contract statements before running.** An AST pass that drops only statement-level contract calls (to be added to the library).
-- **Fuel.** The core returns 1 ("fuel exhausted") only if it found more than n1 · n2 distinct pairs, which is impossible; proving that would need a pigeonhole argument. The wrapper raises if it happens, and the guarantees hold for result 0.
-- **The checker never fails on the core's output** (decision 5). Tested, not proved; the wrapper raises if it does.
+### Builder output (lists)
 
-## 8. Not covered (yet)
+| array | size | meaning |
+|---|---|---|
+| `p1`, `p2` | n | output state `i` is the pair `(p1[i], p2[i])` (the label `φ(i)`) |
+| `start`, `evt`, `dst` | n+1, T, T | the output's transition blocks (output event numbers) |
+| `init`, `marked` | n | flags |
+| `src1`, `src2` | T | witness: the input transitions that output transition `k` uses (`-1`: that side stays) |
+| completeness witnesses | see §4 | question 5 |
 
-- **Every state of H is reachable.** True by the search order, but it affects size only, not the languages.
-- **Speed.**
+## 4. Verified checker: facts
 
-## 9. Order of work
+`φ(i) = (p1[i], p2[i])`, `mode[e]`, `m1`, `m2` as above.
 
-1. Review of this spec.
-2. Lean: L0 (refactor), L1, L2, L2', L3, L4, L5; `lake build` with no `sorry`.
-3. Nagini:
-   - N0 (`check_agree`);
-   - the extended core signature;
-   - N3 and N4;
-   - N2a;
-   - N2b;
-   - N5 (tuple-keyed map).
-4. Library:
-   - contract stripping at import;
-   - a public `parallel(G1, G2)` (validate, check agreement, encode, run, decode);
-   - tests.
+| fact | math | gives |
+|---|---|---|
+| labels in range | `p1[i] ∈ X1`, `p2[i] ∈ X2` | |
+| events | `m1`, `m2` injective, into `[0, m)`; `mode[e]` matches the definition of §1 for `‖` or `×` | the mode table is the right one |
+| agreement | for `e` shared: `in_Euc1[e1] = in_Euc2[e2]`, same for `Euo` | question 1 |
+| initial, sound | `init[i] → p1[i] ∈ X01 ∧ p2[i] ∈ X02` | `φ(X0H) ⊆ X01 × X02` |
+| initial, complete | every `(x1, x2) ∈ X01 × X02` has an initial `i` with `φ(i) = (x1, x2)` (witness) | `⊇` |
+| marked | `marked[i] ⟺ marked1[p1[i]] ∧ marked2[p2[i]]` (two implications, as the delete flags) | `mH = m ∘ φ` |
+| step, sound | for `k` in block `i`: by `mode[evt[k]]`, `src1[k]` / `src2[k]` are transitions out of `p1[i]` / `p2[i]` on that event (or `-1` and that side stays), and `φ(dst[k])` is their targets | `φ(fH(i, e)) ⊆ f(φ(i), e)` |
+| step, complete | every move of `φ(i)` (§1 table) is some output transition of `i` | `⊇` (question 5) |
+
+With these, (L4) gives (L3)'s hypotheses, so `L(H) = L(G1 ‖ G2)` and `Lm(H) = Lm(G1 ‖ G2)`
+(same for `×`).
+
+**Reachability** of every output state is not in the table: the languages don't need it (L3),
+and the builder only creates reached pairs (question 6: not checked; confirmed empirically in
+tests later).
+
+## 5. Completeness: the hard part
+
+The 2026-10-20 attempt proved soundness (65 s) but the completeness walk timed out. Two
+options, to prototype and pick by verification time:
+
+- **(a) canonical order:** the builder writes block `i` in a fixed order (by output event; for a
+  `both` event, pairs `(k1, k2)` in order of `k1` then `k2`). The checker walks the input blocks
+  of `p1[i]`, `p2[i]` and the output block together. One pass, no extra arrays. Risk: the walk is
+  what timed out before; and the order needs both input blocks sorted the same way as the output
+  numbering (true for `m1` if output numbers extend G1's in order, not in general for `m2`).
+- **(b) witness arrays** (as `pos2` in delete, which verified quickly): for each output state
+  `i` and each input transition the move uses, the position of the output transition. For a
+  `left`/`right` event it is one array indexed by `(i, k1)`; for `both` events, by `(i, k1, k2)`
+  with `k1`, `k2` on the same event, offsets per output state. Sizes are linear in the output.
+  Risk: the offsets for `both` pairs need per-event sub-blocks of the inputs (the active-event
+  index has the event ranges).
+
+Decision (question 5): (b), because the patterns are already verified (`keep_ok` + `pos2_ok` in
+`delete.py`).
+
+## 6. Cost (to measure)
+
+Same structure as delete: builder + exactness check + validity pass. The validity pass is the
+largest cost in delete; the deferred plan (spec `delete_states.md`, "Planned (deferred)") applies
+here too, and is recorded as a priority once the tool is more complete.
+
+## 7. Public API (proposal)
+
+    parallel_2aut(G1, G2) -> ValidAutomaton
+    product_2aut(G1, G2)  -> ValidAutomaton
+
+(Names, question 7: two inputs, named so; a general version for several automata later.
+`product_2aut` follows the same naming, assumed.)
+
+- `G1`, `G2`: `Automaton` or `ValidAutomaton` (plain ones validated first, as now).
+- State names: `(name1, name2)`.
+- Empty result (no initial pair; only if an input has no states): the empty automaton with
+  `EmptyAutomatonWarning`, as delete.
+- Several automata: later (question 7).
+- DFA in ⇒ DFA out: decided by the validity pass (question 4).
+
+## 8. What changed from the 2026-10-20 draft
+
+| old | new |
+|---|---|
+| verified core doing the search, with fuel | trusted builder + verified checker |
+| N5 distinct pairs proved in the core (key `x1·n2 + x2`) | not needed for languages; question 4 |
+| one shared event table built from both automata | each `ValidAutomaton` has its own numbering; maps `m1`, `m2` |
+| parallel only | parallel and product, one checker by modes |
+| `parallel.py`, `parallel_check.py` in `verified_ops/` | new files; old ones: question 8 |
+
+## 9. Questions for review
+
+1. **Agreement:** a shared event controllable in one input and uncontrollable in the other (or
+   observable / unobservable). Old decision: reject with `InvalidAutomatonError`. Keep?
+   (Alternative: union, i.e. uncontrollable if uncontrollable in either.)
+   **Answered (user, 2026-10-29): reject.**
+2. **Product events:** `E1 ∩ E2` (the textbook: the product only knows common events) or
+   `E1 ∪ E2` (private events kept in the alphabet, never enabled)? Proposal: `E1 ∩ E2`.
+   **Answered (user, 2026-10-29): union, `E1 ∪ E2`.**
+3. **Event mapping:** trusted by names (`m1`, `m2` built from the two event tables by Python
+   `==`/hash), as the encoding already is. The checker verifies only what follows from the maps
+   (injective, modes consistent). OK?
+   **Answered (user, 2026-10-29): yes.**
+4. **DFA in ⇒ DFA out:** (a) prove it: check that the labels `φ(i)` are distinct (an array over
+   all `n1·n2` pairs is too large, so this needs another witness, e.g. a sorted copy), then
+   `det_of_labels`; or (b) let the validity pass decide whether the output is deterministic (it
+   already checks determinism; no new proof). Proposal: (b).
+   **Answered (user, 2026-10-29): (b) for now. The user notes that scalability will likely need
+   (a): add to the deferred priorities (with deletion keeps validity, `delete_states.md`).**
+5. **Completeness:** option (b) witness arrays (proposal) or (a) canonical order?
+   **Answered (user, 2026-10-29): (b).**
+6. **Reachability:** not checked (proposal), or checked (the reach certificate on the output)?
+   **Answered (user, 2026-10-29): not checked; true by construction. Check empirically later
+   to confirm.**
+7. **Several automata:** `parallel(G1, ..., Gk)` as a left fold of the pair version (names
+   become nested pairs), or only two inputs for now? Proposal: two for now.
+   **Answered (user, 2026-10-29): two for now, as `parallel_2aut`; generalize later.**
+8. **Old files** (`verified_ops/parallel.py`, `parallel_check.py`, `doc/wip/parallel/`): delete
+   once the new version works, or keep as reference? (`Parallel.lean` is kept and extended.)
+   **Answered (user, 2026-10-29): delete** (when the new version replaces them).
+
+## 10. Order of work (after review)
+
+1. Lean: `syncF` by modes, `prod`, `mem_prod_L`/`Lm`, `IsComposition` and its link to the bridge.
+2. Nagini: checker facts one method each (lesson from delete), completeness last; run the full
+   file twice.
+3. Trusted builder, public `parallel` / `product`, tests (against a direct construction; every
+   single-entry mutation of the builder's output rejected; languages on random pairs).
+4. Speed measurements (builder, check, validity pass); log.

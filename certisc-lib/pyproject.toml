@@ -28,6 +28,7 @@ include = ["core_aut*", "ops_aut*", "io_aut*"]
 # py.typed: lets Nagini (via mypy) analyse imports between the packages
 [tool.setuptools.package-data]
 core_aut = ["py.typed"]
+ops_aut = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

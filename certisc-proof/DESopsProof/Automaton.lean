@@ -271,6 +271,161 @@ theorem reach_eq_of_certificate {f : σ → α → Finset σ} {X0 : Finset σ} (
   · rintro y ⟨i, hi, rfl⟩
     exact mem_reach_of_witness out N hw i hi
 
+/-! ## Coreachability certificates
+
+The coreachable states are those from which some word leads to a target state (for an automaton:
+a marked state). As for `reach`, the definition quantifies over all words; the lemmas below
+reduce it to facts a program checks one transition at a time (`spec/coreach.md`):
+- **contains $X_m$** and **backward closed** give $CoAc \subseteq \{out_i\}$ (C1,
+  `coreach_subset_of_closed`);
+- **witnesses** (each $out_i$ is a target, or has a transition **to** an earlier $out_p$) give
+  $\{out_i\} \subseteq CoAc$ (C2, `mem_coreach_of_witness`).
+
+Together: `coreach_eq_of_certificate`. Two facts about `run` come first: it is monotone in the
+start set, and a state reached from a set is reached from one of its members. -/
+
+section coreach
+
+variable {f : σ → α → Finset σ}
+
+/-- $S \subseteq S' \implies f^*(S, s) \subseteq f^*(S', s)$.
+
+**Proof:** induction on $s$, for every $S, S'$; the step case: $\delta_f$ is monotone in $S$
+(`mem_step`). -/
+theorem run_mono {S S' : Finset σ} (h : S ⊆ S') (s : List α) : run f S s ⊆ run f S' s := by
+  induction s generalizing S S' with
+  | nil => exact h
+  | cons e s ih =>
+    apply ih
+    intro y hy
+    obtain ⟨x, hx, hy⟩ := (mem_step f).1 hy
+    exact (mem_step f).2 ⟨x, h hx, hy⟩
+
+/-- $y \in f^*(S, s) \implies \exists z \in S,\ y \in f^*(\{z\}, s)$: a state reached from a set
+is reached from one of its members.
+
+**Proof:** induction on $s$, for every $S$. Base: $z = y$. Step: $y \in f^*(\delta_f(S, e), s)$;
+by induction $y \in f^*(\{w\}, s)$ for some $w \in f(z, e)$, $z \in S$; and
+$\{w\} \subseteq \delta_f(\{z\}, e)$, so $y \in f^*(\{z\}, e \cdot s)$ (`run_mono`). -/
+theorem exists_mem_run_singleton {S : Finset σ} {s : List α} {y : σ} (hy : y ∈ run f S s) :
+    ∃ z ∈ S, y ∈ run f {z} s := by
+  induction s generalizing S with
+  | nil => exact ⟨y, hy, Finset.mem_singleton_self y⟩
+  | cons e s ih =>
+    obtain ⟨w, hw, hyw⟩ := ih hy
+    obtain ⟨z, hz, hwz⟩ := (mem_step f).1 hw
+    refine ⟨z, hz, ?_⟩
+    have hsub : ({w} : Finset σ) ⊆ step f {z} e := by
+      intro v hv
+      rw [Finset.mem_singleton] at hv
+      subst hv
+      exact (mem_step f).2 ⟨z, Finset.mem_singleton_self z, hwz⟩
+    exact run_mono hsub s hyw
+
+end coreach
+
+/-- Coreachable states (targets $X_m$):
+$$CoAc(f, X_m) = \{\, x \mid \exists s \in \Sigma^*,\ f^*(\{x\}, s) \cap X_m \neq \emptyset \,\}.$$
+
+**Lean:** `coreach f Xm`; the intersection is written as
+$\exists y \in f^*(\{x\}, s),\ y \in X_m$. -/
+def coreach (f : σ → α → Finset σ) (Xm : Finset σ) : Set σ :=
+  {x | ∃ s, ∃ y ∈ run f {x} s, y ∈ Xm}
+
+/-- $R$ is backward closed under $f$: $\forall x, e,\ \forall y \in f(x, e):\ y \in R \implies
+x \in R$. -/
+def BackClosed (f : σ → α → Finset σ) (R : Set σ) : Prop :=
+  ∀ x e, ∀ y ∈ f x e, y ∈ R → x ∈ R
+
+/-- $X_m \subseteq CoAc(f, X_m)$: a target state reaches itself by the empty word. -/
+theorem mem_coreach_of_mem {f : σ → α → Finset σ} {Xm : Finset σ} {x : σ} (hx : x ∈ Xm) :
+    x ∈ coreach f Xm :=
+  ⟨[], x, Finset.mem_singleton_self x, hx⟩
+
+/-- $CoAc(f, X_m)$ is backward closed: if $y$ is coreachable and $y \in f(x, e)$, then $x$ is
+coreachable.
+
+**Proof:** if $f^*(\{y\}, s)$ meets $X_m$, so does $f^*(\{x\}, e \cdot s)
+= f^*(\delta_f(\{x\}, e), s) \supseteq f^*(\{y\}, s)$ (`run_mono`). -/
+theorem mem_coreach_of_step {f : σ → α → Finset σ} {Xm : Finset σ} {x y : σ} {e : α}
+    (hy : y ∈ coreach f Xm) (hxy : y ∈ f x e) : x ∈ coreach f Xm := by
+  obtain ⟨s, z, hz, hzm⟩ := hy
+  have hsub : ({y} : Finset σ) ⊆ step f {x} e := by
+    intro v hv
+    rw [Finset.mem_singleton] at hv
+    subst hv
+    exact (mem_step f).2 ⟨x, Finset.mem_singleton_self x, hxy⟩
+  exact ⟨e :: s, z, run_mono hsub s hz, hzm⟩
+
+/-- **C1.** If $X_m \subseteq R$ and $R$ is backward closed, then $CoAc(f, X_m) \subseteq R$
+($CoAc$ is the least backward-closed set containing $X_m$).
+
+**Proof:** for every word $s$ and every $x$: if $f^*(\{x\}, s)$ meets $X_m$, then $x \in R$, by
+induction on $s$ for every $x$. Base: $f^*(\{x\}, \varepsilon) = \{x\}$, so $x \in X_m$. Step:
+a target in $f^*(\{x\}, e \cdot s) = f^*(\delta_f(\{x\}, e), s)$ is reached from some
+$z \in f(x, e)$ (`exists_mem_run_singleton`); by induction $z \in R$, and backward closure gives
+$x \in R$. -/
+theorem coreach_subset_of_closed {f : σ → α → Finset σ} {Xm : Finset σ} {R : Set σ}
+    (h0 : ∀ x ∈ Xm, x ∈ R) (hR : BackClosed f R) : coreach f Xm ⊆ R := by
+  have key : ∀ (s : List α) (x : σ), (∃ y ∈ run f {x} s, y ∈ Xm) → x ∈ R := by
+    intro s
+    induction s with
+    | nil =>
+      rintro x ⟨y, hy, hym⟩
+      rw [run_nil, Finset.mem_singleton] at hy
+      subst hy
+      exact h0 y hym
+    | cons e s ih =>
+      rintro x ⟨y, hy, hym⟩
+      rw [run_cons] at hy
+      obtain ⟨z, hz, hyz⟩ := exists_mem_run_singleton hy
+      obtain ⟨x', hx', hzx⟩ := (mem_step f).1 hz
+      rw [Finset.mem_singleton] at hx'
+      subst hx'
+      exact hR x' e z hzx (ih z ⟨y, hyz, hym⟩)
+  rintro x ⟨s, hs⟩
+  exact key s x hs
+
+/-- **C2.** If each $out_i$ ($i < N$) is a target or has a transition to an earlier $out_p$
+($p < i$), then every $out_i$ is coreachable.
+
+**Proof:** strong induction on $i$. If $out_i \in X_m$: `mem_coreach_of_mem`. Otherwise
+$out_p \in f(out_i, e)$ with $p < i$, and $out_p$ is coreachable by the induction hypothesis:
+`mem_coreach_of_step`. -/
+theorem mem_coreach_of_witness {f : σ → α → Finset σ} {Xm : Finset σ} (out : ℕ → σ) (N : ℕ)
+    (hw : ∀ i < N, out i ∈ Xm ∨ ∃ p < i, ∃ e, out p ∈ f (out i) e) :
+    ∀ i < N, out i ∈ coreach f Xm := by
+  intro i
+  refine Nat.strong_induction_on i ?_
+  intro i ih hi
+  rcases hw i hi with h | ⟨p, hp, e, he⟩
+  · exact mem_coreach_of_mem h
+  · exact mem_coreach_of_step (ih p hp (lt_trans hp hi)) he
+
+/-- **Certificate.** If the list $out_0, \dots, out_{N-1}$
+- contains $X_m$: $\forall x \in X_m,\ \exists i < N,\ out_i = x$;
+- is backward closed: $\forall i < N,\ \forall x, e:\ out_i \in f(x, e) \implies
+  \exists j < N,\ out_j = x$;
+- has witnesses: as in C2;
+
+then it lists exactly the coreachable states: $CoAc(f, X_m) = \{out_i \mid i < N\}$.
+
+This is what the verified `coreachable` establishes (`spec/coreach.md`).
+
+**Proof:** ⊆ by C1 with $R = \{out_i\}$; ⊇ by C2. -/
+theorem coreach_eq_of_certificate {f : σ → α → Finset σ} {Xm : Finset σ} (out : ℕ → σ)
+    (N : ℕ)
+    (h0 : ∀ x ∈ Xm, ∃ i < N, out i = x)
+    (hc : ∀ i < N, ∀ x e, out i ∈ f x e → ∃ j < N, out j = x)
+    (hw : ∀ i < N, out i ∈ Xm ∨ ∃ p < i, ∃ e, out p ∈ f (out i) e) :
+    coreach f Xm = {y | ∃ i < N, out i = y} := by
+  apply Set.Subset.antisymm
+  · apply coreach_subset_of_closed h0
+    rintro x e y hy ⟨i, hi, rfl⟩
+    exact hc i hi x e hy
+  · rintro y ⟨i, hi, rfl⟩
+    exact mem_coreach_of_witness out N hw i hi
+
 /-! ## Automaton -/
 
 /-- An automaton
@@ -318,6 +473,9 @@ def L : Language α := gen G.f G.X0
 def Lm : Language α := mkd G.f G.X0 G.marked
 /-- $Ac(G) = Ac(f, X_0)$, the reachable states of $G$. -/
 def Ac : Set (Fin G.n) := reach G.f G.X0
+/-- $CoAc(G) = CoAc(f, X_m)$, the coreachable states of $G$ (those from which a marked state can
+be reached). -/
+def CoAc : Set (Fin G.n) := coreach G.f (Finset.univ.filter (fun x => G.marked x = true))
 
 /-- $G$ is deterministic:
 $$\lvert X_0 \rvert \le 1 \quad\text{and}\quad \forall x, e:\ \lvert f(x, e) \rvert \le 1.$$
@@ -503,6 +661,44 @@ theorem Lm_congr_Ac (f' : Fin G.n → α → Finset (Fin G.n)) (m' : Fin G.n →
     exact ⟨y, hy, (hm y ⟨s, hy⟩) ▸ hmy⟩
   · rintro ⟨y, hy, hmy⟩
     exact ⟨y, hy, (hm y ⟨s, hy⟩).symm ▸ hmy⟩
+
+/-! ### Deleting states (spec/delete_states.md) -/
+
+/-- $G'$ is $G$ with the states $D$ deleted, renumbered by $old : X' \to X$:
+- $old$ is strictly increasing (the kept states keep their order);
+- $old$ hits exactly the kept states: $x \notin D \iff \exists i,\ old(i) = x$;
+- transitions: $y \in f'(i, e) \iff old(y) \in f(old(i), e)$;
+- initial and marked states: $i \in X_0' \iff old(i) \in X_0$, $X_m'(i) = X_m(old(i))$;
+- the alphabet and its parts are unchanged.
+
+So $G'$ is the part of $G$ on $X \setminus D$, with every transition between kept states and no
+other. Nothing here says that such a $G'$ exists: when every initial state is in $D$ but some
+state is not, none does (by (W3); see `IsDeletion.exists_init`), and the library then returns
+the empty automaton.
+
+**Lean:** a structure of proofs (a `Prop`); `h.f i e y` is the transition condition. -/
+structure IsDeletion (G : Automaton α) (D : Finset (Fin G.n)) (G' : Automaton α)
+    (old : Fin G'.n → Fin G.n) : Prop where
+  mono : StrictMono old
+  range : ∀ x, x ∉ D ↔ ∃ i, old i = x
+  f : ∀ i e y, y ∈ G'.f i e ↔ old y ∈ G.f (old i) e
+  X0 : ∀ i, i ∈ G'.X0 ↔ old i ∈ G.X0
+  marked : ∀ i, G'.marked i = G.marked (old i)
+  E : G'.E = G.E
+  Euc : G'.Euc = G.Euc
+  Euo : G'.Euo = G.Euo
+
+/-- If $G'$ is $G$ with $D$ deleted and $G'$ has a state, then some initial state of $G$ is kept:
+$$n' > 0 \implies \exists x \in X_0,\ x \notin D.$$
+So deleting every initial state can only give the empty automaton.
+
+**Proof:** $G'$ has an initial state $i$ (W3); $old(i) \in X_0$, and $old(i) \notin D$ because
+$old$ hits only kept states. -/
+theorem IsDeletion.exists_init {G G' : Automaton α} {D : Finset (Fin G.n)}
+    {old : Fin G'.n → Fin G.n} (h : IsDeletion G D G' old) (hn : 0 < G'.n) :
+    ∃ x ∈ G.X0, x ∉ D := by
+  obtain ⟨i, hi⟩ := G'.wf_X0.mpr hn
+  exact ⟨old i, (h.X0 i).mp hi, (h.range _).mpr ⟨i, rfl⟩⟩
 
 end Automaton
 

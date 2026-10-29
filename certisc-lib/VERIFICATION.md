@@ -256,6 +256,64 @@ invariant is carried across "add one state" by its own small lemma. Two techniqu
 - recursive lemmas (proofs by induction) for the count;
 - predicates over sequence values rather than lists, so the inputs stay known unchanged.
 
+## 4e. The reverse index, and `coreachable`
+
+**Where:** checker `core_aut/verified_core/reverse_index.py` (`check_reverse`); builder
+`core_aut/trusted/reverse_index.py`; operation `ops_aut/verified_ops/coreach.py`. Called by the
+public `ops_aut.coreachable(G, states=None, witnesses=False)` (default targets: the marked
+states).
+
+**The reverse index** groups the transitions by target: `rstart` (blocks), `rk` (the transition
+at each reverse position), `rsrc` (its source), `pos` (the inverse of `rk`). It is certified like
+the active-event index: plain builder (a counting sort), verified checker, built on first use and
+kept by a `ValidAutomaton`. The checker proves four facts: each reverse position names a
+transition and its source correctly; each reverse block holds only transitions into its state;
+every transition appears, in the right block (via `pos`); and the stored source of every
+transition is its real source. Storing `pos` avoids a counting proof.
+
+**Lean:** new in `Automaton.lean`: `coreach f Xm = {x | ∃ s, f*({x}, s) ∩ Xm ≠ ∅}`, `CoAc` for an
+automaton, and the mirror of R1/R2:
+- C1, `coreach_subset_of_closed`: a backward-closed set containing Xm contains `coreach`;
+- C2, `mem_coreach_of_witness`: a list where each entry is in Xm, or has a transition to an
+  earlier entry, lists only coreachable states;
+- `coreach_eq_of_certificate`. `lake build` passes, standard axioms only.
+
+**Proved** (Nagini): the result is in range with no duplicates, contains the targets, is
+backward closed (a transition into a listed state comes from a listed state), and has witnesses
+(each entry is a target or has a transition to an earlier entry). These are the hypotheses of
+`coreach_eq_of_certificate`. Termination is proved.
+
+**Why it works:** `coreach.py` does not repeat the search proof. It runs the verified
+`reachable` of §4d on the reverse encoding `(rstart, rsrc)`, then two lemmas translate its
+results back ("closed" in the reversed automaton is "backward closed"; reversed witnesses point
+toward the targets) using the checker's four facts. Details: `certisc-proof/spec/coreach.md`.
+
+## 4f. Deleting states; `accessible`, `coaccessible`, `trim`
+
+**Where:** checker `ops_aut/verified_ops/delete.py` (`check_delete`); builder
+`core_aut/trusted/delete_states.py`. Called by the public `ops_aut.delete_states(G, states)`, and
+by `accessible`, `coaccessible`, `trim`, which compute the states to keep with the verified
+`reachable` / `coreachable` and then delete the others. Each returns a new `ValidAutomaton`; `G`
+is unchanged. If no initial state is kept, the result is the empty automaton, with an
+`EmptyAutomatonWarning`.
+
+**Lean:** `Automaton.IsDeletion G D G' old`: `old` renumbers the states of `G'` onto the states of
+`G` not in `D`, in order, and `y ∈ f'(i, e) ↔ old y ∈ f(old i, e)`, with the same initial and
+marked flags and the same events. `IsDeletion.exists_init`: if `G'` has a state, some initial
+state of `G` was kept (so deleting all initial states can only give the empty automaton).
+
+**Proved** (Nagini, of the lists the builder produced, before they are used): the renumbering is
+right (`new_of`/`old_of` inverse on the kept states, `old_of` increasing); flags copied; every new
+transition copies an old one out of the right state, with its event and its renamed (kept)
+target, and no old transition is copied twice; every old transition between two kept states is
+copied, into the block of its source. These are the list form of `IsDeletion` (by hand in the
+docstring of `delete.py`). The result is then validated by `check_automaton` (§3), one or two
+more passes. Termination is proved.
+
+**Why it works:** the same certifying pattern as the indices: plain code builds, a verified
+checker accepts. Two witness arrays (`src2`: the old transition each new one copies; `pos2`: the
+inverse) make "exactly these transitions" a check of each entry, with no counting.
+
 ## 5. Reading the code
 
 Every Nagini line in `basic_ops.py` carries two comments:
@@ -273,7 +331,13 @@ Each verified file opens with a glossary of the notation (`Requires`, `Ensures`,
 | `encode` / `decode` (`core_aut/trusted/encoding.py`) | plain copying between `Automaton` and lists | round-trip tests; sortedness test |
 | `_strip.py` | removes contracts and lemma calls (recursive lemmas included) before running; turns `ToSeq(...)`/`Old(...)` left in code into `None`, their runtime value | only removes statements with no runtime effect (`tests/core_aut/test_strip.py`); tests compare results |
 | the active-index builder (`core_aut/trusted/active_index.py`) | plain code, one scan | its result is accepted only by the verified `check_index` |
-| the public layer (`validate`, `check_or_raise`, `ops_aut.next_states`) | glue: validate, encode, call, translate back | tests against direct computation |
+| the reverse-index builder (`core_aut/trusted/reverse_index.py`) | plain code, a counting sort | its result is accepted only by the verified `check_reverse` |
+| the deletion builder (`core_aut/trusted/delete_states.py`) | plain code, one pass | its result is accepted only by the verified `check_delete`, then validated by `check_automaton` |
+| the empty-result rule and the copied events (`ops_aut/basic_ops.py`, `_delete`) | "no initial state kept → empty automaton (with a warning)"; `in_E`, `in_Euc`, `in_Euo` passed on unchanged | Lean `IsDeletion.exists_init` (no other valid result exists); tests against a direct construction |
+| the complements in `accessible`, `coaccessible`, `trim` | which states to delete, from the verified `reachable` / `coreachable` | tests against direct computation |
+| `validate_encoded` (`core_aut/trusted/wrapper.py`) | runs `check_automaton` on an operation's result (deterministic check first) | the verified checker decides; the same code path as `validate` |
+| the rebinding in `ops_aut/basic_ops.py` that points the stripped `coreach.py` at the stripped `reach.reachable` | one assignment; the same function minus contracts and lemma calls | tests compare results with a direct backward search |
+| the public layer (`validate`, `check_or_raise`, `ops_aut.next_states`, ..., `ops_aut.trim`) | glue: validate, encode, call, translate back | tests against direct computation |
 | `ValidAutomaton` (`core_aut/valid.py`) | read-only by construction (tuples, no setters); made only by `validate` and the readers | tests that it cannot be modified or created directly |
 | the readers (`io_aut`) | parse files and build an `Automaton` | validity is decided by the verified checker afterwards; round-trip and format-error tests |
 | the hand check Lean ↔ Nagini | definitions in two languages | written out in `certisc-proof/spec/`, reviewed by a person |
@@ -288,7 +352,10 @@ From `certisc-lib/`, with the `verify` extra (Python ≥ 3.12, Java):
     nagini src/core_aut/verified_core/active_index.py  # Verification successful, ~55–95 s
     nagini src/ops_aut/verified_ops/basic_ops.py       # Verification successful, ~160–310 s
     nagini src/ops_aut/verified_ops/reach.py           # Verification successful, ~20 s
-    pytest                                             # 50 passed
+    nagini src/core_aut/verified_core/reverse_index.py # Verification successful, ~15 s
+    nagini src/ops_aut/verified_ops/coreach.py         # Verification successful, ~16–19 s
+    nagini src/ops_aut/verified_ops/delete.py          # Verification successful, ~25–30 s
+    pytest                                             # 62 passed
 
 From `certisc-proof/`:
 

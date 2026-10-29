@@ -285,6 +285,7 @@ certisc-lib/src/
 │   │   ├── error.py           InvalidAutomatonError
 │   │   ├── wrapper.py         encode, run check_automaton, raise InvalidAutomatonError
 │   │   ├── active_index.py    builds the active-event index; accepted only by check_index
+│   │   ├── reverse_index.py   builds the reverse index; accepted only by check_reverse
 │   │   └── _strip.py          removes contracts and lemma calls (recursive lemmas included)
 │   │                          before running; ToSeq/Old left in code become None
 │   └── verified_core/         internal
@@ -292,13 +293,15 @@ certisc-lib/src/
 │       ├── _contracts.py      runtime only: no-op stand-ins if Nagini is not installed, and a
 │       │                      no-op `Ensures` if it is (the real one raises when called)
 │       ├── check.py           VERIFIED: *_ok predicates (the spec) and the checkers
-│       └── active_index.py    VERIFIED: check_index (the active-event index is correct)
+│       ├── active_index.py    VERIFIED: check_index (the active-event index is correct)
+│       └── reverse_index.py   VERIFIED: check_reverse (the reverse index is correct)
 ├── io_aut/                    trusted readers/writers: read_aut, write_aut (JSON), read_fsm
-└── ops_aut/                   public layer: next_states, active_events(_at) (basic_ops.py),
-    │                          reachable (reach.py)
+└── ops_aut/                   public layer (basic_ops.py): next_states, active_events(_at),
+    │                          reachable, coreachable
     └── verified_ops/          internal
         ├── basic_ops.py       VERIFIED: next_states, active_events (+ over the index)
         ├── reach.py           VERIFIED: reachable
+        ├── coreach.py         VERIFIED: coreachable (reachable on the reverse index)
         ├── parallel.py        VERIFIED (in progress): parallel composition core
         └── parallel_check.py  VERIFIED: checker for the parallel output (soundness)
 ```

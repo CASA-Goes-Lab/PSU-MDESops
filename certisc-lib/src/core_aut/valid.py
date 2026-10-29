@@ -81,7 +81,8 @@ class _States:
 class ValidAutomaton:
     """A validated automaton (read-only). Create it with validate(G) or io_aut.read_aut."""
 
-    __slots__ = ("_enc", "_event_of", "_number", "_names", "_deterministic", "_active")
+    __slots__ = ("_enc", "_event_of", "_number", "_names", "_deterministic", "_active",
+                 "_reverse")
 
     def __init__(self, *args, **kwargs):
         raise TypeError("ValidAutomaton is made by validate(G) or a reader (io_aut), "
@@ -100,6 +101,7 @@ class ValidAutomaton:
         object.__setattr__(self, "_names", tuple(names))
         object.__setattr__(self, "_deterministic", deterministic)
         object.__setattr__(self, "_active", None)       # active-event index, built on first use
+        object.__setattr__(self, "_reverse", None)      # reverse index, built on first use
         return self
 
     def __setattr__(self, name, value):
@@ -220,6 +222,15 @@ class ValidAutomaton:
             from core_aut.trusted.active_index import checked_active_index
             object.__setattr__(self, "_active", checked_active_index(self._enc))
         return self._active
+
+    def _reverse_index(self) -> Tuple[Tuple[int, ...], ...]:
+        """The reverse index (rstart, rk, rsrc, pos) (core_aut/trusted/reverse_index.py): built
+        and checked by the verified checker on first use, then kept (it depends only on the
+        frozen encoding)."""
+        if self._reverse is None:
+            from core_aut.trusted.reverse_index import checked_reverse_index
+            object.__setattr__(self, "_reverse", checked_reverse_index(self._enc))
+        return self._reverse
 
     def _event_number(self, event: Any) -> Optional[int]:
         """The number of `event` in the encoding, or None if no transition or set uses it."""

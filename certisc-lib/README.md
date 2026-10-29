@@ -5,13 +5,17 @@ Certified supervisory control for discrete event systems. The Python code is ver
 [`../certisc-proof/`](../certisc-proof/).
 
     src/core_aut/                public: Automaton, ValidAutomaton, validate, check_or_raise
-        trusted/                 trusted helpers: encoding, wrapper, _strip, error, active_index
+        trusted/                 trusted helpers: encoding, wrapper, _strip, error, active_index,
+                                 reverse_index (index builders), delete_states (builder)
         verified_core/           Nagini-verified implementations (internal): check.py,
-                                 active_index.py (checker for the active-event index)
+                                 active_index.py, reverse_index.py (checkers for the indexes)
     src/io_aut/                  public: read_aut, write_aut (JSON), read_fsm (DESUMA import)
-    src/ops_aut/                 public: next_states, active_events, active_events_at, reachable
+    src/ops_aut/                 public (basic_ops.py): next_states, active_events,
+                                 active_events_at, reachable, coreachable, delete_states,
+                                 accessible, coaccessible, trim
         verified_ops/            Nagini-verified implementations (internal): basic_ops.py,
-                                 reach.py, parallel.py (in progress), parallel_check.py
+                                 reach.py, coreach.py, delete.py (checker), parallel.py (in
+                                 progress), parallel_check.py
     tests/                       one folder per package
 
 Public functions validate the automaton, encode it (core_aut/trusted/encoding.py), and call an
@@ -73,7 +77,7 @@ next_states(V, [0], "a")                 # [1], without checking again
 
 From `certisc-lib/`:
 
-    $ pytest                                              # 42 passed
+    $ pytest                                              # 62 passed
     $ nagini src/core_aut/verified_core/check.py          # about 20 s
     $ nagini src/ops_aut/verified_ops/basic_ops.py        # about 30 s
     $ nagini src/ops_aut/verified_ops/parallel.py         # about 30 s

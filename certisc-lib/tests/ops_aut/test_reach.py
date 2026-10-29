@@ -10,7 +10,7 @@ import pytest
 
 from core_aut import validate
 from ops_aut import reachable
-from ops_aut.reach import _verified
+from ops_aut.basic_ops import _verified_reach as _verified
 
 from tests.ops_aut.test_parallel import _random
 

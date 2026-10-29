@@ -43,6 +43,23 @@ def validate(G, deterministic: bool = False):
     return ValidAutomaton._make(enc, list(table), [s.name for s in G.states], det_code == 0)
 
 
+def validate_encoded(enc, event_of: list, names: list):
+    """Run the verified checker on an encoding built by an operation (e.g. deleting states);
+    return a ValidAutomaton, or raise InvalidAutomatonError (an internal error: operations build
+    valid encodings).
+
+    The deterministic check runs first: if it passes, the encoding is also valid (the conditions
+    for a DFA include those for an automaton), so a deterministic result costs one pass."""
+    from core_aut.valid import ValidAutomaton
+    if _run_check(enc, True) == 0:
+        return ValidAutomaton._make(enc, event_of, names, True)
+    code = _run_check(enc, False)
+    if code != 0:
+        raise InvalidAutomatonError("internal error: an operation built an invalid automaton: "
+                                    + MESSAGES.get(code, f"code {code}"))
+    return ValidAutomaton._make(enc, event_of, names, False)
+
+
 def check_or_raise(G, deterministic: bool = False) -> None:
     """Encode G and run the verified checker; raise InvalidAutomatonError if it fails."""
     code = _run_check(encode(G, event_table([G])), deterministic)
