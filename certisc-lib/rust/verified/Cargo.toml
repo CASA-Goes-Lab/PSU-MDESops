@@ -1,0 +1,16 @@
+[package]
+name = "certisc_verified"
+version = "0.1.0"
+edition = "2021"
+description = "The Verus-verified core of certisc."
+license = "BSD-3-Clause"
+
+# Verus and its standard library, pinned to the release the proofs are checked with
+# (Verus 0.2026.11.02.8bf68ee). A plain `cargo build` erases the proofs and needs no Verus.
+[dependencies]
+vstd = "=0.0.0-2026-11-01-0251"
+verus_builtin = "=0.0.0-2026-11-01-0251"
+verus_builtin_macros = "=0.0.0-2026-11-01-0251"
+
+[package.metadata.verus]
+verify = true

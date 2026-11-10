@@ -1,28 +1,28 @@
 # CertiSC
 
-Certified supervisory control for discrete event systems. The Python code is verified with
-[Nagini](https://github.com/marcoeilers/nagini). The algorithms are proved in Lean, in
-[`../certisc-proof/`](../certisc-proof/).
+Certified supervisory control for discrete event systems. The operations run in a Rust core
+verified with [Verus](https://github.com/verus-lang/verus) (`rust/`), behind a Python API. The
+algorithms are proved in Lean, in [`../certisc-proof/`](../certisc-proof/). (The earlier
+Python implementation, verified with [Nagini](https://github.com/marcoeilers/nagini), is kept
+for reference in `../legacy/nagini/`.)
 
     src/core_aut/                public: Automaton, ValidAutomaton, validate, check_or_raise
-        trusted/                 trusted helpers: encoding, wrapper, _strip, error, active_index,
-                                 reverse_index (index builders), delete_states (builder)
-        verified_core/           Nagini-verified implementations (internal): check.py,
-                                 active_index.py, reverse_index.py (checkers for the indexes)
+        _rs.abi3.so              the compiled Rust core (built by pip install; not in git)
+        trusted/                 trusted helpers: encoding, wrapper, error
     src/io_aut/                  public: read_aut, write_aut (JSON), read_fsm (DESUMA import)
     src/ops_aut/                 public (basic_ops.py): next_states, active_events,
                                  active_events_at, reachable, coreachable, delete_states,
                                  accessible, coaccessible, trim
-        verified_ops/            Nagini-verified implementations (internal): basic_ops.py,
-                                 reach.py, coreach.py, delete.py (checker), parallel.py (in
-                                 progress), parallel_check.py
     tests/                       one folder per package
+    rust/                        the Rust core (rust/README.md):
+        verified/                Verus-verified crate, modules core_aut/ and ops_aut/
+        binding/                 PyO3 glue (trusted): the extension core_aut._rs
 
-Public functions validate the automaton, encode it (core_aut/trusted/encoding.py), and call an
-implementation (`backend="verified"`; a NumPy backend may come later). The verified code is
-stripped of its contracts at import (core_aut/trusted/_strip.py).
+Public functions take a ValidAutomaton (or validate a plain Automaton first) and call the
+Rust code. `validate` encodes the automaton (core_aut/trusted/encoding.py) and hands it to
+Rust, whose verified checker accepts it; the ValidAutomaton then holds it in Rust.
 
-What is verified, and why it works: [VERIFICATION.md](VERIFICATION.md). Reading and writing automata: [src/io_aut/IO.md](src/io_aut/IO.md). End-user examples: `Examples/v2/testing/certisc/` (outer repository).
+What is verified, what is trusted, and how to check the proofs: [rust/README.md](rust/README.md). Reading and writing automata: [src/io_aut/IO.md](src/io_aut/IO.md). End-user examples: `Examples/v2/testing/certisc/` (outer repository).
 
 ## Automata in files
 
@@ -52,10 +52,15 @@ checker, then read-only, so operations never check or encode it again (validate 
 
 ## Install
 
-From the repository root (Python 3.11+, or 3.12+ with Java for Nagini):
+From the repository root (Python 3.11+), with a Rust toolchain (https://rustup.rs; the build
+compiles the Rust core, about 30 s the first time):
 
     $ python3 -m venv .venv && source .venv/bin/activate
-    $ pip install -e "certisc-lib[dev,verify]"     # drop ",verify" to skip Nagini
+    $ pip install -e "certisc-lib[dev]"
+
+The build backend is [maturin](https://www.maturin.rs). Python edits take effect at once;
+after editing Rust, run the `pip install -e` line again. Verus is not needed to build, only to
+check the proofs (rust/README.md). A released wheel will need neither Rust nor Verus.
 
 ## Use
 
@@ -77,18 +82,15 @@ next_states(V, [0], "a")                 # [1], without checking again
 
 From `certisc-lib/`:
 
-    $ pytest                                              # 62 passed
-    $ nagini src/core_aut/verified_core/check.py          # about 20 s
-    $ nagini src/ops_aut/verified_ops/basic_ops.py        # about 30 s
-    $ nagini src/ops_aut/verified_ops/parallel.py         # about 30 s
-    $ nagini src/ops_aut/verified_ops/parallel_check.py   # about 65 s
+    $ pytest                                                  # 50 passed
+    $ cd rust/verified && verus --crate-type=lib src/lib.rs   # 164 verified (rust/README.md)
 
 ## Adding a package
 
-1. Create `src/<name>/__init__.py`. Start it with `import core_aut` if the package has verified
-   code, so the no-op contracts are installed.
-2. Add `"<name>*"` to `include` in `pyproject.toml`.
-3. Add `tests/<name>/`, then run `pip install -e "certisc-lib[dev,verify]"` again.
+1. Create `src/<name>/__init__.py`; its verified code goes into `rust/verified/src/<name>/`
+   (a module of the same crate), and its binding into `rust/binding/src/lib.rs`.
+2. Add `"<name>"` to `python-packages` in `pyproject.toml` (`[tool.maturin]`).
+3. Add `tests/<name>/`, then run `pip install -e "certisc-lib[dev]"` again.
 
 Don't use standard-library names such as `io`; they would shadow Python's own modules.
 

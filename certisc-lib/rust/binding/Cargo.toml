@@ -1,0 +1,16 @@
+[package]
+name = "certisc_binding"
+version = "0.1.0"
+edition = "2021"
+description = "PyO3 binding of certisc_verified (trusted glue)."
+license = "BSD-3-Clause"
+
+# The extension module core_aut._rs (pyproject.toml, [tool.maturin] module-name).
+[lib]
+name = "_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+certisc_verified = { path = "../verified" }
+# abi3-py311: one wheel per platform works for Python 3.11 and later.
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py311"] }

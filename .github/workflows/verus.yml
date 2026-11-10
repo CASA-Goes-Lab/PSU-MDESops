@@ -1,0 +1,34 @@
+name: Verus
+
+# Checks the proofs of the Rust core (certisc-lib/rust/verified/). The Verus release and the
+# Rust toolchain it needs are pinned; vstd in rust/verified/Cargo.toml must match the release.
+on:
+  push:
+    branches: [master, v2]
+    paths: ["certisc-lib/rust/verified/**", ".github/workflows/verus.yml"]
+  pull_request:
+    paths: ["certisc-lib/rust/verified/**", ".github/workflows/verus.yml"]
+
+env:
+  VERUS_VERSION: "0.2026.11.02.8bf68ee"
+  VERUS_TOOLCHAIN: "1.99.1"
+
+jobs:
+  verus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the Rust toolchain Verus needs
+        run: rustup toolchain install "$VERUS_TOOLCHAIN" --profile minimal
+
+      - name: Download Verus
+        run: |
+          curl -sSL -o verus.zip \
+            "https://github.com/verus-lang/verus/releases/download/release/${VERUS_VERSION}/verus-${VERUS_VERSION}-x86-linux.zip"
+          unzip -q verus.zip -d "$HOME/verus-dl"
+          echo "$HOME/verus-dl/verus-x86-linux" >> "$GITHUB_PATH"
+
+      - name: Verify
+        working-directory: certisc-lib/rust/verified
+        run: verus --crate-type=lib src/lib.rs

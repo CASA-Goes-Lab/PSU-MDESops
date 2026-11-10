@@ -92,6 +92,33 @@ Plan:
    a duplicate state (languages still right, `IsComposition` needs no distinct labels). A
    bound of `n1·n2` new states gives termination.
 
+**No validation pass afterwards (user, 2026-10-29).** The search must prove that its output is a
+valid automaton (`valid_automaton` of `check.py`), so `ValidAutomaton` can be made directly. Each
+condition and where it comes from:
+
+| condition | proved by |
+|---|---|
+| `blocks_ok` | block `i` is written while `i` is processed: `start[i]` = number of transitions so far |
+| `transitions_ok` (event in E, target a state) | each emitted move uses an input transition (W1 of the inputs) and a looked-up / added state |
+| `events_ok` (W2) | the output flags are the unions of the inputs' flags |
+| `init_ok` (W3) | the initial pairs are emitted first; valid inputs with states have initial states; deterministic: `\|I1\|·\|I2\| ≤ 1` |
+| `sorted_ok` | the emission order (below) |
+| `det_ok` and the flag | exact, for free: while emitting a block, compare each event with the previous one (strictly larger ⇒ no repeat) |
+
+**Event numbering, chosen so that sorting is free:** the output numbers are G1's numbers, followed
+by the events only G2 has, in G2's order. Then for state i, the moves are emitted as: walk
+G1's block of `p1[i]` (sorted by G1's numbers = output numbers): `left` events emit one move,
+`both` events emit the pairs with G2's transitions on that event; then walk G2's block of `p2[i]`
+for the `right` events (numbers ≥ G1's count, in G2's order). Every block comes out sorted, with
+no sorting code. (Arbitrary numberings cannot work: the two inputs may order their shared events
+differently.) This fixes the trusted event map of question 3 to this shape; the checks on it
+(G1 part the identity, G2-only part increasing) are verified.
+
+**Duplicates do not break validity:** a duplicate state (a wrong "new" answer from the trusted
+dict) is still a state with correct moves; one transition is emitted per move, so with
+deterministic inputs the output is deterministic whatever the labels. Duplicates only cost size;
+tests check that there are none.
+
 The table and lists below are from the draft (a trusted builder + checker); the lists
 (`p1`, `p2`, `src1`, `src2`, completeness witnesses) carry over as the search's outputs.
 

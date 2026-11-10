@@ -1,0 +1,11 @@
+# The Rust part of certisc (see certisc-lib/README.md, "Rust").
+#   verified/  crate certisc_verified: the Verus-verified core (no Python).
+#   binding/   crate certisc_binding: the PyO3 glue (trusted), built by maturin into
+#              src/core_aut/_rs.*.so (pyproject.toml, [tool.maturin]).
+[workspace]
+members = ["verified", "binding"]
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

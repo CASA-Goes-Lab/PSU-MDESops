@@ -1,6 +1,6 @@
 """
-Reachability: the verified core (src/ops_aut/verified_ops/reach.py, run stripped of its
-contracts) and the public ops_aut.reachable, against a direct search over the Automaton class.
+Reachability: the public ops_aut.reachable (Rust, rust/verified/src/ops_aut/reach.rs), against a
+direct search over the Automaton class.
 """
 
 import random
@@ -10,9 +10,8 @@ import pytest
 
 from core_aut import validate
 from ops_aut import reachable
-from ops_aut.basic_ops import _verified_reach as _verified
 
-from tests.ops_aut.test_parallel import _random
+from tests.random_automata import random_aut as _random
 
 
 def _bfs(g, S):
@@ -26,27 +25,6 @@ def _bfs(g, S):
                     seen.add(y)
                     queue.append(y)
     return seen
-
-
-def test_core_is_reach_with_witnesses():
-    rng = random.Random(30)
-    for trial in range(300):
-        g = _random(rng.randint(1, 9), rng.sample(["a", "b", "c"], rng.randint(1, 3)), rng)
-        enc = validate(g)._encoding()
-        S = [rng.randrange(enc.n) for _ in range(rng.randint(0, 3))]       # may repeat
-        mark, out, par, via = [-1] * enc.n, [], [], []
-        _verified.reachable(enc.n, enc.start, enc.dst, S, mark, out, par, via)
-        expected = _bfs(g, S)
-        assert set(out) == expected and len(out) == len(expected), trial
-        for i, y in enumerate(out):                 # the four proved properties, at runtime
-            assert mark[y] == i
-            if par[i] == -1:
-                assert S[via[i]] == y
-            else:
-                x = out[par[i]]
-                assert par[i] < i and enc.start[x] <= via[i] < enc.start[x + 1]
-                assert enc.dst[via[i]] == y
-        assert all(mark[y] == -1 for y in range(enc.n) if y not in expected)
 
 
 def test_public_reachable():

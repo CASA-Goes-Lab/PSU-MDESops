@@ -2,19 +2,18 @@
 Tests for the verified validity checker and the trusted wrapper around it (event table,
 encode/decode, check_or_raise). Design: certisc-proof/spec/wrapper.md.
 
-The checker itself is proved with Nagini; these tests cover what the proof does not: the trusted
-encoding, and the result codes as seen through check_or_raise.
+The checker itself is proved with Verus (rust/verified/src/core_aut/check.rs, check_code); these
+tests cover what the proof does not: the trusted encoding and binding, and the result codes as
+seen through check_or_raise.
 """
 
 import random
-import subprocess
-import sys
 
 import pytest
 
 from core_aut import Automaton, InvalidAutomatonError, check_or_raise
-from core_aut.verified_core.check import check_automaton
-from core_aut.trusted.encoding import decode, encode, event_table
+from core_aut.trusted.encoding import Encoded, decode, encode, event_table
+from core_aut.trusted.wrapper import to_rust
 
 
 def chain():
@@ -40,11 +39,17 @@ def random_automaton(rnd, n, events, density, max_targets=1, n_init=1):
     return g
 
 
+def check_code(n, m, in_E, in_Euc, in_Euo, init, marked, start, evt, dst, deterministic):
+    """The Rust checker's code for these lists (0: valid; with deterministic=True, also 6 or 7
+    when valid but not deterministic)."""
+    R, code = to_rust(Encoded(n, m, in_E, in_Euc, in_Euo, init, marked, start, evt, dst))
+    return R.det_code if code == 0 and deterministic else code
+
+
 def code_of(g, deterministic=False):
-    table = event_table([g])
-    enc = encode(g, table)
-    return check_automaton(enc.n, enc.m, enc.in_E, enc.in_Euc, enc.in_Euo, enc.init,
-                           enc.marked, enc.start, enc.evt, enc.dst, deterministic)
+    enc = encode(g, event_table([g]))
+    return check_code(enc.n, enc.m, enc.in_E, enc.in_Euc, enc.in_Euo, enc.init,
+                      enc.marked, enc.start, enc.evt, enc.dst, deterministic)
 
 
 def reference_valid(g, deterministic):
@@ -115,22 +120,22 @@ def test_encoding_example_from_spec():
 
 
 def test_sizes_code_1():
-    assert check_automaton(1, 0, [], [], [], [True], [], [0, 0], [], [], False) == 1
+    assert check_code(1, 0, [], [], [], [True], [], [0, 0], [], [], False) == 1
 
 
 def test_blocks_code_2():
     # start not ending at len(evt)
-    assert check_automaton(1, 1, [True], [False], [False], [True], [False],
-                           [0, 2], [0], [0], False) == 2
+    assert check_code(1, 1, [True], [False], [False], [True], [False],
+                      [0, 2], [0], [0], False) == 2
 
 
 def test_unsorted_block_code_8():
     # one state, transitions on events 1 then 0: not sorted by event
-    assert check_automaton(1, 2, [True, True], [False, False], [False, False], [True], [False],
-                           [0, 2], [1, 0], [0, 0], False) == 8
+    assert check_code(1, 2, [True, True], [False, False], [False, False], [True], [False],
+                      [0, 2], [1, 0], [0, 0], False) == 8
     # the same transitions sorted: valid
-    assert check_automaton(1, 2, [True, True], [False, False], [False, False], [True], [False],
-                           [0, 2], [0, 1], [0, 0], False) == 0
+    assert check_code(1, 2, [True, True], [False, False], [False, False], [True], [False],
+                      [0, 2], [0, 1], [0, 0], False) == 0
 
 
 def test_event_not_in_alphabet_code_3():
@@ -240,18 +245,3 @@ def test_checker_matches_reference_on_random_automata():
             g.states[rnd.randrange(n)].out.setdefault("a", []).append(n + 3)
         for det in (False, True):
             assert (code_of(g, det) == 0) == reference_valid(g, det), (trial, det)
-
-
-def test_runs_without_nagini_installed():
-    """The verified modules fall back to no-op contracts when nagini_contracts is missing."""
-    code = (
-        "import sys; sys.modules['nagini_contracts'] = None; "
-        "sys.modules['nagini_contracts.contracts'] = None; "
-        "sys.modules['nagini_contracts.obligations'] = None\n"
-        "from core_aut import Automaton, check_or_raise\n"
-        "g = Automaton(events=['a']); g.add_state('x', init=True); g.add_transition(0, 'a', 0)\n"
-        "check_or_raise(g, deterministic=True); print(True)\n"
-    )
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
-    assert out.returncode == 0, out.stderr
-    assert out.stdout.strip() == "True"

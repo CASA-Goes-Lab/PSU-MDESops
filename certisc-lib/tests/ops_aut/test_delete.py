@@ -1,8 +1,6 @@
 """
-Deleting states: the trusted builder (core_aut/trusted/delete_states.py), the verified checker
-(src/ops_aut/verified_ops/delete.py, run stripped of its contracts), and the public
-delete_states, accessible, coaccessible and trim, against direct constructions over the
-Automaton class.
+Deleting states: the public delete_states, accessible, coaccessible and trim (Rust,
+rust/verified/src/ops_aut/delete.rs), against direct constructions over the Automaton class.
 """
 
 import random
@@ -11,12 +9,10 @@ import warnings
 import pytest
 
 from core_aut import Automaton, validate
-from core_aut.trusted.delete_states import build_delete
 from ops_aut import (EmptyAutomatonWarning, accessible, coaccessible, coreachable,
                      delete_states, reachable, trim)
-from ops_aut.basic_ops import _verified_delete
 
-from tests.ops_aut.test_parallel import _random
+from tests.random_automata import random_aut as _random
 
 
 def _expected(g, D):
@@ -40,13 +36,6 @@ def _summary(V):
             {(names[x], e, names[y]) for x, e, y in V.transitions()})
 
 
-def _check(V, dele):
-    enc = V._encoding()
-    out = build_delete(enc, dele)
-    return out, _verified_delete.check_delete(enc.n, enc.start, enc.evt, enc.dst, enc.init,
-                                              enc.marked, dele, *out)
-
-
 def test_delete_states_matches_direct():
     rng = random.Random(60)
     for trial in range(300):
@@ -65,28 +54,6 @@ def test_delete_states_matches_direct():
             assert R.events == V.events and R.Euc == V.Euc and R.Euo == V.Euo
             if V.is_deterministic:
                 assert R.is_deterministic
-
-
-def test_checker_accepts_builder_and_rejects_mutations():
-    rng = random.Random(61)
-    rejected = 0
-    for trial in range(150):
-        g = _random(rng.randint(1, 7), rng.sample(["a", "b", "c"], rng.randint(1, 3)), rng)
-        V = validate(g)
-        dele = [rng.random() < 0.3 for _ in range(g.num_states)]
-        out, ok = _check(V, dele)
-        assert ok, trial
-        enc = V._encoding()
-        # Change one entry of one output list: the checker must reject (each entry is pinned).
-        for li, lst in enumerate(out):
-            for p in range(len(lst)):
-                bad = [list(l) for l in out]
-                bad[li][p] = (not lst[p]) if isinstance(lst[p], bool) else lst[p] + 1
-                assert not _verified_delete.check_delete(
-                    enc.n, enc.start, enc.evt, enc.dst, enc.init, enc.marked, dele, *bad), \
-                    (trial, li, p)
-                rejected += 1
-    assert rejected > 500
 
 
 def test_accessible_coaccessible_trim():

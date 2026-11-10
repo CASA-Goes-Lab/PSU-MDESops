@@ -1,5 +1,11 @@
 # What is verified in certisc, and why it works
 
+> **2026-11-10: the default implementation is now the Rust core** (`rust/verified/`, verified
+> with Verus; `rust/README.md`). Its contracts state the Lean definitions directly, over a view
+> of the automaton, so the certificate step below is proved too, and deletion is proved to keep
+> validity. This note describes the Nagini-verified Python code, which remains available as
+> `backend="nagini"`. Port and decisions: `doc/logs/rust-port.md` (outer repository).
+
 This note covers the verified pieces that exist so far:
 - **`check_automaton`**: is an automaton well formed?
 - **`next_states`**: which states can one event reach from a set of states?

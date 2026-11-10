@@ -4,8 +4,8 @@ Core automaton (part of the certisc distribution). Public API:
 - Automaton, State      the automaton type (automaton.py)
 - InvalidAutomatonError
 - validate(G, deterministic=False) -> ValidAutomaton
-                        validates G once with the Nagini-verified checker and returns a
-                        read-only ValidAutomaton (raises InvalidAutomatonError if invalid)
+                        validates G once with the verified checker (Rust, Verus) and returns
+                        a read-only ValidAutomaton (raises InvalidAutomatonError if invalid)
 - ValidAutomaton        the read-only, validated automaton (valid.py); operations use it
                         without checking or encoding again
 - check_or_raise(G, deterministic=False)
@@ -13,18 +13,19 @@ Core automaton (part of the certisc distribution). Public API:
 
 Layout:
 - automaton.py            the user-facing, editable type
-- valid.py                ValidAutomaton, the read-only validated type
+- valid.py                ValidAutomaton, the read-only validated type (holds the automaton
+                          in Rust)
+- _rs.*.so                the compiled extension: the Verus-verified Rust core
+                          (certisc-lib/rust/verified/) behind the PyO3 glue (rust/binding/);
+                          built by `pip install` (maturin)
 - trusted/                trusted helpers: encoding (Automaton <-> lists), wrapper
-                          (check_or_raise), _strip (contracts off before running), error
-- verified_core/          Nagini-verified implementations (internal)
-- py.typed                marker that lets Nagini (via mypy) read core_aut when another
-                          package imports it; must stay at the top of the package
+                          (validate, check_or_raise), error
+- py.typed                marker: the package has type hints (PEP 561)
 - (later: numpy_core/)
 
 Design and trust boundary: certisc-proof/spec/wrapper.md. Definitions: certisc-proof/spec/automaton.md.
 """
 
-import core_aut.verified_core  # noqa: F401  (contract stand-ins, before any verified module)
 from core_aut.automaton import Automaton, State
 from core_aut.trusted.error import InvalidAutomatonError
 from core_aut.trusted.wrapper import check_or_raise, validate

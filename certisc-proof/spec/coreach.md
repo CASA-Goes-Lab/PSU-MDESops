@@ -35,7 +35,7 @@ f directly.
 
 The encoding stores the transitions grouped by **source** (block(x)). Going backwards needs them
 grouped by **target**. Without that, the only option is to repeat forward passes until nothing
-changes: O(n·T) in the worst case. With it, backward breadth-first search is O(n + T).
+changes: O(n·T) in the worst case. With it, backward breadth-first search is O(n + T)Where .
 
 **Proposal: a reverse index, built like the active-event index** (trusted builder, verified
 checker, cached lazily on `ValidAutomaton`):

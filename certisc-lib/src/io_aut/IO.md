@@ -162,7 +162,7 @@ the encoding.
 **Why validity is safe even though the reader is not verified:** the reader only builds; the
 verified checker decides. A bug in the reader becomes an error message, never an invalid
 automaton passed to verified code. That is also why new readers (e.g. CIF) can be added without
-growing what has to be trusted. See `VERIFICATION.md` §3 and §6.
+growing what has to be trusted. See `rust/README.md` ("Trusted").
 
 ## 4. Writing
 

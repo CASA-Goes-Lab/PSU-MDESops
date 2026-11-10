@@ -2,9 +2,10 @@
 ValidAutomaton: a read-only automaton that passed the verified checker.
 
 To the user it reads like an Automaton: `num_states`, `states[i].name / .marked / .out`,
-`events`, `Euc`, `Euo`, `init`, `transitions()`. Inside, it stores the automaton once, in the
-encoded form the verified operations use (as tuples, so it cannot change after the check);
-`states` and the sets are views computed from it on access, not second copies.
+`events`, `Euc`, `Euo`, `init`, `transitions()`. Inside, it holds the automaton in Rust
+(`core_aut._rs.RsAut`, read-only), in the encoded form the verified operations use. The
+operations run on that copy. `states` and the sets are views computed on access: the first one
+copies the encoding into Python tuples (`_encoding()`), which are then kept.
 
 Made only by `validate(G)` (core_aut/trusted/wrapper.py) or by the readers (io_aut). "Valid"
 can never go stale, and operations use it without checking or encoding again. To edit, take an
@@ -36,12 +37,12 @@ class StateView:
 
     @property
     def marked(self) -> bool:
-        return self._V._enc.marked[self._i]
+        return self._V._encoding().marked[self._i]
 
     @property
     def out(self) -> Mapping[Any, Tuple[int, ...]]:
         V, i = self._V, self._i
-        enc = V._enc
+        enc = V._encoding()
         out = {}
         for k in range(enc.start[i], enc.start[i + 1]):     # one block, sorted by event
             out.setdefault(V._event_of[enc.evt[k]], []).append(enc.dst[k])
@@ -81,27 +82,23 @@ class _States:
 class ValidAutomaton:
     """A validated automaton (read-only). Create it with validate(G) or io_aut.read_aut."""
 
-    __slots__ = ("_enc", "_event_of", "_number", "_names", "_deterministic", "_active",
-                 "_reverse")
+    __slots__ = ("_rs", "_enc", "_event_of", "_number", "_names")
 
     def __init__(self, *args, **kwargs):
         raise TypeError("ValidAutomaton is made by validate(G) or a reader (io_aut), "
                         "not directly")
 
     @classmethod
-    def _make(cls, enc: Encoded, event_of: list, names: list, deterministic: bool):
-        """Internal: called only after the verified checker accepted `enc`."""
+    def _make(cls, rs, event_of: list, names: list):
+        """Internal: `rs` is a core_aut._rs.RsAut, so valid (the verified checker accepted it,
+        or a verified operation built it). `event_of[k]` is the event numbered k; `names[x]`
+        is the name of state x."""
         self = object.__new__(cls)
-        frozen = Encoded(enc.n, enc.m, tuple(enc.in_E), tuple(enc.in_Euc), tuple(enc.in_Euo),
-                         tuple(enc.init), tuple(enc.marked), tuple(enc.start), tuple(enc.evt),
-                         tuple(enc.dst))
-        object.__setattr__(self, "_enc", frozen)
+        object.__setattr__(self, "_rs", rs)
+        object.__setattr__(self, "_enc", None)          # Python copy, made on first use
         object.__setattr__(self, "_event_of", tuple(event_of))
         object.__setattr__(self, "_number", {e: k for k, e in enumerate(event_of)})
         object.__setattr__(self, "_names", tuple(names))
-        object.__setattr__(self, "_deterministic", deterministic)
-        object.__setattr__(self, "_active", None)       # active-event index, built on first use
-        object.__setattr__(self, "_reverse", None)      # reverse index, built on first use
         return self
 
     def __setattr__(self, name, value):
@@ -111,7 +108,7 @@ class ValidAutomaton:
 
     @property
     def num_states(self) -> int:
-        return self._enc.n
+        return self._rs.n
 
     @property
     def states(self) -> _States:
@@ -129,44 +126,49 @@ class ValidAutomaton:
 
     @property
     def events(self) -> FrozenSet[Any]:
-        return frozenset(e for k, e in enumerate(self._event_of) if self._enc.in_E[k])
+        enc = self._encoding()
+        return frozenset(e for k, e in enumerate(self._event_of) if enc.in_E[k])
 
     @property
     def Euc(self) -> FrozenSet[Any]:
-        return frozenset(e for k, e in enumerate(self._event_of) if self._enc.in_Euc[k])
+        enc = self._encoding()
+        return frozenset(e for k, e in enumerate(self._event_of) if enc.in_Euc[k])
 
     @property
     def Euo(self) -> FrozenSet[Any]:
-        return frozenset(e for k, e in enumerate(self._event_of) if self._enc.in_Euo[k])
+        enc = self._encoding()
+        return frozenset(e for k, e in enumerate(self._event_of) if enc.in_Euo[k])
 
     @property
     def init(self) -> FrozenSet[int]:
-        return frozenset(x for x in range(self._enc.n) if self._enc.init[x])
+        enc = self._encoding()
+        return frozenset(x for x in range(enc.n) if enc.init[x])
 
     @property
     def marked(self) -> FrozenSet[int]:
-        return frozenset(x for x in range(self._enc.n) if self._enc.marked[x])
+        enc = self._encoding()
+        return frozenset(x for x in range(enc.n) if enc.marked[x])
 
     @property
     def is_deterministic(self) -> bool:
         """Decided by the verified checker (at most one initial state, and no state with two
-        transitions on one event)."""
-        return self._deterministic
+        transitions on one event). Computed in Rust on first use, then kept."""
+        return self._rs.is_deterministic
 
     def transitions(self) -> Iterator[Tuple[int, Any, int]]:
         """(source, event, target) for every transition, grouped by source, sorted by event."""
-        enc = self._enc
+        enc = self._encoding()
         for x in range(enc.n):
             for k in range(enc.start[x], enc.start[x + 1]):
                 yield x, self._event_of[enc.evt[k]], enc.dst[k]
 
     def to_automaton(self) -> Automaton:
         """An editable copy (validate it again after editing)."""
-        return decode(self._enc, list(self._event_of), list(self._names))
+        return decode(self._encoding(), list(self._event_of), list(self._names))
 
     def __repr__(self):
         return (f"ValidAutomaton({self.num_states} states, {len(self.events)} events"
-                f"{', deterministic' if self._deterministic else ''})")
+                f"{', deterministic' if self.is_deterministic else ''})")
 
     # --- printing ----------------------------------------------------------------------------
 
@@ -213,24 +215,12 @@ class ValidAutomaton:
     # --- for the operations (internal) -------------------------------------------------------
 
     def _encoding(self) -> Encoded:
+        """The encoding as Python tuples (copied from Rust on first use, then kept): for the
+        views above."""
+        if self._enc is None:
+            t = self._rs.to_lists()
+            object.__setattr__(self, "_enc", Encoded(t[0], t[1], *(tuple(a) for a in t[2:])))
         return self._enc
-
-    def _active_index(self) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
-        """The active-event index (A, H) (core_aut/trusted/active_index.py): built and checked by
-        the verified checker on first use, then kept (it depends only on the frozen encoding)."""
-        if self._active is None:
-            from core_aut.trusted.active_index import checked_active_index
-            object.__setattr__(self, "_active", checked_active_index(self._enc))
-        return self._active
-
-    def _reverse_index(self) -> Tuple[Tuple[int, ...], ...]:
-        """The reverse index (rstart, rk, rsrc, pos) (core_aut/trusted/reverse_index.py): built
-        and checked by the verified checker on first use, then kept (it depends only on the
-        frozen encoding)."""
-        if self._reverse is None:
-            from core_aut.trusted.reverse_index import checked_reverse_index
-            object.__setattr__(self, "_reverse", checked_reverse_index(self._enc))
-        return self._reverse
 
     def _event_number(self, event: Any) -> Optional[int]:
         """The number of `event` in the encoding, or None if no transition or set uses it."""
