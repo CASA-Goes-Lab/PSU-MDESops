@@ -3,7 +3,7 @@ ValidAutomaton: a read-only automaton that passed the verified checker.
 
 To the user it reads like an Automaton: `num_states`, `states[i].name / .marked / .out`,
 `events`, `Euc`, `Euo`, `init`, `transitions()`. Inside, it holds the automaton in Rust
-(`core_aut._rs.RsAut`, read-only), in the encoded form the verified operations use. The
+(`rust_core._rs.RsAut`, read-only), in the encoded form the verified operations use. The
 operations run on that copy. `states` and the sets are views computed on access: the first one
 copies the encoding into Python tuples (`_encoding()`), which are then kept.
 
@@ -90,7 +90,7 @@ class ValidAutomaton:
 
     @classmethod
     def _make(cls, rs, event_of: list, names: list):
-        """Internal: `rs` is a core_aut._rs.RsAut, so valid (the verified checker accepted it,
+        """Internal: `rs` is a rust_core._rs.RsAut, so valid (the verified checker accepted it,
         or a verified operation built it). `event_of[k]` is the event numbered k; `names[x]`
         is the name of state x."""
         self = object.__new__(cls)

@@ -1,33 +1,92 @@
 # CertiSC
 
-Certified supervisory control for discrete event systems. The operations run in a Rust core
-verified with [Verus](https://github.com/verus-lang/verus) (`rust/`), behind a Python API. The
-algorithms are proved in Lean, in [`../certisc-proof/`](../certisc-proof/). (The earlier
-Python implementation, verified with [Nagini](https://github.com/marcoeilers/nagini), is kept
-for reference in `../legacy/nagini/`.)
+Certified supervisory control for discrete event systems, in Python. Every operation runs in a
+formally verified Rust backend: its results are proved correct, not only tested.
 
-    src/core_aut/                public: Automaton, ValidAutomaton, validate, check_or_raise
-        _rs.abi3.so              the compiled Rust core (built by pip install; not in git)
-        trusted/                 trusted helpers: encoding, wrapper, error
-    src/io_aut/                  public: read_aut, write_aut (JSON), read_fsm (DESUMA import)
-    src/ops_aut/                 public (basic_ops.py): next_states, active_events,
-                                 active_events_at, reachable, coreachable, delete_states,
-                                 accessible, coaccessible, trim
-    tests/                       one folder per package
-    rust/                        the Rust core (rust/README.md):
-        verified/                Verus-verified crate, modules core_aut/ and ops_aut/
-        binding/                 PyO3 glue (trusted): the extension core_aut._rs
+Developing certisc (layout, the Rust core, tests, proofs): [DEVELOPING.md](DEVELOPING.md).
 
-Public functions take a ValidAutomaton (or validate a plain Automaton first) and call the
-Rust code. `validate` encodes the automaton (core_aut/trusted/encoding.py) and hands it to
-Rust, whose verified checker accepts it; the ValidAutomaton then holds it in Rust.
+## Install
 
-What is verified, what is trusted, and how to check the proofs: [rust/README.md](rust/README.md). Reading and writing automata: [src/io_aut/IO.md](src/io_aut/IO.md). End-user examples: `Examples/v2/testing/certisc/` (outer repository).
+You need Python 3.11 or newer and the Rust compiler: certisc's backend is written in Rust and
+is compiled on your machine during the install.
+
+**1. Install Rust (once per machine).** On macOS or Linux:
+
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+Accept the default option. Then open a new terminal (or run `source ~/.cargo/env`) and check:
+
+    rustc --version
+
+On Windows, download and run `rustup-init.exe` from https://rustup.rs instead, and accept its
+offer to install the Visual Studio C++ build tools (Rust needs them).
+
+**2. Install certisc**, from the repository root:
+
+    python3 -m venv .venv
+    .venv/bin/pip install ./certisc-lib
+
+The first install compiles the backend (under a minute). Activate the environment with
+`source .venv/bin/activate` to use `python` directly.
+
+## Use
+
+```python
+from core_aut import Automaton, validate
+from ops_aut import reachable, trim
+
+G = Automaton(events=["start", "finish", "break", "repair"], Euc=["break"])
+idle = G.add_state("Idle", init=True, marked=True)
+work = G.add_state("Working")
+down = G.add_state("Down")
+G.add_transition(idle, "start", work)
+G.add_transition(work, "finish", idle)
+G.add_transition(work, "break", down)
+G.add_transition(down, "repair", idle)
+
+V = validate(G)          # checked once; raises InvalidAutomatonError if G is not valid
+reachable(V)             # [0, 1, 2]
+T = trim(V)              # a new automaton; V is unchanged
+T.show()
+```
+
+Build an `Automaton`, then `validate` it once: the result (a read-only `ValidAutomaton`) can be
+passed to every operation without being checked again. To change it, take an editable copy
+with `V.to_automaton()`.
+
+| Package | Functions |
+|---|---|
+| `core_aut` | `Automaton`, `validate`, `check_or_raise`, `ValidAutomaton`, `InvalidAutomatonError`; EFSMs: `EfsmSystem`, `Efsm`, `Edge`, `Variable` |
+| `ops_aut` | `next_states`, `active_events`, `active_events_at`, `reachable`, `coreachable`, `delete_states`, `accessible`, `coaccessible`, `trim`, `parallel_2aut`, `product_2aut` |
+| `io_aut` | `read_aut`, `write_aut` (JSON), `read_fsm` (DESUMA `.fsm` files), `read_cif` (CIF models, as EFSMs) |
+| `sup` | `supervisor` (supervisory control; prefix-closed so far) |
+| `viz_aut` | `write_svg`, `write_dot`, `svg`, `to_dot` (drawings with Graphviz) |
+
+`reachable` and `coreachable` can also return witnesses (`witnesses=True`), from which a
+shortest word to each state follows. `parallel_2aut(G1, G2)` and `product_2aut(G1, G2)` name
+each state of the result by the pair of names `(name1, name2)`; a composed automaton cannot be
+written to JSON yet (writing needs string names).
+
+`supervisor(G, H)` returns the supervisor for the plant `G` and the specification `H`: the
+largest behaviour of `G` allowed by `H` that never needs to prevent an uncontrollable event.
+`G` and `H` must be deterministic, and `H` may use only events of `G` (the events it does not
+mention are left free). `method="naive"` runs the textbook iteration instead (not verified,
+much slower on large automata). `construction="refine"` (complete `H`, then work on `G × H`)
+and `construction="subautomaton"` (when `H` is `G` with some states deleted, same names, or
+just the list of indices of the states of `G` to keep, the fastest form) give the same result
+by other routes; the default is `"escape"`. A forbidden-state specification needs no `H`:
+`supervisor(G, forbidden=[x1, x2, ...])` keeps `G` away from those states.
+
+Drawings: `write_svg(G, "g.svg")` draws any automaton with Graphviz (install the `dot`
+program; macOS: `brew install graphviz`): marked states as double circles, an arrow into the
+initial state, uncontrollable events dashed.
+
+Examples, one script per topic:
+`Examples/v2/testing/certisc/` (outer repository).
 
 ## Automata in files
 
-certisc's format is JSON, with transitions grouped by source state (details in
-`src/io_aut/aut_json.py`):
+certisc's format is JSON, with transitions grouped by source state:
 
 ```json
 {
@@ -45,53 +104,9 @@ certisc's format is JSON, with transitions grouped by source state (details in
 }
 ```
 
-`read_aut(path)` and `read_fsm(path)` return a **ValidAutomaton**: checked once by the verified
-checker, then read-only, so operations never check or encode it again (validate a hand-built
-`Automaton` with `validate(G)`). In a loop of 2000-state reachability this is 0.02 s instead of
-4 s.
-
-## Install
-
-From the repository root (Python 3.11+), with a Rust toolchain (https://rustup.rs; the build
-compiles the Rust core, about 30 s the first time):
-
-    $ python3 -m venv .venv && source .venv/bin/activate
-    $ pip install -e "certisc-lib[dev]"
-
-The build backend is [maturin](https://www.maturin.rs). Python edits take effect at once;
-after editing Rust, run the `pip install -e` line again. Verus is not needed to build, only to
-check the proofs (rust/README.md). A released wheel will need neither Rust nor Verus.
-
-## Use
-
-```python
-from core_aut import Automaton, check_or_raise, validate
-from ops_aut import next_states
-
-g = Automaton(events=["a", "b"])
-g.add_state("x0", init=True)
-g.add_state("x1", marked=True)
-g.add_transition(0, "a", 1)
-check_or_raise(g, deterministic=True)   # raises InvalidAutomatonError if invalid
-next_states(g, [0], "a")                 # [1]
-V = validate(g)                          # read-only ValidAutomaton: checked once
-next_states(V, [0], "a")                 # [1], without checking again
-```
-
-## Test and verify
-
-From `certisc-lib/`:
-
-    $ pytest                                                  # 50 passed
-    $ cd rust/verified && verus --crate-type=lib src/lib.rs   # 164 verified (rust/README.md)
-
-## Adding a package
-
-1. Create `src/<name>/__init__.py`; its verified code goes into `rust/verified/src/<name>/`
-   (a module of the same crate), and its binding into `rust/binding/src/lib.rs`.
-2. Add `"<name>"` to `python-packages` in `pyproject.toml` (`[tool.maturin]`).
-3. Add `tests/<name>/`, then run `pip install -e "certisc-lib[dev]"` again.
-
-Don't use standard-library names such as `io`; they would shadow Python's own modules.
+`read_aut(path)` and `read_fsm(path)` return a `ValidAutomaton`, ready to use. `read_cif(path)`
+reads a CIF model (Eclipse ESCET) as an `EfsmSystem`: extended finite-state machines with
+shared variables, not yet flattened into an automaton (unfolding comes next). More on reading
+and writing: [src/io_aut/IO.md](src/io_aut/IO.md).
 
 License: BSD-3-Clause ([license.txt](license.txt)).

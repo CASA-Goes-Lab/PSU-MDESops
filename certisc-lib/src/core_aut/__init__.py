@@ -10,14 +10,19 @@ Core automaton (part of the certisc distribution). Public API:
                         without checking or encoding again
 - check_or_raise(G, deterministic=False)
                         the same check, without building a ValidAutomaton
+- EfsmSystem, Efsm, Edge, Variable, EfsmError
+                        EFSMs (efsm.py): the syntax of extended finite-state machines sharing
+                        variables; expressions Lit, Var, AtLoc, Un, Bin, Ite (spec:
+                        certisc-proof/spec/efsm.md). read_cif (io_aut) builds one.
 
 Layout:
 - automaton.py            the user-facing, editable type
+- efsm.py                 EFSM syntax and its well-formedness check (plain Python; the
+                          meaning is in certisc-proof/DESopsProof/Efsm.lean)
 - valid.py                ValidAutomaton, the read-only validated type (holds the automaton
                           in Rust)
-- _rs.*.so                the compiled extension: the Verus-verified Rust core
-                          (certisc-lib/rust/verified/) behind the PyO3 glue (rust/binding/);
-                          built by `pip install` (maturin)
+- (the compiled Rust core is not here: it is its own package, rust_core, built from
+  certisc-lib/rust/ by `pip install` (maturin) and reached through trusted/wrapper.py)
 - trusted/                trusted helpers: encoding (Automaton <-> lists), wrapper
                           (validate, check_or_raise), error
 - py.typed                marker: the package has type hints (PEP 561)
@@ -27,9 +32,23 @@ Design and trust boundary: certisc-proof/spec/wrapper.md. Definitions: certisc-p
 """
 
 from core_aut.automaton import Automaton, State
+from core_aut.efsm import (
+    AtLoc,
+    Bin,
+    Edge,
+    Efsm,
+    EfsmError,
+    EfsmSystem,
+    Ite,
+    Lit,
+    Un,
+    Var,
+    Variable,
+)
 from core_aut.trusted.error import InvalidAutomatonError
 from core_aut.trusted.wrapper import check_or_raise, validate
 from core_aut.valid import ValidAutomaton
 
 __all__ = ["Automaton", "State", "InvalidAutomatonError", "ValidAutomaton", "check_or_raise",
-           "validate"]
+           "validate", "EfsmSystem", "Efsm", "Edge", "Variable", "EfsmError", "Lit", "Var",
+           "AtLoc", "Un", "Bin", "Ite"]

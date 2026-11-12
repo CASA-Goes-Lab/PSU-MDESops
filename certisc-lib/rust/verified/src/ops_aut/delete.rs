@@ -725,7 +725,7 @@ pub fn delete_states(g: &Aut, dele: &Vec<bool>) -> (r: (Aut, Vec<usize>))
 // =============================================================================================
 
 /// The states `x` with `flag[x]`, in increasing order.
-fn states_with(g: &Aut, flag: &Vec<bool>) -> (s: Vec<usize>)
+pub fn states_with(g: &Aut, flag: &Vec<bool>) -> (s: Vec<usize>)
     requires
         // Why: facts restated in each loop (a loop only knows its invariant).
         g.wf(),

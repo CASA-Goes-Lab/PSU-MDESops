@@ -1,7 +1,7 @@
 name = "DESopsProof"
 version = "0.1.0"
 keywords = ["math"]
-defaultTargets = ["DESopsProof"]
+defaultTargets = ["DESopsProof", "Tutorial"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -18,3 +18,14 @@ rev = "v4.35.0"
 
 [[lean_lib]]
 name = "DESopsProof"
+
+# The Lean tutorial (Tutorial/README.md): built by `lake build` too, so it stays correct.
+[[lean_lib]]
+name = "Tutorial"
+globs = ["Tutorial.+"]
+# A misspelled name is an error, not a new variable (beginners' files). The two Mathlib linters
+# that ask to merge consecutive `intro`s / `rw`s are off: the lessons take one step per line.
+[lean_lib.leanOptions]
+autoImplicit = false
+weak.linter.tacticAnalysis.introMerge = false
+weak.linter.tacticAnalysis.rwMerge = false

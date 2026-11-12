@@ -5,7 +5,7 @@ edition = "2021"
 description = "PyO3 binding of certisc_verified (trusted glue)."
 license = "BSD-3-Clause"
 
-# The extension module core_aut._rs (pyproject.toml, [tool.maturin] module-name).
+# The extension module rust_core._rs (pyproject.toml, [tool.maturin] module-name).
 [lib]
 name = "_rs"
 crate-type = ["cdylib"]

@@ -1,11 +1,12 @@
 # Reading and writing automata (`io_aut`)
 
 ```python
-from io_aut import read_aut, write_aut, read_fsm
+from io_aut import read_aut, write_aut, read_fsm, read_cif
 
 V = read_aut("machine.json")      # a ValidAutomaton: checked, read-only
 write_aut(V, "copy.json")
 W = read_fsm("M1.fsm")            # DESUMA models: also a ValidAutomaton
+M = read_cif("plant.cif")         # CIF models: an EfsmSystem (EFSMs), not yet an automaton
 ```
 
 ## 1. The file format
@@ -197,15 +198,51 @@ The `.fsm` format is more limited than certisc's:
 
 A malformed file raises `FsmFormatError`.
 
-## 6. Errors
+## 6. CIF models (EFSMs)
+
+`read_cif(path)` (or `parse_cif(text)`) reads a CIF 3 model (Eclipse ESCET) and returns an
+`EfsmSystem` from `core_aut`: the EFSMs, the variables they share, and the events. It is
+checked as syntax (`EfsmSystem.check()`), but it is not an automaton yet: unfolding it into a
+flat automaton is the next step (verified Rust; meaning in
+`certisc-proof/DESopsProof/Efsm.lean`, spec `certisc-proof/spec/efsm.md`).
+
+```python
+M = read_cif("datacenter.cif")
+M.events                    # ['on_1', 'off_1', ..., 'heat', 'cool']
+M.Euc                       # {'load_up', 'load_dn', 'heat', 'cool'}
+M.variables                 # [Variable('Room.T', lo=0, hi=2, init=0)]
+M.automaton("CRAC1").initial            # {'Active'}
+M.writers("Room.T")                     # ['Room']
+```
+
+How CIF is translated (spec §7.1):
+- a variable `x` of automaton `A` is named `"A.x"`; `bool` is the range [0, 1]; an enum's
+  literals are 0, 1, ... in order; `alg` and `const` are inlined;
+- the initial locations are those whose `initial` predicates hold for the initial values;
+- the marked predicate of `A` is: its `marked` predicates, and some marked location `L` with
+  `A.L` and the location's predicates (no marked location: never marked);
+- an edge with several events becomes one edge per event; without `goto` it stays put;
+- `A.L` (A is at location L) is kept as a location test.
+
+Everything outside this subset raises `UnsupportedCifError`; nothing is skipped silently.
+Refused: reals and `/`, `int` without a range, `input`, `invariant`, `urgent`, groups,
+functions, `if` inside `do`, multi-assignment. Integers are 32-bit, as in CIF: a value outside
+[-2147483648, 2147483647] is an overflow error (write the smallest one as `-2147483647 - 1`, as
+CIF does). `div` and `mod` follow CIF: `div` rounds toward
+zero and `mod` has the sign of the left operand (`-7 div 4 = -1`, `-7 mod 4 = -3`; Python's
+`//` and `%` give -2 and 1).
+
+## 7. Errors
 
 | Error | Meaning | Example |
 |---|---|---|
 | `AutFormatError` | the file does not follow the format | unknown key `"intial"`; a target not in `"states"` |
 | `FsmFormatError` | the `.fsm` file is malformed | a state announces 2 transitions but lists 1 |
+| `CifFormatError` | the CIF text is malformed or inconsistent | `goto M` with no location `M`; an event used but not declared |
+| `UnsupportedCifError` | valid CIF outside the supported subset (a `CifFormatError`) | `disc real x`; `invariant` |
 | `InvalidAutomatonError` | well-formed file, but not a valid automaton (verified checker) | a transition on an event missing from `"events"` (W1); no initial state (W3) |
 
-## 7. Examples
+## 8. Examples
 
 `Examples/v2/testing/certisc/` (outer repository):
 - `04_read_write.py`: `.fsm` → JSON → read back → edit a copy → validate;

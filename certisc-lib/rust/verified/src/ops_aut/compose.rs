@@ -205,6 +205,211 @@ pub fn check_map(g1: &Aut, g2: &Aut, map2: &Vec<usize>, m: usize) -> (r: bool)
     true
 }
 
+// --- agreement on shared events (spec/parallel.md §9 Q1, §11 Q-B) ----------------------------
+
+/// G2's event `e2` is shared: it is in `E2`, and its output number `map2[e2]` is in `E1`.
+pub open spec fn shared(g1: AutView, g2: AutView, map2: Seq<usize>, e2: int) -> bool {
+    // Math: e2 ∈ [0, |map2|) ∧ e2 ∈ E2 ∧ map2[e2] ∈ E1
+    // Why: only shared events can disagree; a private event has one attribute only.
+    &&& 0 <= e2 < map2.len()
+    &&& g2.E.contains(e2)
+    &&& g1.E.contains(map2[e2] as int)
+}
+
+/// The inputs agree on G2's event `e2`: if it is shared, it is uncontrollable in both or in
+/// neither, and unobservable in both or in neither.
+pub open spec fn agree_at(g1: AutView, g2: AutView, map2: Seq<usize>, e2: int) -> bool {
+    // Math: shared(e2) → (map2[e2] ∈ Euc1 ↔ e2 ∈ Euc2) ∧ (map2[e2] ∈ Euo1 ↔ e2 ∈ Euo2)
+    // Why: the per-event condition; a named function, so it can be a trigger below.
+    shared(g1, g2, map2, e2) ==> {
+        &&& g1.Euc.contains(map2[e2] as int) == g2.Euc.contains(e2)
+        &&& g1.Euo.contains(map2[e2] as int) == g2.Euo.contains(e2)
+    }
+}
+
+/// The inputs agree on every shared event (the condition for composing them, §9 Q1).
+pub open spec fn agree(g1: AutView, g2: AutView, map2: Seq<usize>) -> bool {
+    // Math: ∀ e2 ∈ [0, |map2|): agree_at(e2)
+    // Why: the whole condition; trigger `agree_at(e2)`, so a proof opens it per event.
+    forall|e2: int| 0 <= e2 < map2.len() ==> #[trigger] agree_at(g1, g2, map2, e2)
+}
+
+/// Decides `agree`: `(0, _)` exactly when the inputs agree; else `(1, e2)` (controllability)
+/// or `(2, e2)` (observability), with `e2` a shared G2 event on which they disagree.
+// Why: `m` is used only in the contract (unused once it is erased).
+#[allow(unused_variables)]
+pub fn check_agree(g1: &Aut, g2: &Aut, map2: &Vec<usize>, m: usize) -> (r: (u8, usize))
+    requires
+        // Math: valid inputs and a valid numbering
+        // Why: map_ok gives |map2| = m2 (so e2 indexes G2's flags) and map2[e2] < m.
+        g1.wf(),
+        g2.wf(),
+        map_ok(g1, g2, map2@, m as int),
+    ensures
+        // Math: r.0 ∈ {0, 1, 2}
+        r.0 <= 2,
+        // Math: r.0 = 0 ↔ agree(G1, G2, map2)
+        // Why: the exact answer: 0 is never wrong, and nonzero is never wrong.
+        (r.0 == 0) == agree(g1@, g2@, map2@),
+        // Math: r.0 = 1 → shared(r.1) ∧ (map2[r.1] ∈ Euc1 ↔ r.1 ∉ Euc2)
+        // Why: the event reported for an error really disagrees on controllability.
+        r.0 == 1 ==> shared(g1@, g2@, map2@, r.1 as int)
+            && g1@.Euc.contains(map2@[r.1 as int] as int) != g2@.Euc.contains(r.1 as int),
+        // Math: r.0 = 2 → shared(r.1) ∧ (map2[r.1] ∈ Euo1 ↔ r.1 ∉ Euo2)
+        // Why: the same for observability.
+        r.0 == 2 ==> shared(g1@, g2@, map2@, r.1 as int)
+            && g1@.Euo.contains(map2@[r.1 as int] as int) != g2@.Euo.contains(r.1 as int),
+{
+    // Math: e2 = 0 (e2 walks G2's events)
+    let mut e2: usize = 0;
+    while e2 < map2.len()
+        invariant
+            // Math: the preconditions, restated
+            // Why: Verus forgets facts about unchanged values across a loop unless restated.
+            g1.wf(),
+            g2.wf(),
+            map_ok(g1, g2, map2@, m as int),
+            // Math: e2 ≤ |map2|
+            e2 <= map2@.len(),
+            // Math: ∀ a < e2: agree_at(a)
+            // Why: the events already walked agree (else the loop returned).
+            forall|a: int| 0 <= a < e2 ==> #[trigger] agree_at(g1@, g2@, map2@, a),
+        // Math: |map2| - e2 decreases
+        decreases map2@.len() - e2,
+    {
+        // Math: o = map2[e2], the output number of e2
+        let o = map2[e2];
+        // Math: o < m1 ↔ o ∈ E1 (every G1 number is in E1, map_ok); e2 ∈ E2 ↔ in_e2[e2]
+        // Why: the run-time form of shared(e2).
+        if o < g1.m && g2.in_e[e2] {
+            proof {
+                // Math: o ∈ E1
+                // Why: hint: map_ok's last line at o, so the view's E1 contains o.
+                assert(g1.in_e@[o as int]);
+                // Math: shared(e2)
+                assert(shared(g1@, g2@, map2@, e2 as int));
+            }
+            // Math: (o ∈ Euc1) ≠ (e2 ∈ Euc2) → report (1, e2)
+            if g1.in_euc[o] != g2.in_euc[e2] {
+                // Math: ¬agree_at(e2), so ¬agree
+                // Why: hint: names the failing instance of agree's ∀ (its trigger).
+                assert(!agree_at(g1@, g2@, map2@, e2 as int));
+                return (1, e2);
+            }
+            // Math: (o ∈ Euo1) ≠ (e2 ∈ Euo2) → report (2, e2)
+            if g1.in_euo[o] != g2.in_euo[e2] {
+                // Math: ¬agree_at(e2), so ¬agree
+                // Why: hint: names the failing instance of agree's ∀ (its trigger).
+                assert(!agree_at(g1@, g2@, map2@, e2 as int));
+                return (2, e2);
+            }
+        } else {
+            proof {
+                // Math: ¬shared(e2): o ∉ E1 (o ≥ m1, outside the view's range) or e2 ∉ E2
+                // Why: then agree_at(e2) holds trivially; the solver needs the case named.
+                assert(!shared(g1@, g2@, map2@, e2 as int));
+            }
+        }
+        // Math: agree_at(e2)
+        // Why: hint: the new instance of the invariant.
+        assert(agree_at(g1@, g2@, map2@, e2 as int));
+        // Math: e2 := e2 + 1
+        e2 += 1;
+    }
+    // Math: agree (the invariant at e2 = |map2|)
+    (0, 0)
+}
+
+/// What agreement buys: the composition's `Euc` and `Euo` are each input's own sets on that
+/// input's events. So a shared event keeps the controllability (and observability) it has in
+/// both inputs, and a private event keeps the one it has in its own input.
+pub proof fn lemma_agree_keeps_flags(par: bool, g1: &Aut, g2: &Aut, map2: Seq<usize>, m: int, h: AutView, p1: Seq<usize>, p2: Seq<usize>)
+    requires
+        // Math: valid inputs, a valid numbering, agreement, and h is their composition
+        g1.wf(),
+        g2.wf(),
+        map_ok(g1, g2, map2, m),
+        agree(g1@, g2@, map2),
+        is_composition(par, g1@, g2@, map2, h, p1, p2),
+    ensures
+        // Math: ∀ o ∈ E1: o ∈ Euc_H ↔ o ∈ Euc1, and o ∈ Euo_H ↔ o ∈ Euo1
+        // Why: G1's events keep G1's attributes in the output.
+        forall|o: int| #[trigger] g1@.E.contains(o) ==> (h.Euc.contains(o) == g1@.Euc.contains(o)
+            && h.Euo.contains(o) == g1@.Euo.contains(o)),
+        // Math: ∀ e2 ∈ E2: map2[e2] ∈ Euc_H ↔ e2 ∈ Euc2, and map2[e2] ∈ Euo_H ↔ e2 ∈ Euo2
+        // Why: G2's events keep G2's attributes in the output (under their output numbers).
+        forall|e2: int| 0 <= e2 < map2.len() && #[trigger] g2@.E.contains(e2) ==> (
+            h.Euc.contains(map2[e2] as int) == g2@.Euc.contains(e2)
+            && h.Euo.contains(map2[e2] as int) == g2@.Euo.contains(e2)),
+{
+    // --- G1's events ---
+    assert forall|o: int| #[trigger] g1@.E.contains(o) implies (h.Euc.contains(o) == g1@.Euc.contains(o)
+        && h.Euo.contains(o) == g1@.Euo.contains(o)) by {
+        // Math: o ∈ map2(Euc2) → o ∈ Euc1
+        // Why: Euc_H = Euc1 ∪ map2(Euc2) (is_composition); the second part adds nothing new.
+        if img(g2@.Euc, map2).contains(o) {
+            // Math: e with map2[e] = o and e ∈ Euc2
+            let e = choose|e: int| 0 <= e < map2.len() && #[trigger] g2@.Euc.contains(e) && map2[e] as int == o;
+            // Math: e ∈ E2 (W2 of G2: Euc2 ⊆ E2)
+            assert(g2.in_euc@[e]);
+            assert(g2@.E.contains(e));
+            // Math: shared(e) and agree_at(e) give o ∈ Euc1
+            assert(agree_at(g1@, g2@, map2, e));
+        }
+        // Math: o ∈ map2(Euo2) → o ∈ Euo1 (same argument with Euo)
+        if img(g2@.Euo, map2).contains(o) {
+            let e = choose|e: int| 0 <= e < map2.len() && #[trigger] g2@.Euo.contains(e) && map2[e] as int == o;
+            // Math: e ∈ E2 (W2 of G2: Euo2 ⊆ E2)
+            assert(g2.in_euo@[e]);
+            assert(g2@.E.contains(e));
+            // Math: agree_at(e) gives o ∈ Euo1
+            assert(agree_at(g1@, g2@, map2, e));
+        }
+    }
+    // --- G2's events ---
+    assert forall|e2: int| 0 <= e2 < map2.len() && #[trigger] g2@.E.contains(e2) implies (
+        h.Euc.contains(map2[e2] as int) == g2@.Euc.contains(e2)
+        && h.Euo.contains(map2[e2] as int) == g2@.Euo.contains(e2)) by {
+        // Math: o = map2[e2]
+        let o = map2[e2] as int;
+        // Math: e2 ∈ Euc2 → o ∈ map2(Euc2) ⊆ Euc_H
+        // Why: the witness of the image is e2 itself.
+        if g2@.Euc.contains(e2) {
+            assert(img(g2@.Euc, map2).contains(o));
+        }
+        // Math: e2 ∈ Euo2 → o ∈ map2(Euo2) ⊆ Euo_H
+        if g2@.Euo.contains(e2) {
+            assert(img(g2@.Euo, map2).contains(o));
+        }
+        // Math: o ∈ Euc1 → e2 ∈ Euc2
+        // Why: o ∈ Euc1 ⊆ E1 (W2 of G1), so e2 is shared and agree_at(e2) applies.
+        if g1@.Euc.contains(o) {
+            assert(g1.in_euc@[o]);
+            assert(g1@.E.contains(o));
+            assert(agree_at(g1@, g2@, map2, e2));
+        }
+        // Math: o ∈ Euo1 → e2 ∈ Euo2 (same argument with Euo)
+        if g1@.Euo.contains(o) {
+            assert(g1.in_euo@[o]);
+            assert(g1@.E.contains(o));
+            assert(agree_at(g1@, g2@, map2, e2));
+        }
+        // Math: o ∈ map2(Euc2) → e2 ∈ Euc2
+        // Why: the image's witness e has map2[e] = o = map2[e2], so e = e2 (map2 injective).
+        if img(g2@.Euc, map2).contains(o) {
+            let e = choose|e: int| 0 <= e < map2.len() && #[trigger] g2@.Euc.contains(e) && map2[e] as int == o;
+            // Math: e = e2 (map_ok: injective)
+            assert(e == e2);
+        }
+        // Math: o ∈ map2(Euo2) → e2 ∈ Euo2 (same argument with Euo)
+        if img(g2@.Euo, map2).contains(o) {
+            let e = choose|e: int| 0 <= e < map2.len() && #[trigger] g2@.Euo.contains(e) && map2[e] as int == o;
+            // Math: e = e2 (map_ok: injective)
+            assert(e == e2);
+        }
+    }
+}
+
 /// Spike's input condition from the shared validity.
 proof fn lemma_aut_ok(g: &Aut)
     requires

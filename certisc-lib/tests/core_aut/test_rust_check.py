@@ -1,4 +1,4 @@
-"""The Verus-verified Rust checker (core_aut._rs, check_code) on random valid encodings and
+"""The Verus-verified Rust checker (rust_core._rs, check_code) on random valid encodings and
 random corruptions of them, against `reference_code` below: the conditions of the spec
 (certisc-proof/spec/automaton.md section 3) written directly in Python, in the checker's order.
 
@@ -8,7 +8,7 @@ codes were equal on 20 000 corrupted encodings.)"""
 import pytest
 
 from core_aut import Automaton, InvalidAutomatonError, check_or_raise, validate
-from core_aut._rs import RsAut
+from rust_core._rs import RsAut
 from core_aut.trusted.encoding import Encoded
 from core_aut.trusted.wrapper import to_rust
 from tests.random_automata import lists, random_valid

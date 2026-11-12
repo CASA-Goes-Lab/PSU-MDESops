@@ -1,4 +1,4 @@
-# Built by maturin: it compiles the Rust (rust/) into the extension core_aut._rs and packs it
+# Built by maturin: it compiles the Rust (rust/) into the extension rust_core._rs and packs it
 # with the Python packages. Building from source needs a Rust toolchain (rustup), not Verus.
 [build-system]
 requires = ["maturin>=1.7,<2"]
@@ -15,7 +15,7 @@ authors = [
     { name = "Romulo Meira Goes", email = "r.meiragoes@gmail.com" },
 ]
 requires-python = ">=3.11"
-# No runtime dependencies: the verified core is compiled in (core_aut._rs).
+# No runtime dependencies: the verified core is compiled in (rust_core._rs).
 dependencies = []
 
 [project.optional-dependencies]
@@ -24,11 +24,11 @@ dev = ["pytest>=8.0"]
 [tool.maturin]
 python-source = "src"
 manifest-path = "rust/binding/Cargo.toml"
-# The extension goes into the core_aut package (src/core_aut/_rs.*.so).
-module-name = "core_aut._rs"
+# The extension goes into its own package, which holds nothing else (src/rust_core/_rs.*.so).
+module-name = "rust_core._rs"
 # The other top-level packages; each new package goes here. Package files (py.typed) are
 # included.
-python-packages = ["ops_aut", "io_aut"]
+python-packages = ["core_aut", "ops_aut", "io_aut", "sup", "viz_aut"]
 # Not shipped: the Rust build output and Python byte-code caches.
 exclude = ["rust/target/**", "**/__pycache__/**"]
 

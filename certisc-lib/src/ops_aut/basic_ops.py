@@ -2,7 +2,7 @@
 Public basic operations on Automaton objects.
 
 Each one calls the Verus-verified Rust code (certisc-lib/rust/verified/src/ops_aut/) through
-the extension core_aut._rs; the automaton is already in Rust (ValidAutomaton._rs). This file is
+the extension rust_core._rs; the automaton is already in Rust (ValidAutomaton._rs). This file is
 trusted glue: it checks the arguments (state indices), translates event labels to numbers and
 back, and gives the results their state names. `backend="rust"` is the only implementation
 (the parameter stays for a later one).
@@ -219,3 +219,71 @@ def _wrap(V: ValidAutomaton, result, op: str) -> ValidAutomaton:
                       EmptyAutomatonWarning, stacklevel=3)
     names = V.names
     return ValidAutomaton._make(rs, list(V._event_of), [names[x] for x in old])
+
+
+def parallel_2aut(G1: Union[ValidAutomaton, Automaton], G2: Union[ValidAutomaton, Automaton], *,
+                  backend: str = "rust") -> ValidAutomaton:
+    """The parallel composition G1 ‖ G2: a new automaton over the pairs of states reachable
+    from the initial pairs. A shared event (in both alphabets) moves both automata together; a
+    private event moves only its own automaton.
+
+    State i is named (name1, name2), the names of its two states. Events: E1 ∪ E2; Euc and Euo:
+    the unions. Marked: both states marked. L(G1 ‖ G2) = P1⁻¹ L(G1) ∩ P2⁻¹ L(G2), and the same
+    for Lm. If an input has no states, the result is the empty automaton, with an
+    EmptyAutomatonWarning.
+
+    Verified (rust/verified/src/ops_aut/compose.rs): the result is a valid automaton and exactly
+    Lean's IsComposition with parMode; the agreement check below is verified too (check_agree),
+    and with it every event keeps its controllability and observability. Trusted: matching the
+    two event tables by name. Spec: certisc-proof/spec/parallel.md.
+
+    Raises InvalidAutomatonError if G1 or G2 is not a valid automaton; ValueError if a shared
+    event is controllable in one and uncontrollable in the other (or observable in one and
+    unobservable in the other), or for an unknown backend."""
+    return _compose(G1, G2, True, backend, "parallel_2aut")
+
+
+def product_2aut(G1: Union[ValidAutomaton, Automaton], G2: Union[ValidAutomaton, Automaton], *,
+                 backend: str = "rust") -> ValidAutomaton:
+    """The product G1 × G2: as parallel_2aut, but only shared events can occur. Private events
+    stay in the alphabet (E1 ∪ E2) but are never enabled. L(G1 × G2) = L(G1) ∩ L(G2), and the
+    same for Lm.
+
+    Verified (rust/verified/src/ops_aut/compose.rs): exactly Lean's IsComposition with
+    prodMode. Errors and warnings as parallel_2aut."""
+    return _compose(G1, G2, False, backend, "product_2aut")
+
+
+def _compose(G1, G2, par: bool, backend: str, op: str) -> ValidAutomaton:
+    """Shared code of parallel_2aut and product_2aut (trusted glue)."""
+    V1, V2 = _valid(G1, backend), _valid(G2, backend)
+    rs, p1, p2, events = _compose_parts(V1, V2, par, op)
+    if rs.n == 0:
+        warnings.warn(f"{op}: the result is the empty automaton (an input has no states)",
+                      EmptyAutomatonWarning, stacklevel=3)
+    n1, n2 = V1.names, V2.names
+    return ValidAutomaton._make(rs, events, [(n1[a], n2[b]) for a, b in zip(p1, p2)])
+
+
+def _compose_parts(V1: ValidAutomaton, V2: ValidAutomaton, par: bool, op: str):
+    """(rs, p1, p2, events): the Rust composition of V1 and V2, with the state labels and the
+    output event table (also used by sup.supervisor, which needs p1)."""
+    # Output event numbering: V1's numbers, then V2's private events in V2's order (the order
+    # map_ok asks for). Events are matched by name (Python == and hash), as in event_table.
+    events = list(V1._event_of)
+    map2 = []
+    for e in V2._event_of:
+        k = V1._event_number(e)
+        if k is None:
+            k = len(events)
+            events.append(e)
+        map2.append(k)
+    m = len(events)
+    # Verified agreement check; Python only turns its answer into a message.
+    code, e2 = V1._rs.agree(V2._rs, map2, m)
+    if code != 0:
+        what = ("controllable in one and uncontrollable in the other" if code == 1 else
+                "observable in one and unobservable in the other")
+        raise ValueError(f"{op}: shared event {V2._event_of[e2]!r} is {what}")
+    rs, p1, p2 = V1._rs.compose(V2._rs, map2, m, par)
+    return rs, p1, p2, events

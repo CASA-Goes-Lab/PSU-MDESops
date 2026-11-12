@@ -13,7 +13,7 @@ Lean 4 proofs of the algorithms implemented in [`certisc`](../certisc-lib/).
 2. From this folder:
 
        $ lake exe cache get    # prebuilt Mathlib, about 7 GB in .lake/
-       $ lake build
+       $ lake build            # the proofs and the tutorial
 
 Lean and Mathlib are pinned in `lean-toolchain` and `lakefile.toml` (both v4.35.0). In VS Code,
 install the `lean4` extension and open this folder. CI: `.github/workflows/proof.yml`.
@@ -24,14 +24,21 @@ This is a Lean project, not a Python package. `lakefile.toml` plays the role tha
 ## Layout
 
     certisc-proof/
+    ├── Tutorial/                       Lean for beginners: one automaton, its words and languages,
+    │                                   math first then Lean step by step (Tutorial/README.md)
     ├── lakefile.toml, lean-toolchain   Lean project (depends on Mathlib)
     ├── DESopsProof.lean                imports every module below
-    ├── DESopsProof/                    one module per topic: Automaton.lean (definitions + lemmas)
+    ├── DESopsProof/                    one module per topic: Automaton.lean (definitions + lemmas),
+    │                                   Parallel.lean (composition), Supervisor.lean (supervisory control),
+    │                                   Efsm.lean (EFSM syntax and meaning)
     └── spec/                           automaton.md, wrapper.md, then one note per operation:
-                                        the Lean definition next to the Nagini postcondition
+                                        the Lean definition next to the code's contract (written
+                                        for Nagini; the Verus contracts state the same definitions)
 
 How the two layers fit together:
 - The Lean proof shows that the algorithm is correct.
-- The Nagini proof in `certisc-lib/src/` (`core_aut`, `ops_aut`) shows that the Python code computes exactly the
-  construction defined in Lean.
+- The Verus proof in `certisc-lib/rust/verified/` shows that the Rust code computes exactly the
+  construction defined in Lean (its contracts state the Lean definitions; see
+  `certisc-lib/DEVELOPING.md`). The earlier Nagini proofs of the Python code are kept, for
+  reference only, in `legacy/nagini/`.
 - The note in `spec/` records that the two definitions match (checked by hand for now).

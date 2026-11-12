@@ -260,3 +260,53 @@ here too, and is recorded as a priority once the tool is more complete.
 3. Trusted builder, public `parallel` / `product`, tests (against a direct construction; every
    single-entry mutation of the builder's output rejected; languages on random pairs).
 4. Speed measurements (builder, check, validity pass); log.
+
+## 11. Public API over the Rust core (2026-11-10; reviewed, implemented)
+
+Since 2026-11-10 the search runs in Rust, not as a Nagini checker (§3–§5, §10 are history).
+`compose_aut` (`certisc-lib/rust/verified/src/ops_aut/compose.rs`) is verified: the result is
+valid and `is_composition(par, g1, g2, map2, h, p1, p2)` (Lean `IsComposition` with
+`parMode`/`prodMode`), with `E`, `Euc`, `Euo` the unions and only reachable pairs built. The
+binding exposes it as `RsAut.compose(other, map2, m, par) -> (H, p1, p2)`; nothing in Python
+calls it yet. What remains is the trusted Python wrapper, in `ops_aut/basic_ops.py`:
+
+    parallel_2aut(G1, G2, *, backend="rust") -> ValidAutomaton
+    product_2aut(G1, G2, *, backend="rust")  -> ValidAutomaton
+
+Steps (all trusted Python except step 4):
+1. `V1, V2 = _valid(G1), _valid(G2)` (plain automata validated first, as everywhere).
+2. **Agreement** (§9 Q1, "reject"): for each shared event, controllable in both or
+   uncontrollable in both, and the same for observable; else raise (Q-A below). Done by names.
+3. **Event map** (§9 Q3, trusted by names): output numbering = V1's numbers, then V2's private
+   events in V2's order (`map_ok` requires this order); `map2[e2]` = the output number of V2's
+   event `e2`; `m` = number of output events. Rust re-checks `map_ok` (`check_map`) and raises
+   `ValueError` if it fails.
+4. `H, p1, p2 = V1._rs.compose(V2._rs, map2, m, par)` (verified).
+5. State names `(V1.names[p1[i]], V2.names[p2[i]])`; `ValidAutomaton._make(H, events, names)`.
+6. Empty result (an input has no states, so no initial pair): `EmptyAutomatonWarning`, as
+   `delete_states` (§7).
+
+Tests (`tests/ops_aut/test_compose.py`): on random pairs, compare with a direct Python
+construction (reachable pairs, transitions by mode), and compare languages up to a length bound
+against `P1⁻¹ L1 ∩ P2⁻¹ L2` (parallel) and `L1 ∩ L2` (product), L and Lm; agreement errors;
+empty inputs; a composition of a composition. Example: `Examples/v2/testing/certisc/09_parallel.py`
+(M1 ‖ M2 ‖ B2 from `models/`).
+
+Questions for review:
+
+- **Q-A. Error for a disagreement.** Each input is valid; the pair is not compatible. Options:
+  `InvalidAutomatonError` (§9 Q1's wording) or a plain `ValueError`. Proposal: `ValueError`
+  (the inputs are not invalid), message naming the event and the attribute.
+  **Answered (user, 2026-11-10): `ValueError`.**
+- **Q-B. Where the agreement check lives.** Trusted Python (step 2, a few lines over names) or
+  verified in Rust (a `compatible(g1, g2, map2)` check added to `compose_aut`'s contract).
+  Proposal: Python for now; the Rust result is a correct composition either way (unions).
+  **Answered (user, 2026-11-10): verified in Rust.** Step 2 becomes a verified check whose
+  result Python only turns into a message.
+- **Q-C. State names.** Tuples `(name1, name2)` (§7) are clear in Python, and a fold gives
+  nested tuples `((a, b), c)`. But `write_aut` needs unique string names, so a composed
+  automaton cannot be written to JSON as is. Options: (a) tuples, and `write_aut` writes
+  non-string names with `str()` (still unique for tuples of distinct strings? not always:
+  must check, else raise); (b) tuples, and writing stays string-only (user renames first);
+  (c) string names `"a|b"` from the start. Proposal: (b) now, (a) later if needed.
+  **Answered (user, 2026-11-10): (b), tuples; writing stays string-only for now.**

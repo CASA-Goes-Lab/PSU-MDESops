@@ -2,11 +2,11 @@
 Trusted wrapper: runs the verified checker on an Automaton (certisc-proof/spec/wrapper.md, section 2).
 
 The checker is the Verus-verified `check_code` in Rust (rust/verified/src/core_aut/check.rs),
-reached through the extension core_aut._rs: RsAut.from_lists runs it and keeps the automaton in
+reached through the extension rust_core._rs: RsAut.from_lists runs it and keeps the automaton in
 Rust.
 """
 
-from core_aut._rs import RsAut
+from rust_core._rs import RsAut
 from core_aut.trusted.error import InvalidAutomatonError
 from core_aut.trusted.encoding import encode, event_table
 

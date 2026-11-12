@@ -9,6 +9,7 @@
 //! - `ops_aut::delete`: `delete_states`, `accessible`, `coaccessible`, `trim`.
 //! - `ops_aut::parallel`: the search behind the composition (pairs of states).
 //! - `ops_aut::compose`: the parallel composition and the product.
+//! - `sup::supcon`: supervisory control, prefix-closed (bad states, uncontrollable part).
 //!
 //! Verify (from certisc-lib/rust/verified/): `verus --crate-type=lib src/lib.rs`.
 //! Verus checks the whole crate at once, because the proofs use each other across modules.
@@ -16,3 +17,4 @@
 
 pub mod core_aut;
 pub mod ops_aut;
+pub mod sup;
