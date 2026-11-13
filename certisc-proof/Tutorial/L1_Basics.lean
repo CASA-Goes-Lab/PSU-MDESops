@@ -33,12 +33,14 @@ without Lean. Two things the Infoview shows that the comments often leave out:
 | a statement $P$ | `P : Prop`, a proposition |
 | a proof of $P$ | `h : P`, a term whose type is `P` |
 | "Theorem. $P$. Proof. ..." | `theorem name : P := by ...` |
+| "For example, $P$. Proof. ..." | `example : P := by ...` (a theorem with no name) |
 | "by definition" / "compute" | `rfl`, `decide`, `simp` |
 | "assume $A$" (to prove $A \Rightarrow B$) | `intro hA` |
 | "let $x$ be arbitrary" (to prove $\forall x$) | `intro x` |
 | "take $x = 3$" (to prove $\exists x$) | `use 3` / `exact ⟨3, proof⟩` |
 | "it suffices to prove both parts" ($A \land B$) | `constructor` |
 | "by the hypothesis $h$" | `exact h` |
+| "by $h : A \Rightarrow B$, it suffices to prove $A$" (goal $B$) | `apply h` |
 | "rewrite with the equation $h$" | `rw [h]` |
 | "by cases on $x$" | `cases x` / `rcases` |
 | "by induction on $n$" | `induction n with ...` |
@@ -96,6 +98,55 @@ numbers or a fact about a finite set of cases. -/
 theorem double_21_lt : double 21 < 50 := by
   decide
 
+/-! **Rewriting with an equation: `rw`.** On paper, "since $a = b$, replace $a$ by $b$". In Lean,
+for a proof `h : a = b`:
+
+| Lean | What it does |
+|---|---|
+| `rw [h]` | replaces every `a` in the goal by `b` (left side → right side) |
+| `rw [← h]` | the other way: replaces every `b` by `a` (type `←` as `\l`) |
+| `rw [h] at h2` | rewrites inside the hypothesis `h2` instead of the goal |
+| `rw [h1, h2]` | `rw [h1]`, then `rw [h2]` |
+
+Things to know:
+- `rw` uses `h` as a replacement rule; it does not change the goal's own `=`. In
+  `⊢ 2 * 21 = 42` above, `rewrite [h]` replaced the piece `2 * 21`, and the goal became `42 = 42`.
+- `rw` is `rewrite` followed by an automatic `rfl`: if both sides become identical, `rw` closes
+  the goal by itself, and a `rfl` written after it fails with "no goals". `double_21` used
+  `rewrite` so that the `42 = 42` step stays visible.
+- `rw` matches what is *written*, not what it means. If `a` does not appear literally in the goal,
+  it fails with "did not find the pattern". Beware of hidden parentheses: `+` groups to the left,
+  so `0 + k + 1` is `(0 + k) + 1` (it contains `0 + k`), while `0 + (k + 1)` does not contain
+  `0 + k` (§6 shows how to get from one to the other). -/
+
+/-- Left to right: replace `a` by `b`. -/
+example (a b : ℕ) (h : a = b) : a + 1 = b + 1 := by
+  -- h : a = b
+  -- ⊢ a + 1 = b + 1
+  rewrite [h]
+  -- every `a` became `b`:
+  -- ⊢ b + 1 = b + 1
+  rfl
+  -- (`rw [h]` alone would have done both lines: rewrite, then `rfl`.)
+
+/-- Right to left, `←`: replace `b` by `a`. -/
+example (a b : ℕ) (h1 : a = b) (h2 : a + 1 = 5) : b + 1 = 5 := by
+  -- h1 : a = b
+  -- h2 : a + 1 = 5
+  -- ⊢ b + 1 = 5
+  rw [← h1]
+  -- every `b` in the goal became `a`:
+  -- ⊢ a + 1 = 5
+  exact h2
+
+/-- The same, rewriting the hypothesis instead of the goal, `at h2`. -/
+example (a b : ℕ) (h1 : a = b) (h2 : a + 1 = 5) : b + 1 = 5 := by
+  rw [h1] at h2
+  -- every `a` in h2 became `b`:
+  -- h2 : b + 1 = 5
+  -- ⊢ b + 1 = 5
+  exact h2
+
 /-! ## 3. Implication and "for all": `intro`
 
 **Math.** For every $n$, $\mathrm{double}(n) = n + n$.
@@ -111,6 +162,7 @@ theorem double_eq_add : ∀ n : ℕ, double n = n + n := by
   unfold double
   -- n : ℕ
   -- ⊢ 2 * n = n + n
+  set_option trace.omega true in
   omega
   -- `omega` proves linear arithmetic over ℕ and ℤ: here 2n = n + n.
 
@@ -127,21 +179,86 @@ theorem double_eq_add' (n : ℕ) : double n = n + n := by
 $h_{AB}$ to $h_A$ gives $B$. ∎
 
 In Lean a proof of `A → B` *is a function* that turns a proof of `A` into a proof of `B`. So
-"applying $h_{AB}$ to $h_A$" is literally function application: `hAB hA`. -/
+"applying $h_{AB}$ to $h_A$" is literally function application: `hAB hA`.
+
+**Reading the statement.** Arrows group to the right: `A → (A → B) → B` is
+`A → ((A → B) → B)`, "assume $A$; then assume $A \Rightarrow B$; then $B$". Each `intro` takes
+the part of the goal before the first `→` and adds it as a hypothesis.
+
+**The names are ours.** `hA` and `hAB` are labels we choose, as "call it $h_A$" on paper; Lean
+does not read them. What a hypothesis stands for comes from the goal, and the Infoview shows it
+after the `:` (more on this after the proof). -/
 
 theorem modus_ponens (A B : Prop) : A → (A → B) → B := by
   -- A B : Prop
   -- ⊢ A → (A → B) → B
   intro hA
+  -- Before the first `→` is `A`: it becomes a hypothesis, which we name hA.
   -- A B : Prop
   -- hA : A
   -- ⊢ (A → B) → B
   intro hAB
+  -- Before the first `→` is now the whole `(A → B)`: it becomes a hypothesis named hAB.
   -- A B : Prop
   -- hA : A
   -- hAB : A → B
   -- ⊢ B
   exact hAB hA
+  -- hAB is a function from proofs of A to proofs of B; given hA, it returns a proof of B.
+
+/-! **Opening up `exact hAB hA`.** `exact` hides nothing: `hAB hA` *is* the proof, and `exact`
+only checks that its type is the goal `B`. To see the step more slowly, split it in two with
+`apply`. On paper: "to prove $B$, by $A \Rightarrow B$ it suffices to prove $A$; and $A$ holds
+by $h_A$."
+
+`example` is a `theorem` with no name: Lean checks it, but later proofs cannot use it. We use it
+here because `modus_ponens` already exists; this is the same proof, written another way. -/
+
+example (A B : Prop) : A → (A → B) → B := by
+  intro hA
+  intro hAB
+  -- hA : A
+  -- hAB : A → B
+  -- ⊢ B
+  apply hAB
+  -- `apply hAB`: hAB gives B once it has a proof of A, so the goal B becomes the goal A
+  -- ("it suffices to prove A").
+  -- hA : A
+  -- hAB : A → B
+  -- ⊢ A
+  exact hA
+  -- `exact hA`: hA is a proof of A; goal closed.
+
+/-! To see the whole proof Lean built, as one term, use `#print`. Hover over it in VS Code: -/
+
+#print modus_ponens
+-- theorem Tutorial.L1.modus_ponens : ∀ (A B : Prop), A → (A → B) → B :=
+-- fun A B hA hAB ↦ hAB hA
+
+/-! `fun x ↦ t` is the function $x \mapsto t$ (also written `fun x => t`).
+Read it as the paper proof: "given $A$, $B$, a proof `hA` of $A$ and a proof `hAB` of
+$A \Rightarrow B$, the proof of $B$ is `hAB hA`". Each `intro` became one `fun` argument, and
+`exact` gave the body. That is all the tactics did: build this term step by step.
+
+**Why `hAB` is `A → B`.** Not because of its name: because `(A → B)` was the next
+assumption in the goal when we wrote `intro hAB`. To see that the name plays no part, swap the
+names. The proof still works; only the names now mislead: -/
+
+example (A B : Prop) : A → (A → B) → B := by
+  intro hAB
+  -- hAB : A          (the name says A → B, the type says A: the type is what counts)
+  -- ⊢ (A → B) → B
+  intro hA
+  -- hAB : A
+  -- hA : A → B
+  -- ⊢ B
+  exact hA hAB
+
+/-! To see what a hypothesis is, read its type in the Infoview (after the `:`), not its name.
+Common habits, not rules: `h` for "hypothesis", followed by a hint of what it is about (`hA : A`,
+`hAB : A → B`, `hlen` for a fact about lengths); lowercase letters for the variables involved
+(`hab : f a = f b`); `ih` for an induction hypothesis (Lean's default name); a leading `_` for a
+hypothesis that is named but not used. -/
 
 /-! ## 4. "And" and "there exists"
 
@@ -155,7 +272,8 @@ theorem exists_double_10 : ∃ n : ℕ, double n = 10 ∧ n < 6 := by
   constructor
   -- two goals now, one per side of ∧:
   -- ⊢ double 5 = 10
-  · rfl
+  · unfold double
+    rfl
   -- ⊢ 5 < 6
   · decide
 
@@ -248,5 +366,10 @@ example (n : ℕ) : 0 + n = n := by simp
 3. For propositions `A B`: `A ∧ B → B ∧ A`.
 4. `∃ n : ℕ, double n = n` (which `n`?).
 -/
+
+example : double (double 3) = 12 := by
+  unfold double
+  rw[← Nat.mul_assoc]
+
 
 end Tutorial.L1
