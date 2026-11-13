@@ -4,12 +4,15 @@ import Mathlib.Tactic.Use
 /-!
 # Lesson 1: Lean for someone who already writes proofs
 
-You know how to prove things on paper. Lean asks for the same proof, but every step must be
-explicit enough for a machine to check. This lesson maps the pieces of a paper proof to Lean,
+You know how to prove things on paper.
+Lean asks for the same proof, but every step must be
+explicit enough for a machine to check.
+This lesson maps the pieces of a paper proof to Lean,
 one at a time. Nothing here is about automata yet; that starts in Lesson 2.
 
 **How to read this file.** Open it in VS Code (with the `lean4` extension) and put the cursor on
-a line inside a proof. The *Infoview* panel on the right shows the **goal**: what is left to
+a line inside a proof.
+The *Infoview* panel on the right shows the **goal**: what is left to
 prove at that point, written
 
     hypotheses we may use
@@ -40,16 +43,18 @@ without Lean. Two things the Infoview shows that the comments often leave out:
 | "by cases on $x$" | `cases x` / `rcases` |
 | "by induction on $n$" | `induction n with ...` |
 
-The one real difference from paper: a type is not a set. `n : ℕ` is a *declaration* ("n is a
-natural number"), not a proposition `n ∈ ℕ` that could be true or false. Sets exist too
-(`Set ℕ`), and we use them for languages in Lesson 4.
+The one real difference from paper: a type is not a set.
+`n : ℕ` is a *declaration* ("n is a natural number"), not a proposition `n ∈ ℕ` that could be true or false.
+Sets exist too (`Set ℕ`), and we use them for languages in Lesson 4.
 -/
 
 namespace Tutorial.L1
 
 /-! ## 1. Definitions and computation
 
-`def` makes a definition. `#eval` computes it (like a calculator); `#check` shows a type.
+`def` makes a definition.
+`#eval` computes it (like a calculator);
+`#check` shows a type.
 Hover over `#eval` in VS Code to see the output. -/
 
 /-- $\mathrm{double}(n) = 2n$. -/
@@ -67,8 +72,24 @@ def double (n : ℕ) : ℕ := 2 * n
 
 theorem double_21 : double 21 = 42 := by
   -- ⊢ double 21 = 42
+  unfold double
+  -- `unfold double` replaces `double 21` by its definition, `2 * 21`.
+  -- ⊢ 2 * 21 = 42
+  have h : 2 * 21 = 42 := by decide
+  -- `have` proves a side fact and names it `h`; `decide` checks it by computing.
+  -- h : 2 * 21 = 42
+  -- ⊢ 2 * 21 = 42
+  rewrite [h]
+  -- `rewrite [h]` replaces the left side of h (`2 * 21`) by its right side (`42`) in the goal.
+  -- h : 2 * 21 = 42
+  -- ⊢ 42 = 42
   rfl
+  -- `rfl`: both sides are literally the same.
   -- no goals: the proof is complete
+
+/-- The same proof in one step: `rfl` unfolds `double` and computes by itself. -/
+theorem double_21_short : double 21 = 42 := by
+  rfl
 
 /-- `decide` proves a statement that Lean can *decide* by running a check, e.g. a comparison of
 numbers or a fact about a finite set of cases. -/
